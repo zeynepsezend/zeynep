@@ -254,6 +254,9 @@ def run_agent(
     if not isinstance(final_response, str):
         raise RuntimeError("Agent finished without a final response")
 
+    print("\nAgent graph (ASCII):")
+    app.get_graph().print_ascii()
+
     dbg("[graph] Completed successfully")
 
     return final_response

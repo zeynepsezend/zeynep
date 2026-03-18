@@ -3,3 +3,4 @@ langchain-core
 langchain-openai
 httpx
 python-dotenv
+grandalf
