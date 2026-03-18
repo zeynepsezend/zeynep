@@ -35,7 +35,7 @@
 #     before it is forced to stop. Raise it if your task needs many tool calls;
 #     lower it to keep things fast and cheap.
 #
-#   route_after_reason (line ~195)
+#   route_after_reason
 #     This is the decision function that chooses which step comes next in the
 #     graph. If you wanted the agent to do something different after calling a
 #     tool — for example, a validation step before looping back — you would
@@ -48,6 +48,72 @@
 #       2. Register it:  graph.add_node("summarize", summarize_node)
 #       3. Wire it in:   graph.add_edge("reason", "summarize")
 #                        graph.add_edge("summarize", END)
+#
+# -----------------------------------------------------------------------------
+# WORKED EXAMPLE — Adding a "classify then filter tools" step
+# -----------------------------------------------------------------------------
+#
+# Goal: Before the agent reasons, classify the user's prompt as being about
+# "area" or "volume", then narrow the tool list to only relevant tools so the
+# AI isn't distracted by unrelated options.
+#
+# The new graph would look like:
+#
+#   START -> classify -> reason -> (tool or END)
+#                   ^-- tool --|
+#
+# STEP 1 — Add "category" to AgentState so every node can read it.
+#
+#   class AgentState(TypedDict):
+#       messages: list[dict[str, str]]
+#       pending_tool_calls: list[dict[str, Any]] | None
+#       final_response: str | None
+#       iteration: int
+#       max_iterations: int
+#       tool_catalog: str          # <-- already here; will be overwritten by classify
+#       category: str              # <-- ADD THIS LINE ("area" or "volume")
+#
+# STEP 2 — Write the classify node function (add it just before run_agent).
+#
+#   AREA_KEYWORDS   = ["area", "surface", "face", "skin"]
+#   VOLUME_KEYWORDS = ["volume", "capacity", "space", "cubic"]
+#
+#   def classify_node(state: AgentState) -> AgentState:
+#       user_message = state["messages"][0]["content"].lower()
+#
+#       if any(word in user_message for word in VOLUME_KEYWORDS):
+#           category = "volume"
+#       else:
+#           category = "area"   # default to area if unclear
+#
+#       # Keep only tools whose name or description mentions the category.
+#       all_tools = ...  # you will need to pass the full tool list into state,
+#                        # or store it somewhere accessible here.
+#       filtered = [t for t in all_tools if category in t["name"].lower()
+#                                        or category in t.get("description","").lower()]
+#
+#       state["category"]     = category
+#       state["tool_catalog"] = _format_tools(filtered)  # overwrite with filtered list
+#       return state
+#
+# STEP 3 — Register the new node and rewire the graph (inside run_agent, where
+#           the graph is built — look for the "Graph shape" comment near the bottom).
+#
+#   # OLD wiring:
+#   graph.add_edge(START, "reason")
+#
+#   # NEW wiring — insert classify between START and reason:
+#   graph.add_node("classify", classify_node)
+#   graph.add_edge(START, "classify")
+#   graph.add_edge("classify", "reason")
+#
+#   # Leave all other edges exactly as they are.
+#
+# STEP 4 — Pass the full tool list into the initial state so classify_node can
+#           access it. In build_initial_state, add a new key, e.g. "all_tools",
+#           and populate it before calling _format_tools.
+#
+# That's it! The agent will now classify → filter → reason → tool → … → answer.
 #
 # =============================================================================
 
