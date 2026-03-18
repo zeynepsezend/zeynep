@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from typing import Any, TypedDict
 
 from langchain_openai import ChatOpenAI
@@ -12,8 +11,7 @@ from mcp_client import McpClient
 
 class AgentState(TypedDict):
     messages: list[dict[str, str]]
-    pending_tool_name: str | None
-    pending_tool_arguments: dict[str, Any] | None
+    pending_tool_calls: list[dict[str, Any]] | None
     final_response: str | None
     iteration: int
     max_iterations: int
@@ -27,71 +25,123 @@ Available tools:
 {tool_catalog}
 
 Return strictly valid JSON with exactly one of the following shapes:
-1) {{"action": "final", "final_response": "..."}}
-2) {{"action": "tool", "tool_name": "<tool-name>", "arguments": {{...}}}}
+1) {{"final_response": "..."}}
+2) {{"tool_call": {{"name": "<tool-name>", "arguments": {{...}}}}}}
+3) {{"tool_calls": [{{"name": "<tool-name>", "arguments": {{...}}}}, ...]}}
+If you return tool calls, use exactly one JSON object.
 """
 
 
+def _format_node_label(node_id: int, node_type: str, detail: str) -> str:
+    if detail:
+        return f"[{node_id:02d}] {node_type}: {detail}"
+    return f"[{node_id:02d}] {node_type}"
+
+
+def _extract_tool_sequence(messages: list[dict[str, str]]) -> list[str]:
+    tool_names: list[str] = []
+    for message in messages:
+        role = message.get("role")
+        content = message.get("content", "")
+
+        if role == "assistant":
+            parsed = json.loads(content)
+            tool_call = parsed.get("tool_call")
+            if isinstance(tool_call, dict):
+                tool_name = tool_call["name"]
+                tool_names.append(tool_name)
+
+    return tool_names
+
+
+def _print_execution_graph_ascii(messages: list[dict[str, str]], final_response: str) -> None:
+    print("\nExecution graph (ASCII):")
+
+    nodes: list[str] = []
+    node_id = 1
+    nodes.append(_format_node_label(node_id, "start", "user_prompt"))
+
+    for tool_name in _extract_tool_sequence(messages):
+        node_id += 1
+        nodes.append(_format_node_label(node_id, "tool", tool_name))
+
+    node_id += 1
+    nodes.append(_format_node_label(node_id, "final", "response"))
+
+    print(nodes[0])
+    for node in nodes[1:]:
+        print("  |")
+        print("  v")
+        print(node)
+
+    print("\nFinal response summary:")
+    print(final_response)
+
+
 def _parse_llm_json(content: str) -> dict[str, Any]:
-    fenced_match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", content, flags=re.IGNORECASE)
-    if fenced_match is not None:
-        fenced_payload = fenced_match.group(1)
-        parsed_fenced = json.loads(fenced_payload)
-        if not isinstance(parsed_fenced, dict):
+    try:
+        parsed = json.loads(content)
+        if not isinstance(parsed, dict):
             raise RuntimeError("LLM JSON response must be an object")
-        return parsed_fenced
+        return parsed
+    except json.JSONDecodeError as exc:
+        if "Extra data" not in str(exc):
+            raise
 
-    decoder = json.JSONDecoder()
-    json_start = content.find("{")
-    if json_start == -1:
-        raise RuntimeError("LLM response did not include a JSON object")
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    if not lines:
+        raise RuntimeError("LLM response was empty")
 
-    parsed, _ = decoder.raw_decode(content, idx=json_start)
-    if not isinstance(parsed, dict):
-        raise RuntimeError("LLM JSON response must be an object")
-    return parsed
+    tool_calls: list[dict[str, Any]] = []
+    for line in lines:
+        parsed_line = json.loads(line)
+        if not isinstance(parsed_line, dict):
+            raise RuntimeError("Each JSON line must be an object")
+        tool_call = parsed_line.get("tool_call")
+        if not isinstance(tool_call, dict):
+            raise RuntimeError("Each JSON line must contain 'tool_call'")
+        tool_calls.append(tool_call)
+
+    return {"tool_calls": tool_calls}
 
 
 def _normalize_llm_decision(parsed: dict[str, Any]) -> dict[str, Any]:
-    if "action" in parsed:
-        action_value = parsed["action"]
-        if action_value not in {"final", "tool"}:
-            raise RuntimeError("LLM action must be either 'final' or 'tool'")
-        return parsed
-
-    # Support tool-call decisions that omit explicit action.
-    if "tool_name" in parsed and "arguments" in parsed:
-        return {
-            "action": "tool",
-            "tool_name": parsed["tool_name"],
-            "arguments": parsed["arguments"],
-        }
-
-    if "tool_call" in parsed and isinstance(parsed["tool_call"], dict):
-        tool_call = parsed["tool_call"]
-        return {
-            "action": "tool",
-            "tool_name": tool_call.get("name"),
-            "arguments": tool_call.get("arguments"),
-        }
-
-    if "tool_calls" in parsed and isinstance(parsed["tool_calls"], list) and parsed["tool_calls"]:
-        first_call = parsed["tool_calls"][0]
-        if isinstance(first_call, dict):
-            return {
-                "action": "tool",
-                "tool_name": first_call.get("name"),
-                "arguments": first_call.get("arguments"),
-            }
-
-    # Support direct-answer decisions that omit explicit action.
     if "final_response" in parsed:
         return {
             "action": "final",
             "final_response": parsed["final_response"],
         }
 
-    raise RuntimeError(f"LLM decision missing required fields: {parsed}")
+    tool_call = parsed.get("tool_call")
+    if isinstance(tool_call, dict):
+        return {
+            "action": "tool",
+            "tool_calls": [
+                {
+                    "tool_name": tool_call["name"],
+                    "arguments": tool_call["arguments"],
+                }
+            ],
+        }
+
+    tool_calls = parsed.get("tool_calls")
+    if isinstance(tool_calls, list) and tool_calls:
+        normalized_tool_calls: list[dict[str, Any]] = []
+        for tool in tool_calls:
+            if not isinstance(tool, dict):
+                raise RuntimeError("Each tool call must be an object")
+            normalized_tool_calls.append(
+                {
+                    "tool_name": tool["name"],
+                    "arguments": tool["arguments"],
+                }
+            )
+        return {
+            "action": "tool",
+            "tool_calls": normalized_tool_calls,
+        }
+
+    raise RuntimeError("LLM response must include either 'final_response' or 'tool_call'")
 
 
 def _format_tools(tools: list[dict[str, Any]]) -> str:
@@ -107,8 +157,7 @@ def _format_tools(tools: list[dict[str, Any]]) -> str:
 def build_initial_state(user_prompt: str, tools: list[dict[str, Any]], max_iterations: int) -> AgentState:
     return {
         "messages": [{"role": "user", "content": user_prompt}],
-        "pending_tool_name": None,
-        "pending_tool_arguments": None,
+        "pending_tool_calls": None,
         "final_response": None,
         "iteration": 0,
         "max_iterations": max_iterations,
@@ -153,75 +202,73 @@ def run_agent(
         if not isinstance(content, str):
             raise RuntimeError("LLM response content must be a string")
 
-        parsed = _normalize_llm_decision(_parse_llm_json(content))
+        try:
+            parsed = _normalize_llm_decision(_parse_llm_json(content))
+        except Exception:
+            print("\n[graph][reason] Raw LLM response before crash:")
+            print(content)
+            raise
         dbg(f"[graph][reason] Parsed decision: {parsed}")
 
         action = parsed["action"]
         if action == "final":
             final_response = parsed["final_response"]
-            if not isinstance(final_response, str):
-                raise RuntimeError("final_response must be a string")
 
             state["final_response"] = final_response
-            state["pending_tool_name"] = None
-            state["pending_tool_arguments"] = None
+            state["pending_tool_calls"] = None
             dbg("[graph][reason] Decision=final")
             return state
 
         if action == "tool":
-            tool_name = parsed["tool_name"]
-            arguments = parsed["arguments"]
-            if not isinstance(tool_name, str):
-                raise RuntimeError("tool_name must be a string")
-            if not isinstance(arguments, dict):
-                raise RuntimeError("arguments must be an object")
-
-            state["pending_tool_name"] = tool_name
-            state["pending_tool_arguments"] = arguments
-            dbg(f"[graph][reason] Decision=tool | tool_name={tool_name} | arguments={arguments}")
+            tool_calls = parsed["tool_calls"]
+            state["pending_tool_calls"] = tool_calls
+            dbg(f"[graph][reason] Decision=tool | tool_calls={tool_calls}")
             return state
 
         raise RuntimeError("LLM action must be either 'final' or 'tool'")
 
     def tool_node(state: AgentState) -> AgentState:
         dbg("[graph][tool] Enter node")
-        if state["pending_tool_name"] is None or state["pending_tool_arguments"] is None:
+        if not state["pending_tool_calls"]:
             raise RuntimeError("Tool node called without pending tool call")
 
-        state["iteration"] += 1
-        if state["iteration"] > state["max_iterations"]:
-            raise RuntimeError("Max iterations exceeded")
+        for pending_tool in state["pending_tool_calls"]:
+            state["iteration"] += 1
+            if state["iteration"] > state["max_iterations"]:
+                raise RuntimeError("Max iterations exceeded")
 
-        dbg(
-            f"[graph][tool] Calling tool | iteration={state['iteration']} | "
-            f"name={state['pending_tool_name']} | args={state['pending_tool_arguments']}"
-        )
+            tool_name = pending_tool["tool_name"]
+            tool_arguments = pending_tool["arguments"]
 
-        tool_output = mcp_client.call_tool(state["pending_tool_name"], state["pending_tool_arguments"])
-        dbg(f"[graph][tool] Tool output: {tool_output}")
+            dbg(
+                f"[graph][tool] Calling tool | iteration={state['iteration']} | "
+                f"name={tool_name} | args={tool_arguments}"
+            )
 
-        state["messages"].append(
-            {
-                "role": "assistant",
-                "content": json.dumps(
-                    {
-                        "tool_call": {
-                            "name": state["pending_tool_name"],
-                            "arguments": state["pending_tool_arguments"],
+            tool_output = mcp_client.call_tool(tool_name, tool_arguments)
+            dbg(f"[graph][tool] Tool output: {tool_output}")
+
+            state["messages"].append(
+                {
+                    "role": "assistant",
+                    "content": json.dumps(
+                        {
+                            "tool_call": {
+                                "name": tool_name,
+                                "arguments": tool_arguments,
+                            }
                         }
-                    }
-                ),
-            }
-        )
-        state["messages"].append(
-            {
-                "role": "user",
-                "content": f"Tool result: {tool_output}",
-            }
-        )
+                    ),
+                }
+            )
+            state["messages"].append(
+                {
+                    "role": "user",
+                    "content": f"Tool result: {tool_output}",
+                }
+            )
 
-        state["pending_tool_name"] = None
-        state["pending_tool_arguments"] = None
+        state["pending_tool_calls"] = None
         return state
 
     def route_after_reason(state: AgentState) -> str:
@@ -231,6 +278,7 @@ def run_agent(
         dbg("[graph][route] reason -> run_tool")
         return "run_tool"
 
+    # Graph shape (static): START -> reason -> (tool or END), and tool -> reason.
     graph = StateGraph(AgentState)
     graph.add_node("reason", reason_node)
     graph.add_node("tool", tool_node)
@@ -248,6 +296,7 @@ def run_agent(
     app = graph.compile()
     dbg("[graph] Graph compiled")
 
+    # Runtime path (dynamic): depends on how many tool calls happen for this prompt.
     final_state = app.invoke(build_initial_state(user_prompt, tools, max_iterations))
     dbg(f"[graph] Final state: {final_state}")
     final_response = final_state.get("final_response")
@@ -256,6 +305,7 @@ def run_agent(
 
     print("\nAgent graph (ASCII):")
     app.get_graph().print_ascii()
+    _print_execution_graph_ascii(final_state["messages"], final_response)
 
     dbg("[graph] Completed successfully")
 
