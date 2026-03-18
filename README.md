@@ -91,7 +91,7 @@ Claude Desktop is another LLM frontend application that allows you to connect to
 
 Again, Claude Desktop will not be the engine for the studio project, just a testing tool.
 
-## Package Management
+### Package Management
 
 To ensure that we can manage dependencies and keep our Grasshopper environments consistent across different machines, we will need to be thoughtful on the packages used in the Grasshopper definitions.  Each team should limit their use of external packages to those that are absolutely necessary and ensure that any required packages are clearly documented. This will help prevent conflicts and make it easier to set up the development environment on different machines.
 
@@ -104,6 +104,17 @@ Please keep a record of all the packages you use in your Grasshopper definitions
 The repository now includes a minimal Python agent implementation in `python/main.py`.
 This implementation is strict fail-fast by design: no retry, no fallback, and no recovery layer.
 
+### Python Environment
+
+It is highly recommended to use a virtual environment for the Python agent to avoid conflicts with other Python packages on your system. A simple option is to use `venv`:
+
+```bash
+python -m venv .venv # This creates a virtual environment directory named '.venv'
+& .\.venv\Scripts\Activate.ps1 # On Windows PowerShell this sets the current session to use the virtual environment
+```
+
+A virtual environment helps isolate the Python dependencies for this project from other projects on your system, reducing the risk of version conflicts, and making it easier to manage the installed packages.
+
 ### Install
 
 ```bash
@@ -114,12 +125,12 @@ pip install -r requirements.txt
 
 Set environment variables before running:
 
-- `OPENAI_API_KEY`
-- `OPENAI_BASE_URL` (must include `/v1`, example: `http://localhost:1234/v1`)
-- `OPENAI_MODEL` (example: `qwen2.5-7b-instruct`)
+- `OPENAI_API_KEY` (if using your endpoint does not require an API key, put in a placeholder such as `"lm-studio"`)
+- `OPENAI_BASE_URL` (must include `/v1`, example: `"http://localhost:1234/v1"`)
+- `OPENAI_MODEL` (example: `"qwen2.5-7b-instruct"`)
 
 The app auto-loads `.env` from repository root before reading these values.
-`OPENAI_API_KEY` must be non-empty.
+`OPENAI_API_KEY` must be non-empty, use a placeholder value such as `"lm-studio"` if your endpoint does not require an API key.
 
 MCP endpoint settings are loaded from `mcp.json` in the repository root.
 The agent uses the first server entry in `mcpServers`.
@@ -129,6 +140,7 @@ Optional:
 
 - `REQUEST_TIMEOUT_SECONDS` (default `30`)
 - `MAX_ITERATIONS` (default `4`)
+- `DEBUG_GRAPH` (default `false`; set `true` to print StateGraph step traces)
 
 ### Run
 
@@ -136,4 +148,22 @@ Optional:
 python python/main.py "Use available tools to solve this prompt"
 ```
 
-The script prints selected model/base URL, MCP endpoint information, discovered tool count, and final response.
+The script prints selected model/base URL, MCP endpoint information, discovered tool count, and final response. If DEBUG_GRAPH is set to true, it will also print step traces of the StateGraph execution, and the intermediate states of the agent as it processes the prompt.
+
+### Default Agent Graph
+
+The agent graph is in `python/agent_graph.py` and defines the default workflow for the Python agent using LangGraph and MCP tools. It specifies how the agent should process prompts, interact with the MCP tools, and generate responses.
+
+```mermaid
+graph TD
+    A[Start] --> B[Receive Prompt]
+    B --> C[Process Prompt with LangGraph]
+    C --> D[Call MCP Tools]
+    D --> E[Generate Response]
+    E --> F[End]
+```
+
+You will need to modify `python/agent_graph.py` if you want to change the default workflow of the Python agent. This file defines how the agent processes prompts, interacts with MCP tools, and generates responses. The implementation here is designed to be minimal and fail-fast, meaning it does not include retries, fallbacks, or recovery layers. You can extend or modify this graph to suit your specific needs for the studio project.
+
+Also, the current implementation exposes all tools to the agent without any filtering or access control. As part of your thoughtful agent design, you will be expected to implement appropriate filtering and routing of tool access to ensure that the agent only uses the tools it is authorized to use, and are best for the specific task at hand. For example the default implementation exposes volume and area calculations for spheres, cones, cylinders, cubes, triangular pyramids and square pyramids. Your agent could first determine if the user's prompt is area or volume based, and then only expose the relevant tools for either volume or area. Or your agent could first determine if the user is asking about a specific shape, and then only expose the tools relevant to that shape. It is up to you to implement this filtering and routing logic in your agent graph.
+
