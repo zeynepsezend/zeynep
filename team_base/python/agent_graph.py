@@ -81,7 +81,13 @@ Return strictly valid JSON with exactly one of the following shapes:
 1) {{"final_response": "..."}}
 2) {{"tool_call": {{"name": "<tool-name>", "arguments": {{...}}}}}}
 3) {{"tool_calls": [{{"name": "<tool-name>", "arguments": {{...}}}}, ...]}}
-If you return tool calls, use exactly one JSON object.
+Output rules:
+- Return JSON only, with no prose or explanation.
+- Do not use markdown code fences.
+- Do not use XML tags like <function_calls>.
+- Do not include any text before or after the JSON object.
+- Do not include flags such as ```json or ```python.
+- If you return tool calls, they must be inside one JSON object using either "tool_call" or "tool_calls".
 """
 
 
@@ -228,6 +234,7 @@ def run_agent(
     debug_graph: bool,
     timeout_seconds: float,
     max_iterations: int,
+    llm_provider: str,
 ) -> str:
     def dbg(message: str) -> None:
         if debug_graph:
@@ -237,13 +244,15 @@ def run_agent(
     dbg(f"[graph] Model: {llm_model}")
     dbg(f"[graph] Max iterations: {max_iterations}")
 
+    model_kwargs={"response_format": {"type": "json_object"}}
+
     llm = ChatOpenAI(
         api_key=api_key,
         base_url=base_url,
         model=llm_model,
         timeout=timeout_seconds,
         temperature=0,
-        model_kwargs={"response_format": {"type": "json_object"}},
+        model_kwargs=model_kwargs,
     )
 
     def reason_node(state: AgentState) -> AgentState:

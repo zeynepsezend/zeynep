@@ -40,6 +40,7 @@ def main() -> None:
         debug_graph=settings.debug_graph,
         timeout_seconds=settings.request_timeout_seconds,
         max_iterations=settings.max_iterations,
+        llm_provider=settings.llm_provider,
     )
     print("\nAgent response:\n")
     print(response)
