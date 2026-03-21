@@ -62,7 +62,7 @@ from langgraph.graph import END, START, StateGraph
 from mcp_client import McpClient
 from nodes.reason_node import create_reason_node
 from nodes.route_after_reason import create_route_after_reason
-from nodes.tool_node import create_tool_node
+from nodes.tool_node import create_tool_node, get_llm_response_format
 
 
 class AgentState(TypedDict):
@@ -161,7 +161,7 @@ def run_agent(
     dbg(f"[graph] Model: {llm_model}")
     dbg(f"[graph] Max iterations: {max_iterations}")
 
-    model_kwargs={"response_format": {"type": "json_object"}}
+    model_kwargs = get_llm_response_format()
 
     llm = ChatOpenAI(
         api_key=api_key,

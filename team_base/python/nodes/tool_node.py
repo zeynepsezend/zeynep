@@ -6,6 +6,68 @@ from typing import Any, Callable
 from mcp_client import McpClient
 
 
+LLM_DECISION_SCHEMA: dict[str, Any] = {
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "final_response": {"type": "string"},
+            },
+            "required": ["final_response"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "tool_call": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "arguments": {"type": "object"},
+                    },
+                    "required": ["name", "arguments"],
+                    "additionalProperties": False,
+                },
+            },
+            "required": ["tool_call"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "tool_calls": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string"},
+                            "arguments": {"type": "object"},
+                        },
+                        "required": ["name", "arguments"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["tool_calls"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+
+def get_llm_response_format() -> dict[str, Any]:
+    return {
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "agent_decision",
+                "schema": LLM_DECISION_SCHEMA,
+            },
+        }
+    }
+
+
 def create_tool_node(
     mcp_client: McpClient,
     dbg: Callable[[str], None],

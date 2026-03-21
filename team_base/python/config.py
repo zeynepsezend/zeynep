@@ -48,17 +48,6 @@ def _parse_bool_env(name: str, default: bool) -> bool:
     raise ValueError(f"Invalid value for {name}: {raw_value}. Allowed values are 'true' or 'false'.")
 
 
-# def _validate_openai_base_url(base_url: str) -> str:
-#     parsed = urlparse(base_url)
-#     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-#         raise ValueError("OPENAI_BASE_URL must be a valid http/https URL")
-
-#     if not parsed.path.rstrip("/").endswith("/v1"):
-#         raise ValueError("OPENAI_BASE_URL must include '/v1' for OpenAI-compatible Chat Completions")
-
-#     return base_url
-
-
 def _load_mcp_server_from_json(config_path: Path) -> tuple[str, str]:
     if not config_path.exists():
         raise ValueError(f"MCP config file not found: {config_path}")
