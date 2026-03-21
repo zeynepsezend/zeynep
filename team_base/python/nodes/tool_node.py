@@ -108,6 +108,7 @@ def get_llm_response_format(tools: list[dict[str, Any]]) -> dict[str, Any]:
 
 def create_tool_node(
     mcp_client: McpClient,
+    allowed_tools: list[dict[str, Any]],
     dbg: Callable[[str], None],
 ) -> Callable[[dict[str, Any]], dict[str, Any]]:
     '''
@@ -115,6 +116,9 @@ def create_tool_node(
     The tool node will process pending tool calls in the state, call the appropriate tools
     via the MCP client, and update the state with the results.
     '''
+
+    allowed_tool_names = {str(tool.get("name")) for tool in allowed_tools if tool.get("name")}
+
     def tool_node(state: dict[str, Any]) -> dict[str, Any]:
         dbg("[graph][tool] Enter node")
         if not state["pending_tool_calls"]:
@@ -126,6 +130,9 @@ def create_tool_node(
                 raise RuntimeError("Max iterations exceeded")
 
             tool_name = pending_tool["tool_name"]
+            if tool_name not in allowed_tool_names:
+                raise RuntimeError(f"Tool '{tool_name}' is not allowed in this domain")
+
             raw_tool_arguments = pending_tool["arguments"]
             if not isinstance(raw_tool_arguments, dict):
                 raise RuntimeError("Tool arguments must be an object")
