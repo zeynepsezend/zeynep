@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 import json
-from typing import Any
 
 
 def _format_node_label(node_id: int, node_type: str, detail: str) -> str:
