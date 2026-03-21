@@ -59,6 +59,7 @@ from typing import Any, TypedDict
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 
+from execution_graph_ascii import print_execution_graph_ascii
 from mcp_client import McpClient
 from nodes.reason_node import create_reason_node
 from nodes.route_after_reason import create_route_after_reason
@@ -66,6 +67,13 @@ from nodes.tool_node import create_tool_node, get_llm_response_format
 
 
 class AgentState(TypedDict):
+    '''
+    Represents the state of the AI agent during its reasoning and tool-calling loop.
+    This includes the conversation history, any pending tool calls, the final response 
+    if available, the current iteration count, the maximum allowed iterations, and a 
+    formatted catalog of available tools.
+    '''
+
     messages: list[dict[str, str]]
     pending_tool_calls: list[dict[str, Any]] | None
     final_response: str | None
@@ -74,53 +82,13 @@ class AgentState(TypedDict):
     tool_catalog: str
 
 
-def _format_node_label(node_id: int, node_type: str, detail: str) -> str:
-    if detail:
-        return f"[{node_id:02d}] {node_type}: {detail}"
-    return f"[{node_id:02d}] {node_type}"
-
-
-def _extract_tool_sequence(messages: list[dict[str, str]]) -> list[str]:
-    tool_names: list[str] = []
-    for message in messages:
-        role = message.get("role")
-        content = message.get("content", "")
-
-        if role == "assistant":
-            parsed = json.loads(content)
-            tool_call = parsed.get("tool_call")
-            if isinstance(tool_call, dict):
-                tool_name = tool_call["name"]
-                tool_names.append(tool_name)
-
-    return tool_names
-
-
-def _print_execution_graph_ascii(messages: list[dict[str, str]], final_response: str) -> None:
-    print("\nExecution graph (ASCII):")
-
-    nodes: list[str] = []
-    node_id = 1
-    nodes.append(_format_node_label(node_id, "start", "user_prompt"))
-
-    for tool_name in _extract_tool_sequence(messages):
-        node_id += 1
-        nodes.append(_format_node_label(node_id, "tool", tool_name))
-
-    node_id += 1
-    nodes.append(_format_node_label(node_id, "final", "response"))
-
-    print(nodes[0])
-    for node in nodes[1:]:
-        print("  |")
-        print("  v")
-        print(node)
-
-    print("\nFinal response summary:")
-    print(final_response)
-
-
 def _format_tools(tools: list[dict[str, Any]]) -> str:
+    '''
+    Formats the list of available tools into a human-readable string.
+    Each tool is represented with its name, description, and input schema.
+    This reflects the definitions in the Swiftlet definition for each tool.
+    '''
+
     lines: list[str] = []
     for tool in tools:
         name = str(tool.get("name", "<unknown>"))
@@ -131,6 +99,11 @@ def _format_tools(tools: list[dict[str, Any]]) -> str:
 
 
 def build_initial_state(user_prompt: str, tools: list[dict[str, Any]], max_iterations: int) -> AgentState:
+    '''
+    Builds the initial state for the AI agent, including the user prompt,
+    the formatted tool catalog, and the maximum number of iterations allowed.
+    '''
+
     return {
         "messages": [{"role": "user", "content": user_prompt}],
         "pending_tool_calls": None,
@@ -153,7 +126,17 @@ def run_agent(
     max_iterations: int,
     llm_provider: str,
 ) -> str:
+    '''
+    Runs the AI agent loop, which involves reasoning, calling tools, and producing a final response.
+    This function sets up the agent graph, compiles it, and executes it with the initial state.
+    It also prints the execution graph in ASCII format for debugging purposes.
+    '''
+
     def dbg(message: str) -> None:
+        '''
+        Prints a debug message if debug_graph is True.
+        '''
+
         if debug_graph:
             print(message)
 
@@ -163,6 +146,7 @@ def run_agent(
 
     model_kwargs = get_llm_response_format()
 
+    # Initialize the language model with the specified parameters.
     llm = ChatOpenAI(
         api_key=api_key,
         base_url=base_url,
@@ -172,9 +156,11 @@ def run_agent(
         model_kwargs=model_kwargs,
     )
 
-    reason_node = create_reason_node(llm=llm, dbg=dbg)
-    tool_node = create_tool_node(mcp_client=mcp_client, dbg=dbg)
-    route_after_reason = create_route_after_reason(dbg=dbg)
+    # Create the nodes for the agent graph.
+    # classifier_node = create_classifier_node(llm=llm, dbg=dbg) # This node classifies the user's prompt to determine if they are asking about a volume or area calculation.
+    reason_node = create_reason_node(llm=llm, dbg=dbg) # This node handles the reasoning step of the agent, generating the next action or final response based on the current state.
+    tool_node = create_tool_node(mcp_client=mcp_client, dbg=dbg) # This node handles calling external tools via the MCP client.
+    route_after_reason = create_route_after_reason(dbg=dbg) # This node decides the next step after the reasoning node, based on the agent's output.
 
     # Graph shape (static): START -> reason -> (tool or END), and tool -> reason.
     graph = StateGraph(AgentState)
@@ -203,7 +189,7 @@ def run_agent(
 
     print("\nAgent graph (ASCII):")
     app.get_graph().print_ascii()
-    _print_execution_graph_ascii(final_state["messages"], final_response)
+    print_execution_graph_ascii(final_state["messages"], final_response)
 
     dbg("[graph] Completed successfully")
 
