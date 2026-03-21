@@ -13,13 +13,12 @@ from langgraph.graph import END, START, StateGraph
 from execution_graph_ascii import print_execution_graph_ascii
 from mcp_client import McpClient
 from nodes.classifier_node import CLASSIFIER_RESPONSE_FORMAT, create_classifier_node
-from nodes.domain_registry import AVAILABLE_DOMAINS, DOMAIN_REGISTRY
+from nodes.domain_registry import AVAILABLE_DOMAINS, DOMAIN_REGISTRY, build_domain_prompt, group_tools_by_domain
 from nodes.reason_node import create_reason_node
 from nodes.routing import (
     WorkflowState,
     create_route_after_reason,
     create_route_after_classifier,
-    create_route_after_run_domain,
 )
 from nodes.tool_node import create_tool_node, get_llm_response_format
 
@@ -108,46 +107,6 @@ def _create_chat_llm(
     )
 
 
-def _group_tools_by_domain(tools: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
-    '''
-    Split the MCP tools into the small domain-specific collections used by the
-    child agents. Right now the tool names are the simplest source of truth:
-    tools containing "volume" go to the volume agent, and tools containing
-    "area" go to the area agent.
-    '''
-
-    grouped_tools: dict[str, list[dict[str, Any]]] = {
-        domain: [] for domain in AVAILABLE_DOMAINS
-    }
-
-    for tool in tools:
-        tool_name = str(tool.get("name", "")).lower()
-        for domain_name in AVAILABLE_DOMAINS:
-            domain_config = DOMAIN_REGISTRY[domain_name]
-            match_tokens = domain_config.get("tool_name_contains", [])
-            if not isinstance(match_tokens, list):
-                continue
-            if any(str(token).lower() in tool_name for token in match_tokens):
-                grouped_tools[domain_name].append(tool)
-                break
-
-    return grouped_tools
-
-
-def _build_domain_prompt(domain_name: str, user_prompt: str) -> str:
-    '''
-    When a sub-agent runs, we remind it to solve only its own slice of the job.
-    That keeps the volume agent from trying to answer area questions, and vice
-    versa, even when the original user prompt asks for both.
-    '''
-
-    return (
-        f"You are the {domain_name} specialist inside a larger workflow. "
-        f"Only solve the parts of the request related to {domain_name}.\n\n"
-        f"Original user request:\n{user_prompt}"
-    )
-
-
 def _run_domain_agent(
     domain_name: str,
     user_prompt: str,
@@ -204,7 +163,7 @@ def _run_domain_agent(
     app = graph.compile() # Compile the domain sub-agent graph into an executable app
     final_state = app.invoke(
         build_initial_state(
-            _build_domain_prompt(domain_name, user_prompt),
+            build_domain_prompt(domain_name, user_prompt),
             tools,
             max_iterations,
         )
@@ -355,7 +314,7 @@ def run_agent(
     dbg(f"[graph] Model: {llm_model}")
     dbg(f"[graph] Max iterations: {max_iterations}")
 
-    grouped_tools = _group_tools_by_domain(tools)
+    grouped_tools = group_tools_by_domain(tools)
 
     classifier_llm = _create_chat_llm(
         api_key=api_key,
@@ -382,10 +341,6 @@ def run_agent(
         )
 
     route_after_classifier = create_route_after_classifier(dbg=dbg)
-    route_after_run_domain = {
-        domain: create_route_after_run_domain(domain_name=domain, dbg=dbg)
-        for domain in AVAILABLE_DOMAINS
-    }
 
     # This outer graph does only orchestration. The actual reasoning and tool
     # calls happen inside the reusable domain sub-agents created above.
@@ -408,23 +363,11 @@ def run_agent(
         classify_targets,
     )
 
-    # For single-domain requests, these conditional edges send control directly
-    # to combine. For multi-domain requests, they route to a sink and wait for the
-    # explicit parallel join edge below.
-    for domain in AVAILABLE_DOMAINS:
-        graph.add_conditional_edges(
-            domain_node_names[domain],
-            route_after_run_domain[domain],
-            {
-                "combine": "combine",
-                "wait_for_parallel_join": "wait_for_parallel_join",
-            },
-        )
-
-    # Join point for multi-domain dispatch: combine runs only after all known
-    # domain nodes have reported completion (selected domains compute results,
-    # non-selected domains no-op).
-    graph.add_edge([domain_node_names[domain] for domain in AVAILABLE_DOMAINS], "combine")
+    # Every domain runner completes first, then we synchronize once at the
+    # join node. This works for both single-domain and multi-domain requests
+    # because non-selected domains no-op quickly.
+    graph.add_edge([domain_node_names[domain] for domain in AVAILABLE_DOMAINS], "wait_for_parallel_join")
+    graph.add_edge("wait_for_parallel_join", "combine")
 
     graph.add_edge("combine", END)
 

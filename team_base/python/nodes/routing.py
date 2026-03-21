@@ -53,24 +53,20 @@ def create_route_after_reason(dbg: Callable[[str], None]) -> Callable[[dict[str,
 
 def create_route_after_classifier(dbg: Callable[[str], None]) -> Callable[[WorkflowState], str | list[Send]]:
     '''
-    Decide which top-level branch should run next based on selected_domains.
+    Dispatch all domain runner nodes in one step using Send packets.
 
-    - one selected domain -> run that domain node directly
-    - multiple selected domains -> return Send packets for parallel execution
+    Selected domains will do real work, and non-selected domains will no-op.
+    This gives us one consistent barrier pattern for both single-domain and
+    multi-domain requests.
     '''
 
-    def route_after_classifier(state: WorkflowState) -> str:
+    def route_after_classifier(state: WorkflowState) -> list[Send]:
         selected_domains = state["selected_domains"]
         if not selected_domains:
             raise RuntimeError("Workflow classifier returned no selected domains")
 
         unique_domains = list(dict.fromkeys(selected_domains))
-        if len(unique_domains) == 1:
-            next_node = f"run_{unique_domains[0]}"
-            dbg(f"[graph][route] classify -> {next_node}")
-            return next_node
-
-        dbg("[graph][route] classify -> direct multi-send")
+        dbg("[graph][route] classify -> direct multi-send (all domains)")
         return [
             Send(
                 f"run_{domain}",
@@ -85,30 +81,5 @@ def create_route_after_classifier(dbg: Callable[[str], None]) -> Callable[[Workf
         ]
 
     return route_after_classifier
-
-
-def create_route_after_run_domain(domain_name: str, dbg: Callable[[str], None]) -> Callable[[WorkflowState], str]:
-    '''
-    Route after one domain branch:
-    - If this is the only selected domain, go straight to combine
-        - If multiple domains are selected, wait for the explicit graph join edge.
-    '''
-
-    def route_after_run_domain(state: WorkflowState) -> str:
-        selected_domains = state["selected_domains"]
-        selected_set = set(selected_domains)
-
-        if domain_name not in selected_set:
-            dbg(f"[graph][route] run_{domain_name} -> wait_for_parallel_join (domain not selected)")
-            return "wait_for_parallel_join"
-
-        if len(selected_set) == 1:
-            dbg(f"[graph][route] run_{domain_name} -> combine")
-            return "combine"
-
-        dbg(f"[graph][route] run_{domain_name} -> wait_for_parallel_join")
-        return "wait_for_parallel_join"
-
-    return route_after_run_domain
 
 
