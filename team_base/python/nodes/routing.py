@@ -34,43 +34,26 @@ def create_route_after_reason(dbg: Callable[[str], None]) -> Callable[[dict[str,
 
 def create_route_after_classifier(dbg: Callable[[str], None]) -> Callable[[WorkflowState], str]:
     '''
-    Decide which domain branch should run first.
+    Decide which top-level branch should run next.
 
-    For the "both" route we deliberately start with volume and then continue to
-    area. Doing the two branches sequentially keeps the workflow simple for a
-    novice reader while still separating the two domains cleanly.
+    - volume -> run only the volume branch
+    - area -> run only the area branch
+    - both -> go to a fan-out node that launches volume and area in parallel
     '''
 
     def route_after_classifier(state: WorkflowState) -> str:
         route = state["route"]
         if route == "volume":
-            dbg("[graph][route] classify -> run_volume")
-            return "run_volume"
+            dbg("[graph][route] classify -> run_volume_only")
+            return "run_volume_only"
         if route == "area":
-            dbg("[graph][route] classify -> run_area")
-            return "run_area"
+            dbg("[graph][route] classify -> run_area_only")
+            return "run_area_only"
         if route == "both":
-            dbg("[graph][route] classify -> run_volume -> run_area")
-            return "run_volume"
+            dbg("[graph][route] classify -> fan_out_both")
+            return "fan_out_both"
         raise RuntimeError("Workflow classifier did not choose a valid route")
 
     return route_after_classifier
-
-
-def create_route_after_volume(dbg: Callable[[str], None]) -> Callable[[WorkflowState], str]:
-    '''
-    After the volume branch finishes, either continue to the area branch or go
-    straight to the final combine step.
-    '''
-
-    def route_after_volume(state: WorkflowState) -> str:
-        if state["route"] == "both":
-            dbg("[graph][route] run_volume -> run_area")
-            return "run_area"
-
-        dbg("[graph][route] run_volume -> combine")
-        return "combine"
-
-    return route_after_volume
 
 

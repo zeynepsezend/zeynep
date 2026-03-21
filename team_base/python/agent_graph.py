@@ -63,7 +63,7 @@ from execution_graph_ascii import print_execution_graph_ascii
 from mcp_client import McpClient
 from nodes.classifier_node import CLASSIFIER_RESPONSE_FORMAT, create_classifier_node
 from nodes.reason_node import create_reason_node
-from nodes.routing import WorkflowState, create_route_after_reason, create_route_after_classifier, create_route_after_volume
+from nodes.routing import WorkflowState, create_route_after_reason, create_route_after_classifier
 from nodes.tool_node import create_tool_node, get_llm_response_format
 
 
@@ -294,14 +294,15 @@ def _create_domain_runner_node(
             max_iterations=max_iterations,
         )
 
+        # Important for parallel fan-out: return only the field this branch owns.
+        # If each branch returns the entire state, LangGraph treats unchanged keys
+        # (like user_prompt/route) as concurrent writes and raises an error.
         if domain_name == "volume":
-            state["volume_response"] = response
+            return {"volume_response": response}
         elif domain_name == "area":
-            state["area_response"] = response
+            return {"area_response": response}
         else:
             raise RuntimeError(f"Unsupported domain runner: {domain_name}")
-
-        return state
 
     return run_domain
 
@@ -336,6 +337,17 @@ def _combine_results_node(state: WorkflowState) -> WorkflowState:
         raise RuntimeError("Workflow combine step did not produce a final response")
 
     state["final_response"] = final_response
+    return state
+
+
+def _fan_out_both_node(state: WorkflowState) -> WorkflowState:
+    '''
+    This is a tiny pass-through node used only to make the graph shape easy to
+    read: classify -> fan_out_both -> (run_volume_both and run_area_both).
+
+    The parallel behavior is created by giving this node two outgoing edges.
+    '''
+
     return state
 
 
@@ -408,33 +420,33 @@ def run_agent(
         max_iterations=max_iterations,
     )
     route_after_classifier = create_route_after_classifier(dbg=dbg)
-    route_after_volume = create_route_after_volume(dbg=dbg)
 
     # This outer graph does only orchestration. The actual reasoning and tool
     # calls happen inside the reusable domain sub-agents created above.
     graph = StateGraph(WorkflowState)
     graph.add_node("classify", classifier_node)
-    graph.add_node("run_volume", run_volume_node)
-    graph.add_node("run_area", run_area_node)
+    graph.add_node("fan_out_both", _fan_out_both_node)
+    graph.add_node("run_volume_only", run_volume_node)
+    graph.add_node("run_area_only", run_area_node)
+    graph.add_node("run_volume_both", run_volume_node)
+    graph.add_node("run_area_both", run_area_node)
     graph.add_node("combine", _combine_results_node)
     graph.add_edge(START, "classify")
     graph.add_conditional_edges(
         "classify",
         route_after_classifier,
         {
-            "run_volume": "run_volume",
-            "run_area": "run_area",
+            "run_volume_only": "run_volume_only",
+            "run_area_only": "run_area_only",
+            "fan_out_both": "fan_out_both",
         },
     )
-    graph.add_conditional_edges(
-        "run_volume",
-        route_after_volume,
-        {
-            "run_area": "run_area",
-            "combine": "combine",
-        },
-    )
-    graph.add_edge("run_area", "combine")
+    graph.add_edge("run_volume_only", "combine")
+    graph.add_edge("run_area_only", "combine")
+    graph.add_edge("fan_out_both", "run_volume_both")
+    graph.add_edge("fan_out_both", "run_area_both")
+    # Join point: combine runs only after both parallel branches finish.
+    graph.add_edge(["run_volume_both", "run_area_both"], "combine")
     graph.add_edge("combine", END)
 
     app = graph.compile()
