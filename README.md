@@ -1,6 +1,6 @@
 # AIA26 Studio README
 
-## Github Repository Structure
+## Github Repository Structure and Guidelines
 In this repository, you will find a directory for each team, labeled `team_01`, `team_02`, etc. Each team directory contains two Grasshopper Cluster files: one for MCP Tool definitions and one for MCP Tool results. Additionally, there is a working test Grasshopper definition in each team directory that is set up to run the Swiftlet MCP Server and expose only that team's tools defined in the clusters for testing with an LLM MCP Client.
 
 You'll also find a `python` directory that contains a minimal implementation of a Python agent using LangGraph and MCP tools. This implementation is designed to be a starting point for your development, and you will need to modify and extend it to create the more sophisticated agents required for the studio project.
@@ -11,15 +11,15 @@ Feel free to add any additional files or directories within your team's folder a
 
 Check out this link for information about managing branches on Github Desktop: https://docs.github.com/en/desktop/making-changes-in-a-branch/managing-branches-in-github-desktop
 
-## Team Base Directory
+### Team Base Directory
 
 The `team_base` directory contains the base example files for each team to start with. This includes the Grasshopper Cluster files for MCP Tool definitions and results, as well as the working test Grasshopper definition that is set up to run the Swiftlet MCP Server. We have copied these into each team's respective directory to provide a starting point for your development. But if you need to refer back to the original base files, you can always find them in the `team_base` directory.
 
-## All Teams Directory
+### All Teams Directory
 
 The `all_teams` directory is where the final merged versions of the MCP Tools can be found. The `tool_cluster.gh` file will allow you to run a Swiftlet MCP Server that exposes all the tools from all the teams, which can be useful for testing and development purposes. We do not want you to modify the `all_teams` directory until we are ready to merge everything together at the end of the studio project, so please focus your development efforts on your team's designated branch and folder until then. If you would like to see a change to the `tool_cluster.gh` file in the `all_teams` directory, please coordinate with the instructors to determine the best way to implement that change.
 
-## Pull Request Process
+### Pull Request Process
 
 Each week, each team must make a single pull request to merge their changes from their team branch into the main branch. This pull request should include all the updates and additions made to the MCP Tools and agent implementations for that week. The pull request will be reviewed by the instructors, and once approved, it will be merged into the main branch. This process ensures that all teams are contributing to the shared codebase in an organized manner and allows for any necessary feedback or adjustments to be made before merging. It's important to coordinate with your team members and communicate effectively to ensure that your pull request is complete and ready for review each week. ***The deadline is every Sunday at 11:59 PM, Barcelona time***, so make sure to plan your work accordingly to meet this deadline.
 
@@ -29,7 +29,7 @@ We will not be testing your tools or agents on a weekly basis, until near the en
 
 Check out this link for information about making pull requests on Github Desktop: https://docs.github.com/en/desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request-from-github-desktop
 
-## Coordination with Other Teams
+### Coordination with Other Teams
 
 It is important to make sure that your tool is not redundant with tools that other teams are building. We encourage you to communicate and coordinate with the other teams to ensure that you are building unique and complementary tools that can work together effectively in the final project. This will help create a more robust and versatile set of MCP Tools for the agents to use, and will also foster collaboration and knowledge sharing among the different teams.
 
