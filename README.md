@@ -1,5 +1,34 @@
 # AIA26 Studio README
 
+## Github Repository Structure
+In this repository, you will find a directory for each team, labeled `team_01`, `team_02`, etc. Each team directory contains two Grasshopper Cluster files: one for MCP Tool definitions and one for MCP Tool results. Additionally, there is a working test Grasshopper definition in each team directory that is set up to run the Swiftlet MCP Server and expose only that team's tools defined in the clusters for testing with an LLM MCP Client.
+
+You'll also find a `python` directory that contains a minimal implementation of a Python agent using LangGraph and MCP tools. This implementation is designed to be a starting point for your development, and you will need to modify and extend it to create the more sophisticated agents required for the studio project.
+
+Each team will have a separate branch in the repository where they will develop their MCP Tools and agent implementations. The main branch will be used to merge the final versions of the tools and agents from each team, creating a unified codebase that contains all the MCP Tools and agent implementations developed by the different teams. **It is crucial that your team only works within your designated branch and folder and does not modify any other team's files or branches.** This will help prevent conflicts and ensure that each team's work is properly isolated until we are ready to merge everything together at the end of the studio project.
+
+Feel free to add any additional files or directories within your team's folder as needed for your development, but please do not modify any files outside of your team's designated area. If you need to add shared resources or documentation that is relevant to all teams, please coordinate with the instructors to determine the best way to include that information without causing conflicts in the codebase.
+
+## Team Base Directory
+
+The `team_base` directory contains the base example files for each team to start with. This includes the Grasshopper Cluster files for MCP Tool definitions and results, as well as the working test Grasshopper definition that is set up to run the Swiftlet MCP Server. We have copied these into each team's respective directory to provide a starting point for your development. But if you need to refer back to the original base files, you can always find them in the `team_base` directory.
+
+## All Teams Directory
+
+The `all_teams` directory is where the final merged versions of the MCP Tools can be found. The `tool_cluster.gh` file will allow you to run a Swiftlet MCP Server that exposes all the tools from all the teams, which can be useful for testing and development purposes. We do not want you to modify the `all_teams` directory until we are ready to merge everything together at the end of the studio project, so please focus your development efforts on your team's designated branch and folder until then. If you would like to see a change to the `tool_cluster.gh` file in the `all_teams` directory, please coordinate with the instructors to determine the best way to implement that change.
+
+## Pull Request Process
+
+Each week, each team must make a single pull request to merge their changes from their team branch into the main branch. This pull request should include all the updates and additions made to the MCP Tools and agent implementations for that week. The pull request will be reviewed by the instructors, and once approved, it will be merged into the main branch. This process ensures that all teams are contributing to the shared codebase in an organized manner and allows for any necessary feedback or adjustments to be made before merging. It's important to coordinate with your team members and communicate effectively to ensure that your pull request is complete and ready for review each week. ***The deadline is every Sunday at 11:59 PM, Barcelona time***, so make sure to plan your work accordingly to meet this deadline.
+
+The instructors will review the pull requests each week and only approve them if they only contain changes within the team's designated folder and branch. If any changes are found outside of the team's designated area, the pull request will be rejected, and the team will not be able to merge their changes into the main branch until the following week. This is to ensure that each team's work remains isolated and does not interfere with the work of other teams until we are ready to merge everything together at the end of the studio project.
+
+We will not be testing your tools or agents on a weekly basis, until near the end of the studio project when we will be running a final evaluation. However, it is important that you follow the guidelines and structure outlined in this README and the project documentation to ensure that your tools and agents are developed in a way that is compatible with the overall project requirements and can be successfully integrated into the final codebase.
+
+## Coordination with Other Teams
+
+It is important to make sure that your tool is not redundant with tools that other teams are building. We encourage you to communicate and coordinate with the other teams to ensure that you are building unique and complementary tools that can work together effectively in the final project. This will help create a more robust and versatile set of MCP Tools for the agents to use, and will also foster collaboration and knowledge sharing among the different teams.
+
 ## Grasshopper MCP Tools
 
 Your application can interact with Rhino Grasshopper through the MCP Tools that your team defines.  The goal is to build a single repository that contains all the MCP Tools created by the different teams, allowing for agents created by different teams to access and use each other's tools.
