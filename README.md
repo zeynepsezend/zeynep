@@ -72,7 +72,9 @@ You will need to make sure that the tool names and the calculation logic are in 
 
 ![Tool Name List in Result Cluster](./readme_images/tool_name_list.png)
 
-It is important the output variables are named in a way that matches the Tool's description in the definition cluster, so that when the LLM MCP Client receives the output, it can correctly interpret and utilize the results based on the tool's intended functionality. You may need to expirement with the descriptions and output variable names to find the right balance of clarity and functionality for the LLM MCP Client to effectively use the tools you have created, especially if you are trying to capture more complex data or more nuanced results.
+It is important the output variables are named in a way that matches the Tool's description in the definition cluster, so that when the LLM MCP Client receives the output, it can correctly interpret and utilize the results based on the tool's intended functionality. You may need to experiment with the descriptions and output variable names to find the right balance of clarity and functionality for the LLM MCP Client to effectively use the tools you have created, especially if you are trying to capture more complex data or more nuanced results.
+
+You will also need to make sure that the OK output of the Tool Response node is connected to the Gate Or node's input in the result cluster, so that when a tool call is successfully processed, it allows the result to be logged correctly in the Data Recorder node.
 
 ### Running the Swiftlet Server
 
