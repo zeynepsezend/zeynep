@@ -1,5 +1,7 @@
 # AIA26 Studio README
 
+This README is intended to be a live document that will be updated throughout the course of the studio project. It provides important information about the structure of the studio and the organization of the Github repository, and technical guidelines for the course. Please make sure to read through this document carefully and refer back to it as needed throughout the studio project. We will also be providing additional documentation and resources in the repository, so be sure to check those out as well. If you have any questions or need clarification on any of the information provided in this README, please don't hesitate to reach out to the instructors for assistance. 
+
 ## Github Repository Structure and Guidelines
 In this repository, you will find a directory for each team, labeled `team_01`, `team_02`, etc. Each team directory contains two Grasshopper Cluster files: one for MCP Tool definitions and one for MCP Tool results. Additionally, there is a working test Grasshopper definition in each team directory that is set up to run the Swiftlet MCP Server and expose only that team's tools defined in the clusters for testing with an LLM MCP Client.
 
