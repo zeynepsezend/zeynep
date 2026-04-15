@@ -46,7 +46,9 @@ def bootstrap() -> Context:
         model_kwargs=get_llm_response_format(tools),
     )
 
-    edited_layout_path = Path(__file__).resolve().parents[2] / "edited_layout.json"
+    team_dir = Path(__file__).resolve().parents[2]
+    team_name = team_dir.name
+    edited_layout_path = team_dir / f"{team_name}_edited_layout.json"
 
     return Context(
         llm=llm,

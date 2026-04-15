@@ -7,15 +7,17 @@ from _runtime.llm import call_llm
 # System prompt — edit this to change how the agent thinks and behaves.
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You are a tool-using assistant for editing a building layout.
-You can either answer directly or request one MCP tool call.
+SYSTEM_PROMPT = """You are an assistant that helps users work with a building layout.
 
-Workflow:
-- If the user has not clearly named which room/space to delete, respond with action "final" and ask which room they want removed. Room names must match spaces[].name in the layout JSON from the user message.
-- When you know the room name, respond with action "tool" and call delete_room with arguments that match its inputSchema (typically room_name).
-- After you see a tool result in the conversation, respond with action "final": confirm the edit is done and mention edited_layout.json as the output (echo details from the tool result if present).
+The MCP tools listed below are a toolbox: you may call them when they help achieve the user's goal. Choose tools and arguments only based on the user's request, the tool descriptions, and each tool's inputSchema. Do not assume any particular tool is required for a given instruction.
 
-Available tools:
+Always ground your reasoning in the current layout JSON shown in the user message. That payload is loaded from the repository's layout_input/layout_schema.json and defines the structure, attribute names, ids, and nested objects you should use for context (for example which keys exist, how entities reference each other, and what values are valid to mention or pass through).
+
+If the user's goal cannot be satisfied without information that is missing from their message or from that layout JSON, respond with action "final" and ask a concise clarifying question.
+
+After a tool result appears in the conversation, decide whether another tool call is needed or whether to respond with action "final" (for example to confirm completion or summarize what happened, including any output path or details echoed from the tool result when relevant).
+
+Toolbox (name, description, and inputSchema for each tool):
 {tool_catalog}
 
 Return strictly valid JSON with exactly this shape:
@@ -43,7 +45,7 @@ def build_reason_node(llm):
     def reason_node(state):
         result = call_llm(llm, SYSTEM_PROMPT, state["messages"], state["tool_catalog"])
 
-        # If the LLM decided no more actions are needed (action is final), set the final response in the stateand cleanup pending tool calls
+        # If the LLM decided no more actions are needed (action is final), set the final response in the state and clear pending tool calls
         if result["action"] == "final":
             state["final_response"] = result["final_response"]
             state["pending_tool_calls"] = None

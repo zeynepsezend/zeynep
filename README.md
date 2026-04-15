@@ -219,6 +219,7 @@ The agent reads **`mcp.json` at the repo root**. It must contain an **`mcpServer
 ```bash
 cd team_01/python
 python main.py "delete the kitchen"
+python main.py "add a window to Bedroom 1"
 ```
 
 The run lists tools from the MCP server, injects **`layout_input/layout_schema.json`** into the prompt, prints the final reply, and writes tool output to that team’s **`edited_layout.json`** when the response is JSON (otherwise as text).
@@ -239,11 +240,14 @@ flowchart LR
 - **Allowlist:** Only tools from `tools/list` at startup; unknown names error out.
 - **`layout_json`:** If the model puts `layout_json` in arguments, the tool node replaces it with the current full layout string from state.
 
-### Example MCP tool call (`delete_room`)
+### Example MCP tool calls (`delete_room`, `add_window`)
 
-`nodes/reason.py` assumes a **`delete_room`**-style tool: resolve the room name (must match `spaces[].name` in the layout JSON), call with schema-compliant arguments (often `room_name`), then after the tool result reply with **`action: "final"`** and point to **`edited_layout.json`**.
+`nodes/reason.py` is written to work with layout-editing tools exposed by Grasshopper. Examples include **`delete_room`** and **`add_window`** (names and parameters must match what your definition cluster publishes in **`tools/list`**).
 
-Example shape (URL/port depend on your setup); see also `team_01/grasshopper_mcp_requests.txt` (copies exist under other teams):
+- **`delete_room`:** Resolve the room name (must match the layout JSON—e.g. `rooms[].name` in `layout_input/layout_schema.json`), call with schema-compliant arguments (often `room_name`), then after the tool result reply with **`action: "final"`** and point to **`edited_layout.json`** when appropriate.
+- **`add_window`:** Adds a window to the layout (updates the `windows` array and related fields per your MCP tool’s `inputSchema`). Use the parameter names and types from **`tools/list`** / your definition cluster; the layout’s `windows` entries use `id`, `name`, `geometry` (two points), and optional `attributes` such as `roomId`, as in the sample schema.
+
+Example shape for **`delete_room`** (URL/port depend on your setup); see also `team_01/grasshopper_mcp_requests.txt` (copies exist under other teams):
 
 ```json
 {
@@ -260,7 +264,9 @@ Example shape (URL/port depend on your setup); see also `team_01/grasshopper_mcp
 }
 ```
 
-The Python client sends this over **HTTP POST** to the endpoint in `mcp.json`.
+For **`add_window`**, the same JSON-RPC envelope applies; only `params.name` and `params.arguments` change to match your Swiftlet tool definition (still including `layout_json` when the tool expects the current layout string, same as above).
+
+The Python client sends these over **HTTP POST** to the endpoint in `mcp.json`.
 
 **Before changing the graph or prompts**, read **`graph.py`**, **`nodes/reason.py`**, and **`nodes/tools.py`** so you understand state and tool arguments.
 

@@ -96,7 +96,8 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
 
     # Engineer the user message
     user_message = (
-        "Context: the current layout is JSON below. Valid room names are spaces[].name.\n\n"
+        "Context: the current layout is JSON below. "
+        "Valid room names are rooms[].name.\n\n"
         f"User request:\n{prompt}\n\n"
         f"Current layout JSON:\n{layout_text}"
     )
