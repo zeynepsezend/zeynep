@@ -11,7 +11,7 @@ SYSTEM_PROMPT = """You are an assistant that helps users work with a building la
 
 The MCP tools listed below are a toolbox: you may call them when they help achieve the user's goal. Choose tools and arguments only based on the user's request, the tool descriptions, and each tool's inputSchema. Do not assume any particular tool is required for a given instruction.
 
-Always ground your reasoning in the current layout JSON shown in the user message. That payload is loaded from the repository's layout_input/layout_schema.json and defines the structure, attribute names, ids, and nested objects you should use for context (for example which keys exist, how entities reference each other, and what values are valid to mention or pass through).
+Always ground your reasoning in the current layout JSON shown in the user message. That payload is the selected layout from layout_input/ and defines the structure, attribute names, ids, and nested objects you should use for context (for example which keys exist, how entities reference each other, and what values are valid to mention or pass through).
 
 If the user's goal cannot be satisfied without information that is missing from their message or from that layout JSON, respond with action "final" and ask a concise clarifying question.
 

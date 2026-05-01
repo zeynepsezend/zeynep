@@ -19,16 +19,61 @@ class Context:
     edited_layout_path: Path
 
 
-def bootstrap() -> Context:
+def select_layout(repo_root: Path) -> Path:
+    """Discover available layout files and prompt the user to select one.
+    
+    Searches for JSON files in layout_input/ directory.
+    Returns the Path to the selected layout file.
+    """
+    layout_dir = repo_root / "layout_input"
+    
+    # Find all JSON files in the layout_input directory
+    layout_files = sorted(layout_dir.glob("*.json"))
+    
+    if not layout_files:
+        raise FileNotFoundError(f"No JSON files found in {layout_dir}")
+    
+    # If only one file exists, use it without prompting
+    if len(layout_files) == 1:
+        print(f"Using layout: {layout_files[0].name}")
+        return layout_files[0]
+    
+    # Multiple files: prompt the user to select
+    print("\nAvailable layouts:")
+    for i, file in enumerate(layout_files, 1):
+        print(f"  {i}. {file.name}")
+    
+    while True:
+        try:
+            choice = input("\nSelect a layout (enter number): ").strip()
+            index = int(choice) - 1
+            if 0 <= index < len(layout_files):
+                selected = layout_files[index]
+                print(f"Selected: {selected.name}\n")
+                return selected
+            else:
+                print(f"Please enter a number between 1 and {len(layout_files)}")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
+
+def bootstrap(layout_path: Path | None = None) -> Context:
     """Load settings, connect to the MCP server, discover tools, and build the LLM.
 
     Call this once from main.py and pass the returned Context into run_agent().
+    
+    Args:
+        layout_path: Optional Path to a specific layout file. If not provided,
+                    will use the default layout_input/layout_schema.json.
     """
     settings = load_settings()
 
-    # Read the layout schema that will be given to the agent as context (shared at repo root)
+    # Determine which layout file to use
     repo_root = Path(__file__).resolve().parents[3]
-    layout_path = repo_root / "layout_input" / "layout_schema.json"
+    if layout_path is None:
+        layout_path = repo_root / "layout_input" / "layout_schema.json"
+    
+    # Read the layout schema that will be given to the agent as context
     layout_data: dict[str, Any] = json.loads(layout_path.read_text(encoding="utf-8"))
 
     # Connect to the Grasshopper MCP server and list available tools
