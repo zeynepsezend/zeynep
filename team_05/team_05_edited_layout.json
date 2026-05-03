@@ -1,3 +1,5 @@
 {
-  "volume": "125"
+  "element_type": "wooden_door",
+  "unit_cost": 350,
+  "currency": "EUR"
 }
