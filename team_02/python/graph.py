@@ -70,9 +70,8 @@ def run_agent(prompt: str, ctx: Any) -> str:
     # Pre-empt: if the user's prompt clearly involves a layout but none is
     # loaded yet, run the select_layout pseudo-tool ourselves before the LLM
     # reasons. We mutate ctx.layout_data so _build_initial_state below uses
-    # the "layout already loaded" branch — this keeps the initial user
-    # message consistent (no stale "no layout loaded" text). The 8B Llama
-    # otherwise re-calls select_layout in a loop because it sees the stub.
+    # the "layout already loaded" branch - keeps the initial user message
+    # consistent (no stale "no layout loaded" text).
     if not ctx.layout_data and _prompt_needs_layout(prompt):
         print("\n[graph] Prompt mentions layout - running select_layout before LLM reasoning.")
         scratch: dict[str, Any] = {"layout_json_string": ""}
@@ -97,10 +96,15 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
     layout_loaded = bool(ctx.layout_data)
 
     if layout_loaded:
-        layout_text = json.dumps(ctx.layout_data, indent=2)
+        # Send the LLM a compact summary, NOT the full layout JSON. The full
+        # JSON (with every room's geometry) blows past small-model context
+        # windows. The tool node still has the full layout in state and
+        # injects it into MCP calls; the LLM only needs room names/ids/types
+        # to decide which arguments to pass.
         layout_section = (
-            "Current layout JSON (use rooms[].name for valid room names):\n"
-            f"{layout_text}"
+            "Current layout (use rooms[].name for valid room names; "
+            "the full layout JSON is auto-injected into tool calls):\n"
+            f"{_layout_summary(ctx.layout_data)}"
         )
         layout_json_string = json.dumps(ctx.layout_data)
     else:
@@ -130,10 +134,34 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
 
 
 def _format_tool_catalog(tools: list[dict[str, Any]]) -> str:
+    # Compact: name, description, and parameter names only. The strict JSON
+    # schema in llm.py enforces actual argument structure, so we don't feed
+    # the model verbose inputSchema text. Full schemas balloon the prompt
+    # past small-model context limits.
     lines = []
     for tool in tools:
         name = tool.get("name", "<unknown>")
         description = tool.get("description", "")
-        schema = json.dumps(tool.get("inputSchema", {}))
-        lines.append(f"- {name}: {description} | inputSchema={schema}")
+        props = list((tool.get("inputSchema", {}).get("properties") or {}).keys())
+        params = ", ".join(props) if props else "(no params)"
+        lines.append(f"- {name}: {description} [params: {params}]")
+    return "\n".join(lines)
+
+
+def _layout_summary(layout: dict[str, Any]) -> str:
+    """Compact, LLM-friendly summary of a layout - drops geometry arrays."""
+    rooms = layout.get("rooms", []) or []
+    lines = [
+        f"layoutId: {layout.get('layoutId', '?')}",
+        f"name: {layout.get('name', '?')}",
+        f"rooms ({len(rooms)}):",
+    ]
+    for r in rooms:
+        attrs = r.get("attributes", {}) or {}
+        lines.append(
+            f"  - id={r.get('id', '?')} "
+            f"name=\"{r.get('name', '?')}\" "
+            f"type={attrs.get('roomType', '?')} "
+            f"area={attrs.get('area', '?')}"
+        )
     return "\n".join(lines)
