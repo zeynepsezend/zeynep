@@ -17,11 +17,6 @@ def point3d_to_coords(point) -> Tuple[float, float]:
     return [point.X, point.Y]
 
 
-def line_to_coords(line) -> List[List[float]]:
-    """Convert Rhino Line to [[x1, y1], [x2, y2]]"""
-    return [[line.From.X, line.From.Y], [line.To.X, line.To.Y]]
-
-
 def calculate_polygon_area(coords: List[List[float]]) -> float:
     """Calculate polygon area using shoelace formula"""
     if len(coords) < 3:
