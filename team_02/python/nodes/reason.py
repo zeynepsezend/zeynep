@@ -18,6 +18,12 @@ Layout selection rules (IMPORTANT):
 - Never call `select_layout` more than once in a session unless the user explicitly asks to switch layouts.
 - For any layout-dependent MCP tool, do not include `layout_json` in your arguments — it is injected automatically from the loaded layout.
 
+**CRITICAL: Tool Failure Detection Rule**
+- If a tool result contains "_no_change_warning", it means the tool call had NO EFFECT (the layout did not change).
+- This indicates the requested item (furniture, room, etc.) does NOT EXIST or is NOT EDITABLE.
+- When you see "_no_change_warning", IMMEDIATELY respond with action "final" and tell the user the item cannot be found or modified.
+- DO NOT call the same tool again with the same arguments—it will fail again.
+
 If the user's goal cannot be satisfied without information that is missing from their message or from the loaded layout, respond with action "final" and ask a concise clarifying question.
 
 After a tool result appears in the conversation, decide whether another tool call is needed or whether to respond with action "final" (for example to confirm completion or summarize what happened, including any output path or details echoed from the tool result when relevant).

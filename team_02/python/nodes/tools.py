@@ -85,6 +85,10 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, layout_input_
                     for k, v in tool_args.items()
                 }
                 print(f"Calling tool: {tool_name} with arguments: {printable_args}")
+                
+                # Store the layout before the tool call to detect if nothing changed
+                layout_before = state["layout_json_string"]
+                
                 tool_output = mcp_client.call_tool(tool_name, tool_args)
 
                 write_tool_result(tool_output, edited_layout_path)
@@ -98,6 +102,28 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, layout_input_
                         state["layout_json_string"] = json.dumps(updated)
                 except (json.JSONDecodeError, AttributeError):
                     pass
+                
+                # Detect if the tool produced no change (layout-modifying tools failed silently)
+                if layout_before and state["layout_json_string"] == layout_before:
+                    # The layout didn't change - the tool had no effect or failed
+                    # Check if this is a tool that should modify the layout
+                    if tool_name in ("remove_furniture_piece", "add_furniture_piece", 
+                                    "rename_room", "split_room", "merge_rooms",
+                                    "add_window_01"):
+                        # Add an error message to inform the LLM the operation had no effect
+                        try:
+                            result_dict = json.loads(tool_output.strip())
+                            if isinstance(result_dict, dict):
+                                result_dict["_no_change_warning"] = (
+                                    f"NOTE: The layout did not change after calling {tool_name}. "
+                                    "The requested modification may not have been applied. "
+                                    "This typically means the specified item (room, furniture, etc.) "
+                                    "does not exist or is not editable. Do NOT call this tool again "
+                                    "with the same arguments. TASK COMPLETE - report this to the user."
+                                )
+                                tool_output = json.dumps(result_dict)
+                        except (json.JSONDecodeError, AttributeError):
+                            pass
 
             _append_tool_messages(state, tool_name, printable_args, tool_output)
             print(f"Tool result: {tool_output[:300]}{'...' if len(tool_output) > 300 else ''}")
