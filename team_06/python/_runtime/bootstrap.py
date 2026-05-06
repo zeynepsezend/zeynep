@@ -50,6 +50,7 @@ def bootstrap() -> Context:
         base_url=settings.base_url,
         llm_model=settings.llm_model,
         timeout_seconds=settings.request_timeout_seconds,
+        max_tokens=8000,  # Structured JSON responses need space to format properly
         model_kwargs=get_llm_response_format(tools),
     )
 

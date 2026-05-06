@@ -15,16 +15,20 @@ def create_chat_llm(
     base_url: str,
     llm_model: str,
     timeout_seconds: float,
+    max_tokens: int | None = None,
     model_kwargs: dict[str, Any] | None = None,
 ) -> ChatOpenAI:
-    return ChatOpenAI(
-        api_key=api_key,
-        base_url=base_url,
-        model=llm_model,
-        timeout=timeout_seconds,
-        temperature=0,
-        model_kwargs=model_kwargs or {},
-    )
+    kwargs = {
+        "api_key": api_key,
+        "base_url": base_url,
+        "model": llm_model,
+        "timeout": timeout_seconds,
+        "temperature": 0,
+        "model_kwargs": model_kwargs or {},
+    }
+    if max_tokens is not None:
+        kwargs["max_tokens"] = max_tokens
+    return ChatOpenAI(**kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +166,14 @@ def _parse_llm_json(content: str) -> dict[str, Any]:
 
 
 def _normalize_llm_decision(parsed: dict[str, Any]) -> dict[str, Any]:
+    print(f"[llm] _normalize_llm_decision input type: {type(parsed)}")
+    print(f"[llm] _normalize_llm_decision input: {parsed}")
+    
+    if not isinstance(parsed, dict):
+        raise RuntimeError(f"_normalize_llm_decision expects dict, got {type(parsed)}: {parsed}")
+    
     action = parsed.get("action")
+    print(f"[llm] Action: {action}")
 
     if action == "final":
         return {"action": "final", "final_response": parsed["final_response"]}
@@ -248,10 +259,15 @@ def call_llm(
         raise RuntimeError("LLM response content must be a string")
 
     try:
-        return _normalize_llm_decision(_parse_llm_json(content))
-    except Exception:
+        parsed = _parse_llm_json(content)
+        print(f"[llm] Parsed JSON: {parsed}")
+        result = _normalize_llm_decision(parsed)
+        print(f"[llm] Normalized decision: {result}")
+        return result
+    except Exception as e:
         print("\n[llm] Raw LLM response before crash:")
         print(content)
+        print(f"\n[llm] Error: {type(e).__name__}: {e}")
         raise
 
 
