@@ -14,6 +14,7 @@ from functools import lru_cache
 from tools.embedding_matcher import match_layouts
 from tools.layout_filter import select_layout
 from tools.graph_searcher import GraphSearcher
+from utils.schema_to_graph import build_topology_graph
 
 
 # ---------------------------------------------------------------------------
@@ -42,8 +43,8 @@ def _load_all_descriptions() -> list[dict[str, Any]]:
 def _get_graph_searcher() -> GraphSearcher:
     """Initialize and cache GraphSearcher instance."""
     repo_root = Path(__file__).resolve().parent.parent.parent
-    layouts_path = repo_root / "layout_inputs" / "sample_layouts.json"
-    return GraphSearcher(str(layouts_path))
+    graphs_path = repo_root / "layout_inputs" / "sample_graphs.json"
+    return GraphSearcher(str(graphs_path))
 
 
 
@@ -70,50 +71,22 @@ def get_local_tools() -> list[dict[str, Any]]:
         },
         {
             "name": "layout_graph_search",
-            "description": "Search layouts by graph topology. Use 'room_program' to find layouts with specific room types (e.g., find layouts with bed+kitchen+living). Use 'graph_similarity' to compare room connection patterns.",
+            "description": "Search layouts by topology using a pattern graph. Specify room types and whether they must be connected.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "search_type": {
-                        "type": "string",
-                        "enum": ["room_program", "graph_similarity"],
-                        "description": "Type of graph search to perform"
-                    },
                     "programs": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "For room_program: list of room types to find (e.g., ['bed', 'kitchen', 'living'])"
+                        "description": "List of room types (e.g., ['bed', 'kitchen', 'living']). INCLUDE DUPLICATES for counts! For '2-bedroom': ['bed', 'bed', 'kitchen']. For '3 bathrooms': ['bath', 'bath', 'bath']. Count matters!"
                     },
-                    "min_match": {
-                        "type": "integer",
-                        "description": "For room_program: minimum number of programs to match (default: all programs)"
-                    }
-                },
-                "required": ["search_type"]
-            }
-        },
-        {
-            "name": "layout_matcher",
-            "description": "[OPTIONAL] Find layouts by semantic description. This tool is available but graph-based search is preferred.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "query": {
+                    "connection_type": {
                         "type": "string",
-                        "description": "User's natural language description of desired apartment (e.g., 'cozy 2-bedroom with open kitchen')"
-                    },
-                    "top_k": {
-                        "type": "integer",
-                        "description": "Number of top results to return (default: 3)",
-                        "default": 3
-                    },
-                    "min_score": {
-                        "type": "number",
-                        "description": "Minimum similarity score 0-1 to include results (default: 0.5)",
-                        "default": 0.5
+                        "enum": ["any", "connected"],
+                        "description": "'any' = rooms exist (any edges), 'connected' = rooms must all be interconnected via doors"
                     }
                 },
-                "required": ["query"]
+                "required": ["programs"]
             }
         }
     ]
@@ -136,7 +109,7 @@ def build_local_tool_node():
             tool_name = call["name"]
             
             # Skip non-local tools
-            if tool_name not in ["layout_filter", "layout_matcher", "layout_graph_search"]:
+            if tool_name not in ["layout_filter", "layout_graph_search"]:
                 remaining_calls.append(call)
                 continue
             
@@ -160,64 +133,31 @@ def build_local_tool_node():
                 state["last_action"] = f"Selected layout {selected_id}"
                 print(f"[local_tool] Updated state: layout_id={selected_id}")
                 
-            elif tool_name == "layout_matcher":
-                all_descriptions = _load_all_descriptions()
-                query_text = tool_args.get("query") or tool_args.get("description")
-                
-                raw_output = match_layouts(
-                    query=query_text,
-                    all_descriptions=all_descriptions,
-                    top_k=tool_args.get("top_k", 3),
-                    min_score=tool_args.get("min_score", 0.15)
-                )
-                tool_output = raw_output
-                
-                # Save candidate layouts with layoutId and score only
-                candidates = []
-                for match in raw_output.get("matches", []):
-                    candidates.append({
-                        "layoutId": match["layoutId"],
-                        "score": match["score"]
-                    })
-                state["candidate_layouts"] = candidates
-                
-                # Update session state with search action
-                state["last_action"] = f"Searched for: {query_text}"
-                print(f"[local_tool] Updated state: candidate_layouts with {len(candidates)} results")
-                
             elif tool_name == "layout_graph_search":
                 graph_searcher = _get_graph_searcher()
-                search_type = tool_args.get("search_type", "room_program")
+                programs = tool_args.get("programs", [])
+                connection_type = tool_args.get("connection_type", "any")
                 
-                if search_type == "room_program":
-                    programs = tool_args.get("programs", [])
-                    min_match = tool_args.get("min_match")
-                    results = graph_searcher.search_by_room_program(programs, min_match)
-                    
-                    # Format results: [(layout_id, count), ...]
-                    candidates = [
-                        {"layoutId": layout_id, "score": count / len(programs) if programs else 0}
-                        for layout_id, count in results
-                    ]
-                    tool_output = {
-                        "method": "room_program",
-                        "programs": programs,
-                        "matches": candidates,
-                        "total": len(candidates)
-                    }
-                    state["last_action"] = f"Graph search for rooms: {', '.join(programs)}"
-                    
-                else:  # graph_similarity
-                    # For graph similarity, we'd need a pattern graph from the user
-                    # For now, return info message
-                    tool_output = {
-                        "method": "graph_similarity",
-                        "note": "Graph similarity requires a reference layout pattern (not yet implemented)"
-                    }
-                    state["last_action"] = "Graph similarity search (not yet implemented)"
+                # Build pattern graph from user intent
+                pattern_graph = build_topology_graph(programs, connection_type)
                 
-                state["candidate_layouts"] = candidates if search_type == "room_program" else []
-                print(f"[local_tool] Graph search results: {len(candidates)} layouts found" if search_type == "room_program" else f"[local_tool] {tool_output}")
+                # Search using graph similarity
+                results = graph_searcher.search_by_graph_similarity(pattern_graph, method="jaccard")
+                
+                # Format results
+                candidates = [
+                    {"layoutId": layout_id, "score": similarity}
+                    for layout_id, similarity in results
+                ]
+                
+                tool_output = {
+                    "pattern": f"Rooms: {', '.join(programs)}, connection: {connection_type}",
+                    "matches": candidates,
+                    "total": len(candidates)
+                }
+                state["last_action"] = f"Searched for rooms {connection_type}: {', '.join(programs)}"
+                state["candidate_layouts"] = candidates
+                print(f"[local_tool] Graph search: {len(candidates)} layouts found")
             else:
                 tool_output = {"error": f"Unknown tool: {tool_name}"}
 
