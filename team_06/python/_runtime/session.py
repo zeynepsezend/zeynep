@@ -28,7 +28,7 @@ def save_session_state(state: dict) -> None:
     }
     with open(SESSION_FILE, "w") as f:
         json.dump(persistent_state, f, indent=2)
-    print(f"[Session saved: candidates={len(state.get('candidate_layouts', []))} layout={persistent_state.get('layout_id')}]")
+    print(f"[Session saved: candidates={len(state.get('candidate_layouts') or [])} layout={persistent_state.get('layout_id')}]")
 
 
 def load_session_state() -> dict | None:
