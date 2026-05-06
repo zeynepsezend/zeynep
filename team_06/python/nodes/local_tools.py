@@ -22,7 +22,7 @@ from tools.layout_filter import select_layout
 @lru_cache(maxsize=1)
 def _load_all_layouts() -> list[dict[str, Any]]:
     """Load all layouts from sample_layouts.json."""
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = Path(__file__).resolve().parent.parent.parent
     layouts_path = repo_root / "layout_inputs" / "sample_layouts.json"
     return json.loads(layouts_path.read_text(encoding="utf-8"))
 
@@ -30,7 +30,7 @@ def _load_all_layouts() -> list[dict[str, Any]]:
 @lru_cache(maxsize=1)
 def _load_all_descriptions() -> list[dict[str, Any]]:
     """Load layout descriptions from sample_descriptions.json."""
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = Path(__file__).resolve().parent.parent.parent
     descriptions_path = repo_root / "layout_inputs" / "sample_descriptions.json"
     return json.loads(descriptions_path.read_text(encoding="utf-8"))
 
@@ -45,21 +45,21 @@ def get_local_tools() -> list[dict[str, Any]]:
     return [
         {
             "name": "layout_filter",
-            "description": "Search and filter layouts by ID",
+            "description": "This tool selects a layout based on its layoutId. Use this after layout_matcher to get the full layout JSON for the best match, or to select a specific layout by ID.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "layout_id": {
+                    "layoutId": {
                         "type": "string",
-                        "description": "Search by layoutId (exact match)"
+                        "description": "The layout ID (e.g., 'layout-1', 'layout-4')"
                     }
                 },
-                "required": ["layout_id"]
+                "required": ["layoutId"]
             }
         },
         {
             "name": "layout_matcher",
-            "description": "Find best matching layouts using semantic search. Embed user query and compare to layout descriptions.",
+            "description": "This tool finds layouts that match a natural language description. It returns metadata about the best-matching layouts, including their layoutIds and similarity scores. Use this to search for relevant layouts before using layout_filter to select one.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -74,8 +74,8 @@ def get_local_tools() -> list[dict[str, Any]]:
                     },
                     "min_score": {
                         "type": "number",
-                        "description": "Minimum similarity score 0-1 to include results (default: 0.3)",
-                        "default": 0.3
+                        "description": "Minimum similarity score 0-1 to include results (default: 0.5)",
+                        "default": 0.5
                     }
                 },
                 "required": ["query"]
@@ -115,33 +115,44 @@ def build_local_tool_node():
                 all_layouts = _load_all_layouts()
                 tool_output = select_layout(
                     all_layouts=all_layouts,
-                    layout_id=tool_args.get("layout_id")
+                    layout_id=tool_args.get("layoutId")
                 )
+                state["layout_json_string"] = json.dumps(tool_output, indent=2)
+                
+                # Update session state with selected layout ID
+                selected_id = tool_args.get("layoutId")
+                state["layout_id"] = selected_id
+                state["last_action"] = f"Selected layout {selected_id}"
+                print(f"[local_tool] Updated state: layout_id={selected_id}")
+                
             elif tool_name == "layout_matcher":
                 all_descriptions = _load_all_descriptions()
-                tool_output = match_layouts(
-                    query=tool_args.get("query"),
+                query_text = tool_args.get("query") or tool_args.get("description")
+                
+                raw_output = match_layouts(
+                    query=query_text,
                     all_descriptions=all_descriptions,
                     top_k=tool_args.get("top_k", 3),
-                    min_score=tool_args.get("min_score", 0.3)
+                    min_score=tool_args.get("min_score", 0.15)
                 )
+                tool_output = raw_output
+                
+                # Save candidate layouts with layoutId and score only
+                candidates = []
+                for match in raw_output.get("matches", []):
+                    candidates.append({
+                        "layoutId": match["layoutId"],
+                        "score": match["score"]
+                    })
+                state["candidate_layouts"] = candidates
+                
+                # Update session state with search action
+                state["last_action"] = f"Searched for: {query_text}"
+                print(f"[local_tool] Updated state: candidate_layouts with {len(candidates)} results")
             else:
-                tool_output = {"error": f"Unknown local tool: {tool_name}"}
+                tool_output = {"error": f"Unknown tool: {tool_name}"}
 
-            # Store results in state for downstream tool calls
-            if tool_name == "layout_matcher" and isinstance(tool_output, dict):
-                # Extract the best matching layout ID
-                matches = tool_output.get("matches", [])
-                if matches:
-                    best_match = matches[0]
-                    state["layout_id"] = best_match.get("layoutId")
-            
-            elif tool_name == "layout_filter" and isinstance(tool_output, dict):
-                # Store the full layout schema
-                state["layout_schema"] = tool_output
-                state["layout_id"] = tool_output.get("layoutId")
-
-            # Append the tool call and its result to the conversation history
+            # Append to conversation history
             state["messages"].append({
                 "role": "assistant",
                 "content": json.dumps({
@@ -155,9 +166,9 @@ def build_local_tool_node():
                 "role": "user",
                 "content": f"Tool result: {json.dumps(tool_output)}",
             })
-            print(f"Local tool result: {tool_output}")
+            
+            print(f"[local_tool] Result: {tool_output}")
 
-        # Keep remaining (non-local) tool calls for the run_tool node
         state["pending_tool_calls"] = remaining_calls if remaining_calls else None
         return state
 
