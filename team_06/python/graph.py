@@ -30,8 +30,6 @@ class AgentState():
     max_iterations: int                  # safety cap to stop the process (set from .env)
     tool_catalog: str                    # formatted list of available MCP tools
     layout_json_string: str              # current layout as a JSON string, injected into tool calls
-    all_layouts: list[dict[str, Any]]    # all available layouts, injected into local tool calls
-    all_descriptions: list[dict[str, Any]]  #layout descriptions for embedding search
     layout_id: str | None                # current selected layout ID
     layout_schema: dict[str, Any] | None # current selected layout schema dict
 
@@ -105,15 +103,6 @@ def run_agent(prompt: str, ctx: Any) -> str:
 # ---------------------------------------------------------------------------
 
 def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
-    repo_root = Path(__file__).resolve().parent.parent
-    # Load all available layouts
-    layouts_path = repo_root / "layout_inputs" / "sample_layouts.json"
-    all_layouts = json.loads(layouts_path.read_text(encoding="utf-8"))
-    
-    # Load layout descriptions
-    descriptions_path = repo_root / "layout_inputs" / "sample_descriptions.json"
-    all_descriptions = json.loads(descriptions_path.read_text(encoding="utf-8"))
-    
     # Convert the layout data to a JSON string
     layout_text = json.dumps(ctx.layout_data, indent=2)
     
@@ -140,8 +129,6 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
         "max_iterations": ctx.max_iterations,
         "tool_catalog": tool_catalog,
         "layout_json_string": layout_text,
-        "all_layouts": all_layouts,
-        "all_descriptions": all_descriptions,
         "layout_id": None,
         "layout_schema": None,
     }

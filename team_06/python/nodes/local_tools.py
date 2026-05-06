@@ -7,10 +7,32 @@
 
 from __future__ import annotations
 import json
+from pathlib import Path
 from typing import Any
+from functools import lru_cache
 
 from tools.embedding_matcher import match_layouts
 from tools.layout_filter import select_layout
+
+
+# ---------------------------------------------------------------------------
+# File loading — cache JSON files to avoid repeated disk reads.
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=1)
+def _load_all_layouts() -> list[dict[str, Any]]:
+    """Load all layouts from sample_layouts.json."""
+    repo_root = Path(__file__).resolve().parent.parent
+    layouts_path = repo_root / "layout_inputs" / "sample_layouts.json"
+    return json.loads(layouts_path.read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=1)
+def _load_all_descriptions() -> list[dict[str, Any]]:
+    """Load layout descriptions from sample_descriptions.json."""
+    repo_root = Path(__file__).resolve().parent.parent
+    descriptions_path = repo_root / "layout_inputs" / "sample_descriptions.json"
+    return json.loads(descriptions_path.read_text(encoding="utf-8"))
 
 
 
@@ -90,14 +112,16 @@ def build_local_tool_node():
 
             # Execute the appropriate local tool
             if tool_name == "layout_filter":
+                all_layouts = _load_all_layouts()
                 tool_output = select_layout(
-                    all_layouts=state["all_layouts"],
+                    all_layouts=all_layouts,
                     layout_id=tool_args.get("layout_id")
                 )
             elif tool_name == "layout_matcher":
+                all_descriptions = _load_all_descriptions()
                 tool_output = match_layouts(
                     query=tool_args.get("query"),
-                    all_descriptions=state["all_descriptions"],  # Pass from state
+                    all_descriptions=all_descriptions,
                     top_k=tool_args.get("top_k", 3),
                     min_score=tool_args.get("min_score", 0.3)
                 )
