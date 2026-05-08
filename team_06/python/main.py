@@ -1,6 +1,6 @@
 import argparse
 from _runtime.bootstrap import bootstrap
-from team_06.python.graph import run_agent
+from graph import run_agent
 
 
 def main():
