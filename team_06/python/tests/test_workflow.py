@@ -139,13 +139,13 @@ class MockLLMDecisionMaker:
         bed_match = re.search(r'(\d+)\s*[-\s]?bedroom', text)
         if bed_match:
             count = int(bed_match.group(1))
-            programs.extend(['bed'] * count)
+            programs.extend(['bedroom'] * count)
         
         # Extract bathroom count
-        bath_match = re.search(r'(\d+)\s*[-\s]?bathrooms?', text)
+        bath_match = re.search(r'(\d+)\s*[-\s]?bathroom?', text)
         if bath_match:
             count = int(bath_match.group(1))
-            programs.extend(['bath'] * count)
+            programs.extend(['bathroom'] * count)
         
         # Extract keywords
         if 'kitchen' in text:
@@ -184,9 +184,9 @@ class MockLLMDecisionMaker:
         delete_part = text[delete_idx:] if delete_idx >= 0 else text
         
         room_to_delete = None
-        for room in ['kitchen', 'bed', 'bath', 'living', 'dining', 'foyer', 'entry']:
+        for room in ['kitchen', 'bedroom', 'bathroom', 'living', 'dining', 'foyer', 'entry']:
             if room in delete_part:
-                room_to_delete = room.capitalize() if room != 'bed' else 'Bed'
+                room_to_delete = room.capitalize() if room != 'bedroom' else 'Bedroom'
                 break
         
         if not room_to_delete:
@@ -228,9 +228,9 @@ class MockLLMDecisionMaker:
         
         # Extract room name
         room_name = None
-        for room in ['living', 'bed', 'kitchen', 'bath', 'dining', 'foyer']:
+        for room in ['living', 'bedroom', 'kitchen', 'bathroom', 'dining', 'foyer']:
             if room in text:
-                room_name = room.capitalize() if room != 'bed' else 'Bed'
+                room_name = room.capitalize() if room != 'bedroom' else 'Bedroom'
                 break
         
         if not room_name:

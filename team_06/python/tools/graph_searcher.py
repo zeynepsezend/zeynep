@@ -21,19 +21,19 @@ def build_topology_graph(programs: list, connection_type: str = "any") -> nx.Gra
     Build a SEARCH PATTERN graph from room programs during tool execution.
     
     This function is called DURING SEARCH:
-    1. User says: "find layouts with bed and kitchen"
-    2. LLM decides to call layout_graph_search tool with programs=['bed', 'kitchen']
+    1. User says: "find layouts with bedroom and kitchen"
+    2. LLM decides to call layout_graph_search tool with programs=['bedroom', 'kitchen']
     3. local_tool_node calls THIS FUNCTION to build a pattern graph
     4. Pattern is compared against all 6 layout graphs in sample_graphs.json
     
-    The KEY ABSTRACTION: we work at PROGRAM-LEVEL (bed, kitchen) not ROOM-LEVEL 
-    (room-1, room-3), allowing ANY bed to match ANY kitchen regardless of physical IDs.
+    The KEY ABSTRACTION: we work at PROGRAM-LEVEL (bedroom, kitchen) not ROOM-LEVEL 
+    (room-1, room-3), allowing ANY bedroom to match ANY kitchen regardless of physical IDs.
     """
     G = nx.Graph()
     
     # Create unique node IDs for each program instance (preserves count)
-    # This ensures ['bed', 'bed'] creates 2 nodes, not 1
-    # e.g., ['bed', 'bed', 'kitchen'] → nodes: bed_1, bed_2, kitchen_1
+    # This ensures ['bedroom', 'bedroom'] creates 2 nodes, not 1
+    # e.g., ['bedroom', 'bedroom', 'kitchen'] → nodes: bedroom_1, bedroom_2, kitchen_1
     program_count = {}
     node_ids = {}
     for idx, program in enumerate(programs):
@@ -47,7 +47,7 @@ def build_topology_graph(programs: list, connection_type: str = "any") -> nx.Gra
     if connection_type == "connected" and len(node_ids) > 1:
         # CONNECTED mode: create a fully connected graph (complete subgraph)
         # This means all programs must be interconnected via doors
-        # E.g., "bed connected to kitchen connected to living"
+        # E.g., "bedroom connected to kitchen connected to living"
         node_list = [node_id for node_id, _ in node_ids.values()]
         for i in range(len(node_list)):
             for j in range(i + 1, len(node_list)):
@@ -90,8 +90,8 @@ class GraphSearcher:
         4. Compare user edges vs layout edges using similarity metric
         5. Rank by similarity + tiebreaker (connectivity)
         
-        KEY INSIGHT: We work at PROGRAM LEVEL (bed, kitchen, living),
-        not ROOM LEVEL (room-1, room-2). This allows matching ANY bed
+        KEY INSIGHT: We work at PROGRAM LEVEL (bedroom, kitchen, living room),
+        not ROOM LEVEL (room-1, room-2). This allows matching ANY bedroom
         to ANY kitchen, regardless of their physical room IDs.
         
 
@@ -99,14 +99,14 @@ class GraphSearcher:
         results = []
         
         # STEP 1: Extract what user is looking for from topology pattern
-        # Count each program type: {'bed': 1, 'kitchen': 1, 'living': 1}
+        # Count each program type: {'bedroom': 1, 'kitchen': 1, 'living room': 1}
         pattern_programs = {}
         for node in topology_graph.nodes():
             program = topology_graph.nodes[node].get('program', '')
             pattern_programs[program] = pattern_programs.get(program, 0) + 1
         
         # Extract required PROGRAM-LEVEL edges (not room IDs)
-        # E.g., {('bed', 'kitchen'), ('kitchen', 'living')}
+        # E.g., {('bedroom', 'kitchen'), ('kitchen', 'living room')}
         # This is the CONNECTIVITY PATTERN the user wants
         pattern_edges = set()
         for u, v in topology_graph.edges():
@@ -118,21 +118,21 @@ class GraphSearcher:
         # STEP 2-4: Check each layout
         for layout_id, G in self.layout_graphs.items():
             # Get available programs in this layout
-            # Count actual rooms by program type: {'bed': 1, 'kitchen': 1, 'living': 2, ...}
+            # Count actual rooms by program type: {'bedroom': 1, 'kitchen': 1, 'living': 2, ...}
             available_programs = {}
             for node in G.nodes():
                 program = G.nodes[node].get('program', '')
                 available_programs[program] = available_programs.get(program, 0) + 1
             
             # FILTER: Does layout have enough of each program type?
-            # E.g., if user wants 2 beds, layout must have at least 2 beds
+            # E.g., if user wants 2 bedrooms, layout must have at least 2 bedrooms
             if not all(available_programs.get(prog, 0) >= count 
                       for prog, count in pattern_programs.items()):
                 continue  # Skip this layout, doesn't match
             
             # EXTRACT: Get program-level edges from the layout
             # Only count edges between programs user cares about
-            # E.g., if user wants bed+kitchen, ignore bathroom edges
+            # E.g., if user wants bedroom+kitchen, ignore bathroom edges
             layout_edges = set()
             for u, v in G.edges():
                 prog_u = G.nodes[u].get('program', '')

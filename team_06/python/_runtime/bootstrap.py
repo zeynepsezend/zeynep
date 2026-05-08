@@ -33,7 +33,7 @@ def bootstrap() -> Context:
     
     edited_layout_path = team_dir / f"{team_name}_edited_layout.json"
     reference_layout_path = team_dir / f"{team_name}_reference_layout.json"
-    input_layout_path = repo_root / "layout_input" / "layout_schema.json"
+    input_layout_path = team_dir / f"{team_name}_input_layout.json"
     
     # Load layout with priority: edited → reference → input
     if edited_layout_path.exists():
@@ -44,7 +44,7 @@ def bootstrap() -> Context:
         print(f"[bootstrap] Loaded layout: reference_layout ({team_name}_reference_layout.json)")
     else:
         layout_data = json.loads(input_layout_path.read_text(encoding="utf-8"))
-        print(f"[bootstrap] Loaded layout: input_layout (layout_schema.json)")
+        print(f"[bootstrap] Loaded layout: input_layout ({team_name}_input_layout.json)")
 
     # Connect to the Grasshopper MCP server and list available tools
     mcp_client = McpClient(settings.mcp_endpoint, settings.request_timeout_seconds)

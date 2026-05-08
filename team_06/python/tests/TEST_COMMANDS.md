@@ -45,7 +45,7 @@ python test_workflow.py --test all
 - Chained commands: `"filter layout-3 and delete kitchen"`
 - Delete room: `"delete kitchen"`
 - Add window: `"add window 1.5m in living room"`
-- Graph search: `"find layout with bed and kitchen connected"`
+- Graph search: `"find layout with bedroom and kitchen connected"`
 
 **Output:**
 - Session state: `test_results/test_session_state.json` (persists layout_id across runs)

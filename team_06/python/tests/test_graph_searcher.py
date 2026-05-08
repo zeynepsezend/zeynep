@@ -25,15 +25,15 @@ print("=" * 70)
 print("TEST 1: Presence Queries (rooms exist anywhere)")
 print("=" * 70)
 
-print("\nTest 1a: ['bed', 'kitchen'] -> find layouts with bed AND kitchen")
-pattern = build_topology_graph(['bed', 'kitchen'], connection_type="any")
+print("\nTest 1a: ['bedroom', 'kitchen'] -> find layouts with bedroom AND kitchen")
+pattern = build_topology_graph(['bedroom', 'kitchen'], connection_type="any")
 print(f"  Pattern: nodes={set(pattern.nodes())}, edges={list(pattern.edges())}")
 results = gs.search_by_graph_similarity(pattern, method="jaccard")
 for layout_id, score in results:
     print(f"  {layout_id}: {score:.3f}")
 
-print("\nTest 1b: ['bed', 'kitchen', 'living'] -> find layouts with bed, kitchen, living")
-pattern = build_topology_graph(['bed', 'kitchen', 'living'], connection_type="any")
+print("\nTest 1b: ['bedroom', 'kitchen', 'living'] -> find layouts with bedroom, kitchen, living")
+pattern = build_topology_graph(['bedroom', 'kitchen', 'living'], connection_type="any")
 print(f"  Pattern: nodes={set(pattern.nodes())}, edges={list(pattern.edges())}")
 results = gs.search_by_graph_similarity(pattern, method="jaccard")
 for layout_id, score in results:
@@ -53,8 +53,8 @@ results = gs.search_by_graph_similarity(pattern, method="jaccard")
 for layout_id, score in results:
     print(f"  {layout_id}: {score:.3f} (1.0=exact, <1.0=has extra edges)")
 
-print("\nTest 2b: ['bed', 'kitchen', 'living'] -> find layouts where all three connected")
-pattern = build_topology_graph(['bed', 'kitchen', 'living'], connection_type="connected")
+print("\nTest 2b: ['bedroom', 'kitchen', 'living'] -> find layouts where all three connected")
+pattern = build_topology_graph(['bedroom', 'kitchen', 'living'], connection_type="connected")
 print(f"  Pattern: nodes={set(pattern.nodes())}, edges={set(pattern.edges())}")
 results = gs.search_by_graph_similarity(pattern, method="jaccard")
 for layout_id, score in results:
@@ -85,8 +85,8 @@ print("\n" + "=" * 70)
 print("TEST 4: Real-World Queries")
 print("=" * 70)
 
-print("\nExample 1: 'I want a layout with bed and kitchen'")
-pattern = build_topology_graph(['bed', 'kitchen'], connection_type="any")
+print("\nExample 1: 'I want a layout with bedroom and kitchen'")
+pattern = build_topology_graph(['bedroom', 'kitchen'], connection_type="any")
 results = gs.search_by_graph_similarity(pattern)
 print(f"  -> Found {len(results)} layouts: {[r[0] for r in results]}")
 

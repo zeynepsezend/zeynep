@@ -103,7 +103,7 @@ def get_local_tools() -> list[dict[str, Any]]:
                     "programs": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "List of room types (e.g., ['bed', 'kitchen', 'living']). INCLUDE DUPLICATES for counts! For '2-bedroom': ['bed', 'bed', 'kitchen']. For '3 bathrooms': ['bath', 'bath', 'bath']. Count matters!"
+                        "description": "List of room types (e.g., ['bedroom', 'kitchen', 'living']). INCLUDE DUPLICATES for counts! For '2-bedroom': ['bedroom', 'bedroom', 'kitchen']. For '3 bathrooms': ['bathroom', 'bathroom', 'bathroom']. Count matters!"
                     },
                     "connection_type": {
                         "type": "string",
