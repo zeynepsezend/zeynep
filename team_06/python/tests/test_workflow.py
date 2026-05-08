@@ -36,8 +36,9 @@ from typing import Any, Optional
 from threading import Thread
 import signal
 
-# Add current directory to path
-sys.path.insert(0, str(Path.cwd()))
+# Add parent directory (/python/) to path for imports
+# This script is at /tests/test_workflow.py, so parent is /python/
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from _runtime.bootstrap import bootstrap
 from graph import run_agent
@@ -282,7 +283,7 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], ctx: Any, state: dic
             all_layouts = _load_all_layouts()
             layout_id = arguments.get("layoutId")
             result = select_layout(all_layouts, layout_id)
-            print(f"    ✓ Loaded layout {layout_id} with {len(result.get('rooms', []))} rooms")
+            print(f"    [OK] Loaded layout {layout_id} with {len(result.get('rooms', []))} rooms")
             
             # Store in state for subsequent operations - match real code structure
             state["selected_layout_id"] = layout_id
@@ -303,7 +304,7 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], ctx: Any, state: dic
                 {"layoutId": layout_id, "score": similarity}
                 for layout_id, similarity in results
             ]
-            print(f"    ✓ Found {len(candidates)} layouts matching {programs}")
+            print(f"    [OK] Found {len(candidates)} layouts matching {programs}")
             return {"candidates": candidates}
             
         elif tool_name == "delete_room_06":
@@ -331,7 +332,7 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], ctx: Any, state: dic
             try:
                 # Attempt to call the MCP tool with timeout
                 result = call_tool_with_timeout(ctx.mcp_client, 'delete_room_06', full_arguments, timeout_seconds=5)
-                print(f"    ✓ MCP tool executed: deleted room '{room_name}' from {layout_id}")
+                print(f"    [OK] MCP tool executed: deleted room '{room_name}' from {layout_id}")
                 return json.loads(result) if isinstance(result, str) else result
             except TimeoutError as e:
                 print(f"    ⚠ MCP call timed out: {e}")
@@ -366,7 +367,7 @@ def execute_tool(tool_name: str, arguments: dict[str, Any], ctx: Any, state: dic
             try:
                 # Attempt to call the MCP tool with timeout
                 result = call_tool_with_timeout(ctx.mcp_client, 'add_window_06', full_arguments, timeout_seconds=5)
-                print(f"    ✓ MCP tool executed: added {width}m window to {room_name} in {layout_id}")
+                print(f"    [OK] MCP tool executed: added {width}m window to {room_name} in {layout_id}")
                 return json.loads(result) if isinstance(result, str) else result
             except TimeoutError as e:
                 print(f"    ⚠ MCP call timed out: {e}")
@@ -398,8 +399,9 @@ def run_test(prompt: str, session_state: dict[str, Any] | None = None) -> dict[s
     
     try:
         # Initialize state - can come from previous runs (session persistence)
-        team_dir = Path.cwd()
-        results_dir = team_dir / "test_results"
+        # Results go to tests/test_results/ directory
+        script_dir = Path(__file__).resolve().parent
+        results_dir = script_dir / "test_results"
         results_dir.mkdir(exist_ok=True)
         session_file = results_dir / "test_session_state.json"
         
@@ -408,7 +410,7 @@ def run_test(prompt: str, session_state: dict[str, Any] | None = None) -> dict[s
             if session_file.exists():
                 with open(session_file, 'r') as f:
                     state = json.load(f)
-                    print(f"✓ Loaded state from previous session: layout_id={state.get('selected_layout_id')}")
+                    print(f"[OK] Loaded state from previous session: layout_id={state.get('selected_layout_id')}")
             else:
                 # Fresh state
                 state = {
@@ -421,24 +423,24 @@ def run_test(prompt: str, session_state: dict[str, Any] | None = None) -> dict[s
         
         # Bootstrap context to get access to tools and settings
         ctx = bootstrap()
-        print(f"✓ Bootstrapped context")
+        print(f"[OK] Bootstrapped context")
         
         # Parse prompt with mock LLM
         mock_llm = MockLLMDecisionMaker()
         decision = mock_llm._parse_prompt(prompt)
-        print(f"✓ Mock LLM parsed prompt: action={decision['action']}")
+        print(f"[OK] Mock LLM parsed prompt: action={decision['action']}")
         
         results = []
         
         # If it's a final response, just return it
         if decision.get("action") == "final":
-            print(f"✓ Final response: {decision.get('final_response', '')[:50]}...")
+            print(f"[OK] Final response: {decision.get('final_response', '')[:50]}...")
             results.append({"type": "final", "content": decision.get("final_response")})
         
         # If it's tools, execute them
         elif decision.get("action") == "tool":
             tool_calls = decision.get("tool_calls", [])
-            print(f"✓ Executing {len(tool_calls)} tool call(s)...")
+            print(f"[OK] Executing {len(tool_calls)} tool call(s)...")
             
             for call in tool_calls:
                 tool_name = call["name"]
@@ -447,9 +449,9 @@ def run_test(prompt: str, session_state: dict[str, Any] | None = None) -> dict[s
                 result = execute_tool(tool_name, args, ctx, state)
                 results.append({"tool": tool_name, "result": result})
         
-        # Save results
-        team_dir = Path.cwd()
-        results_dir = team_dir / "test_results"
+        # Save results to tests/test_results/
+        script_dir = Path(__file__).resolve().parent
+        results_dir = script_dir / "test_results"
         results_dir.mkdir(exist_ok=True)
         
         # Create a detailed log file
@@ -469,7 +471,7 @@ def run_test(prompt: str, session_state: dict[str, Any] | None = None) -> dict[s
         with open(session_file, 'w') as f:
             json.dump(state, f, indent=2)
         
-        print(f"✓ Test completed (state: layout_id={state.get('selected_layout_id')}, log: {log_file})")
+        print(f"[OK] Test completed (state: layout_id={state.get('selected_layout_id')}, log: {log_file})")
         ctx.mcp_client.close()
         
         return {"success": True, "decision": decision, "results": results, "state": state}
