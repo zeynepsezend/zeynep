@@ -5,8 +5,8 @@
     "graph": {},
     "nodes": [
       {
-        "name": "Bed",
-        "program": "bed",
+        "name": "Bedroom",
+        "program": "bedroom",
         "id": "room-1"
       },
       {
@@ -20,8 +20,8 @@
         "id": "room-3"
       },
       {
-        "name": "Bath",
-        "program": "bath",
+        "name": "Bathroom",
+        "program": "bathroom",
         "id": "room-4"
       }
     ],
@@ -69,8 +69,8 @@
         "id": "room-4"
       },
       {
-        "name": "Bath",
-        "program": "bath",
+        "name": "Bathroom",
+        "program": "bathroom",
         "id": "room-5"
       }
     ],
@@ -113,13 +113,13 @@
         "id": "room-2"
       },
       {
-        "name": "Bath",
-        "program": "bath",
+        "name": "Bathroom",
+        "program": "bathroom",
         "id": "room-3"
       },
       {
-        "name": "Bed",
-        "program": "bed",
+        "name": "Bedroom",
+        "program": "bedroom",
         "id": "room-4"
       },
       {
@@ -167,8 +167,8 @@
     "graph": {},
     "nodes": [
       {
-        "name": "Bath",
-        "program": "bath",
+        "name": "Bathroom",
+        "program": "bathroom",
         "id": "room-1"
       },
       {
@@ -182,13 +182,13 @@
         "id": "room-3"
       },
       {
-        "name": "Bed",
-        "program": "bed",
+        "name": "Bedroom",
+        "program": "bedroom",
         "id": "room-4"
       },
       {
-        "name": "Bath",
-        "program": "bath",
+        "name": "Bathroom",
+        "program": "bathroom",
         "id": "room-5"
       },
       {
@@ -207,8 +207,8 @@
         "id": "room-8"
       },
       {
-        "name": "Bed",
-        "program": "bed",
+        "name": "Bedroom",
+        "program": "bedroom",
         "id": "room-9"
       }
     ],
@@ -321,13 +321,13 @@
         "id": "room-5"
       },
       {
-        "name": "Bed",
-        "program": "bed",
+        "name": "Bedroom",
+        "program": "bedroom",
         "id": "room-6"
       },
       {
-        "name": "Bath",
-        "program": "bath",
+        "name": "Bathroom",
+        "program": "bathroom",
         "id": "room-7"
       }
     ],
@@ -370,8 +370,8 @@
     "graph": {},
     "nodes": [
       {
-        "name": "Bath",
-        "program": "bath",
+        "name": "Bathroom",
+        "program": "bathroom",
         "id": "room-1"
       },
       {
