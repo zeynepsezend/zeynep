@@ -81,23 +81,45 @@ This is an **AI agent system** that uses LangGraph to build a reasoning-tool loo
 
 ```
 team_04/
-├── gh/                                 # Grasshopper files
-│   ├── team_04_definition_cluster.ghcluster   # Input definition
-│   ├── team_04_result_cluster.ghcluster       # Output results
-│   └── team_04_working.gh                     # Working file
+├── ARCHITECTURE.md                         # System architecture (this file)
+├── PROGRESS.md                             # Implementation progress log
+├── QUICK_START.md                          # Week-by-week GH implementation guide
+├── README_DELIVERABLES.md                  # Hand-off summary of all deliverables
+├── TERRAPILOT_PLAN.md                      # Full 23-tool specification + timeline
+├── TOOLS_CHECKLIST.md                      # Interactive per-tool checkbox tracker
+├── team_04_edited_layout.json              # Output from latest agent run
 │
-└── python/                             # Python agent code
-    ├── main.py                         # Entry point
-    ├── graph.py                        # LangGraph workflow definition
+├── gh/                                     # Grasshopper files
+│   ├── team_04_definition_cluster.ghcluster   # INPUT + SHAPE tools cluster
+│   ├── team_04_result_cluster.ghcluster       # Remaining tools + MCP output
+│   ├── team_04_working.gh                     # Test harness (MCP server entry)
+│   └── tool_definitions/                      # Per-tool specification docs
+│       ├── README.md                          # GH cluster template (JSON parse/format pattern)
+│       ├── 01_site_boundary_reader.md         # Full spec: site_boundary_reader_04
+│       └── 05_parametric_shape_generator.md   # Full spec: parametric_shape_generator_04
+│
+├── test_cases/                             # Test scenario definitions
+│   ├── test_01_simple_rectangle.md         # Simple rectangular site
+│   └── test_02_pentagon_with_trees.md      # Pentagon site with tree constraints
+│
+└── python/                                 # Python agent code
+    ├── main.py                             # Entry point
+    ├── graph.py                            # LangGraph workflow definition
+    ├── terrapilot_explore.ipynb            # 19-cell interactive exploration notebook
+    ├── terrapilot_workflow.png             # Generated swimlane workflow diagram
     │
-    ├── _runtime/                       # Core runtime utilities
-    │   ├── __init__.py                 # Empty (package marker)
-    │   ├── bootstrap.py                # System initialization
-    │   ├── config.py                   # Settings and env loading
-    │   ├── llm.py                      # LLM interface & schema
-    │   └── mcp_client.py               # MCP server client
+    ├── _runtime/                           # Core runtime utilities
+    │   ├── __init__.py                     # Empty (package marker)
+    │   ├── bootstrap.py                    # System initialization
+    │   ├── config.py                       # Settings and env loading
+    │   ├── llm.py                          # LLM interface & schema
+    │   └── mcp_client.py                   # MCP server client
     │
-    └── nodes/                          # Graph node implementations
+    └── nodes/                              # Graph node implementations
+        ├── __init__.py                     # Empty (package marker)
+        ├── reason.py                       # Reasoning node (LLM)
+        └── tools.py                        # Tool execution node
+```
         ├── __init__.py                 # Empty (package marker)
         ├── reason.py                   # Reasoning node (LLM)
         └── tools.py                    # Tool execution node
@@ -106,6 +128,48 @@ team_04/
 ---
 
 ## File-by-File Breakdown
+
+### 📁 `/` (Team Root)
+
+#### `TERRAPILOT_PLAN.md`
+Complete 23-tool specification. Covers all tool input/output schemas, GH implementation notes, and a week-by-week build timeline.
+
+#### `TOOLS_CHECKLIST.md`
+Interactive checkbox tracker — one section per tool with sub-tasks and priority levels (CRITICAL / HIGH / MEDIUM / LOW). Update this as you build each GH tool.
+
+#### `QUICK_START.md`
+Day-by-day guide for building GH clusters (Week 1 detailed, Weeks 2–4 sketched). Includes Python placeholder templates and testing workflow.
+
+#### `README_DELIVERABLES.md`
+Hand-off summary listing everything created in this branch: docs, code, tool specs, test cases.
+
+#### `team_04_edited_layout.json`
+Output layout JSON written by the agent during the first successful end-to-end run. Serves as a baseline for regression tests.
+
+---
+
+### 📁 `/gh/tool_definitions/` (GH Tool Specs)
+
+#### `README.md`
+Grasshopper cluster template: describes the standard JSON-parse → core logic → JSON-format cluster pattern, with Python component code templates.
+
+#### `01_site_boundary_reader.md`
+Full spec for `site_boundary_reader_04`: input schema, output schema, example JSON, GH implementation steps, test cases.
+
+#### `05_parametric_shape_generator.md`
+Full spec for `parametric_shape_generator_04`: `geometry_id` generation, shape types (bar/L/U/H/courtyard/cluster), parameter schema.
+
+---
+
+### 📁 `/test_cases/` (Test Scenarios)
+
+#### `test_01_simple_rectangle.md`
+Test case for a simple rectangular site. Defines site coordinates, expected tool call sequence, and pass/fail criteria.
+
+#### `test_02_pentagon_with_trees.md`
+Test case for an irregular pentagon site with 3 trees. Covers tree constraint checking, setback validation, and geometry manipulation.
+
+---
 
 ### 📁 `/python/` (Root Python Code)
 

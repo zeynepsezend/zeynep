@@ -1,6 +1,6 @@
 # Team 04 — TerraPilot Implementation Progress
 
-_Last updated: 2026-05-04_
+_Last updated: 2026-05-09_
 
 ---
 
@@ -18,8 +18,12 @@ _Last updated: 2026-05-04_
 | End-to-end agent run | ✅ Done | Cell 19 runs successfully with mock stubs |
 | `.env` setup | ✅ Done | Credentials file created at repo root |
 | API schema fix | ✅ Done | Removed `json_schema` response_format; no timeout/token errors |
-| Grasshopper tools | 🔄 In progress | GH clusters started; tool definitions documented |
-| Test cases | 📋 Planned | 5 scenarios defined; GH validation pending |
+| Edited layout output | ✅ Done | `team_04_edited_layout.json` generated from first agent run |
+| Documentation suite | ✅ Done | TERRAPILOT_PLAN.md, TOOLS_CHECKLIST.md, QUICK_START.md, README_DELIVERABLES.md |
+| GH tool specs | ✅ Done | 2 of 23 detailed specs written: tool 1 (`site_boundary_reader`) + tool 5 (`parametric_shape_generator`) |
+| GH cluster parameters | ✅ Done | `team_04_definition_cluster.ghcluster` + working.gh parameter-tuned and verified |
+| Grasshopper tools (remaining) | 🔄 In progress | 21 tools still need GH implementation; stubs exist for all |
+| Test cases | 🔄 In progress | 2/5 written: `simple_rectangle`, `pentagon_with_trees`; 3 pending |
 
 ---
 
@@ -152,6 +156,61 @@ Updated `SYSTEM_PROMPT` with:
 
 ---
 
+### 5. Documentation Suite (Added 2026-05-04)
+
+Four new top-level documentation files were added to `team_04/`:
+
+| File | Purpose |
+|---|---|
+| `TERRAPILOT_PLAN.md` | Complete implementation plan — full specs for all 23 tools with input/output schemas, GH notes, and a week-by-week timeline |
+| `TOOLS_CHECKLIST.md` | Interactive checkbox list for all 23 tools with per-tool sub-tasks and priority levels |
+| `QUICK_START.md` | Week-by-week and day-by-day guide for building GH clusters; includes placeholder templates and testing workflow |
+| `README_DELIVERABLES.md` | Summary of all deliverables created — intended as a hand-off reference |
+
+---
+
+### 6. Grasshopper Tool Specifications (`gh/tool_definitions/`)
+
+Detailed markdown specs added for 2 priority tools:
+
+| File | Tool | Status |
+|---|---|---|
+| `01_site_boundary_reader.md` | `site_boundary_reader_04` | ✅ Full spec — inputs, outputs, example JSON, GH steps |
+| `05_parametric_shape_generator.md` | `parametric_shape_generator_04` | ✅ Full spec — geometry_id generation, shape types, parameter schema |
+| `README.md` | GH cluster template | ✅ Python component templates for JSON parse/format pattern |
+
+Remaining 21 tools: stubs in mock MCP client; specs not yet written.
+
+---
+
+### 7. Grasshopper Cluster Updates
+
+`team_04_definition_cluster.ghcluster` and `team_04_working.gh` were updated (commit `81f342a`):
+- Parameters adjusted to ensure tools are wired correctly
+- Binary changes only (no new text-visible changes)
+- MCP tool registration in `team_04_result_cluster.ghcluster` also updated
+
+---
+
+### 8. Test Cases Written
+
+Two detailed test cases added to `test_cases/`:
+
+| File | Scenario | Contents |
+|---|---|---|
+| `test_01_simple_rectangle.md` | Simple rectangular site | Site coords, expected tool sequence, pass/fail criteria |
+| `test_02_pentagon_with_trees.md` | Irregular pentagon + 3 trees | Tree constraint testing, setback validation, geometry manipulation |
+
+3 remaining planned scenarios (`sloped_site`, `gfa_deficit`, `irregular_boundary`) not yet written.
+
+---
+
+### 9. Edited Layout Output
+
+`team_04_edited_layout.json` was generated from the first successful end-to-end agent run and committed to the repo. It serves as the baseline for subsequent test runs.
+
+---
+
 ### 5. Environment & Dependencies
 
 - **Python env:** Python 3.14.4 kernel
@@ -166,31 +225,50 @@ Updated `SYSTEM_PROMPT` with:
 
 ### Grasshopper Tool Implementation
 
-GH clusters started. Tool definitions written for the first 5 tools:
-- `site_boundary_reader_04` — site polygon → boundary curve + area metrics
-- `context_reader_04` — roads, buildings, entrances → baked context geometry
-- `parametric_shape_generator_04` — returns a live-editable geometry with `geometry_id`
+GH clusters have been started and parameters tuned. Detailed specs exist for tools 1 and 5. Still needed:
 
-Still needed (16 remaining GH tools):
-- All constraint checkers (5)
-- All manipulation tools (7)
-- All evaluators (3)
-- `bake_geometry_id_04`
+| Category | Tools | Count |
+|---|---|---|
+| Input | `context_reader_04` | 1 |
+| Shape | `shape_library_loader_04`, `legal_constraints_reader_04` | 2 |
+| Constraint | `site_fit_checker_04`, `setback_checker_04`, `area_requirement_checker_04`, `adjacency_access_checker_04`, `tree_constraint_checker_04` | 5 |
+| Manipulation | `scale_shape_tool_04`, `stretch_arm_tool_04`, `width_modifier_tool_04`, `courtyard_modifier_tool_04`, `rotate_mirror_tool_04`, `bend_angle_tool_04`, `terrace_step_tool_04` | 7 |
+| Evaluation | `spatial_intention_evaluator_04`, `performance_evaluator_04`, `shape_integrity_evaluator_04` | 3 |
+| Output | `bake_geometry_id_04` | 1 |
+| **Total** | | **19** |
+
+Each tool still needs: GH cluster wiring, real output JSON, and mock stub updated to match real schema.
+
+### Test Cases
+
+3 of 5 planned test cases still to write:
+- `test_03_sloped_site.md`
+- `test_04_gfa_deficit.md`
+- `test_05_irregular_boundary.md`
 
 ---
 
 ## Next Steps
 
-### Priority 1 — Grasshopper tool implementation
-Build GH components for the 16 remaining tools. Each tool needs:
-1. GH cluster (input/output wires)
-2. MCP registration in `mcp.json`
-3. Mock stub updated to match real output schema
+### Priority 1 — Grasshopper tool implementation (19 tools remaining)
+Build GH components for all remaining tools. Each tool needs:
+1. GH cluster wiring (input/output wires, Python JSON parser/formatter)
+2. MCP registration verified in `team_04_working.gh`
+3. Mock stub in the notebook updated to match real output schema
+4. Checkbox ticked in `TOOLS_CHECKLIST.md`
 
-### Priority 2 — Test case validation with live GH
-Run all 5 test cases (`simple_bar`, `pentagon_trees`, `sloped_site`, `gfa_deficit`, `irregular_boundary`) against the live MCP server once GH tools are complete.
+Use `gh/tool_definitions/README.md` as the template. Follow the `01_site_boundary_reader.md` spec as a reference pattern.
 
-### Priority 3 — Tune system prompt for live tools
+### Priority 2 — Complete remaining tool specs
+Write `gh/tool_definitions/` specs for the remaining 21 tools (prioritise constraint checkers and manipulation tools first).
+
+### Priority 3 — Write remaining 3 test cases
+`test_03_sloped_site.md`, `test_04_gfa_deficit.md`, `test_05_irregular_boundary.md`.
+
+### Priority 4 — Test case validation with live GH
+Run all 5 test cases against the live MCP server once GH tools are complete.
+
+### Priority 5 — Tune system prompt for live tools
 Mock stubs always return `success: true`; real GH tools may return errors or different field names. Adjust `reason.py` prompt guidance and `tools.py` parsing accordingly.
 
 ---
@@ -199,6 +277,8 @@ Mock stubs always return `success: true`; real GH tools may return errors or dif
 
 | Issue | Severity | Status |
 |---|---|---|
-| 16 GH tools not yet implemented | High | In progress |
+| 19 GH tools not yet implemented | High | In progress — see Priority 1 above |
+| GH tool specs written for only 2 of 23 tools | Medium | In progress — write specs before implementing |
+| 3 of 5 test cases not yet written | Low | Planned |
 | `grandalf` not installed — `print_ascii` silently skipped | Low | Resolved via `try/except` — no action needed |
 | Cloudflare rate limits under heavy testing | Medium | Monitor — stagger test runs if hitting 429 errors |
