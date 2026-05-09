@@ -11,7 +11,8 @@ from _runtime.llm import create_chat_llm, get_llm_response_format
 @dataclass
 class Context:
     """Everything the agent graph needs to run — passed from main.py into graph.py."""
-    llm: Any
+    llm: Any          # Structured-output LLM (JSON schema enforced) — reserved for future tool-calling
+    llm_simple: Any   # Plain LLM (no response_format) — used by chitchat, respond, route_intent
     mcp_client: McpClient
     tools: list[dict[str, Any]]
     layout_data: dict[str, Any]
@@ -118,7 +119,7 @@ def bootstrap(layout_path: Path | None = None) -> Context:
     tools = mcp_tools + [SELECT_LAYOUT_TOOL]
     print(f"Plus Python-side pseudo-tool: {SELECT_LAYOUT_TOOL['name']}")
 
-    # Build the LLM with a structured-output schema tailored to the available tools
+    # Structured LLM — JSON schema enforced (reserved for future tool-calling nodes)
     llm = create_chat_llm(
         api_key=settings.api_key,
         base_url=settings.base_url,
@@ -127,11 +128,22 @@ def bootstrap(layout_path: Path | None = None) -> Context:
         model_kwargs=get_llm_response_format(tools),
     )
 
+    # Plain LLM — no response_format, free-form text output.
+    # Used by chitchat, respond, and route_intent nodes via call_llm_simple().
+    llm_simple = create_chat_llm(
+        api_key=settings.api_key,
+        base_url=settings.base_url,
+        llm_model=settings.llm_model,
+        timeout_seconds=settings.request_timeout_seconds,
+        model_kwargs=None,
+    )
+
     team_name = team_dir.name
     edited_layout_path = team_dir / f"{team_name}_edited_layout.json"
 
     return Context(
         llm=llm,
+        llm_simple=llm_simple,
         mcp_client=mcp_client,
         tools=tools,
         layout_data=layout_data,

@@ -1,185 +1,259 @@
+"""
+graph.py — Comfort Copilot state graph.
+
+Architecture:
+
+  START → PREPROCESS
+    ├─[chitchat]─→ CHITCHAT → END
+    ├─[inspire]──→ INSPIRE  → END
+    └─[comfort]──→ LOAD_LAYOUT → ASK_PERSONA → ROUTE_INTENT → ANALYZE
+                                                                  │
+                                              ┌───────[analyze]───┘
+                                              │   [detect/full]──→ DETECT
+                                              │                       │
+                                              │       ┌──[detect]────┘
+                                              │       │  [full]──→ SUGGEST
+                                              │       │               │
+                                              └───→ RESPOND ←────────┘
+                                                      │
+                                                     END
+
+Nodes:
+  preprocess    Pure Python. Coarse routing: comfort / inspire / chitchat.
+                Extracts layout ID and detects persona from prompt.
+
+  load_layout   Pure Python. Loads layout JSON by ID or interactive picker.
+                Skips if layout already in session state.
+
+  ask_persona   Pure Python. Interactive persona picker.
+                Pass-through if persona already known.
+
+  route_intent  LLM. Classifies depth: analyze / detect / full.
+                Python keyword fallback if LLM fails.
+
+  analyze       Pure Python. Calls compute_comfort_scores via MCP.
+  detect        Pure Python. Calls detect_sensorial_conflicts via MCP.
+  suggest       Pure Python. Calls generate_suggestions via MCP.
+
+  respond       LLM. Formats all accumulated results into natural language.
+  chitchat      LLM. Conversational response for non-comfort prompts.
+  inspire       Placeholder. Phase 3 — atmosphere / image generation.
+"""
+
 from __future__ import annotations
-import json
-from typing import Any
+from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
-from nodes.reason import build_reason_node
-from nodes.tools import build_tool_node, handle_select_layout
-from nodes.preprocess import build_preprocess_node, needs_layout, detect_intent
-from personas import PERSONAS, detect_persona_in_text
+
+from nodes.preprocess   import preprocess_node
+from nodes.load_layout  import build_load_layout_node
+from nodes.ask_persona  import ask_persona_node
+from nodes.route_intent import build_route_intent_node
+from nodes.analyze      import build_analyze_node
+from nodes.detect       import build_detect_node
+from nodes.suggest      import build_suggest_node
+from nodes.respond      import build_respond_node
+from nodes.chitchat     import build_chitchat_node
+from nodes.inspire      import inspire_node
 
 
-# =============================================================================
-# graph.py - Define the agent graph: state, nodes, and edges.
-# =============================================================================
+# ---------------------------------------------------------------------------
+# State
+# ---------------------------------------------------------------------------
+
+class AgentState(TypedDict, total=False):
+    # Input
+    raw_prompt:            str
+    has_image:             bool
+
+    # Routing
+    intent:                str          # "comfort" | "inspire" | "chitchat"
+    layout_id:             str | None   # e.g. "201"
+    persona_detected:      str | None   # e.g. "Elderly 65+"
+    needs_persona_ask:     bool
+    comfort_depth:         str          # "analyze" | "detect" | "full"
+
+    # Session persistence (carried across turns in main.py)
+    layout_json_string:    str
+
+    # Tool results (accumulated within one turn)
+    last_scores_json:      str
+    last_conflicts_json:   str
+    last_suggestions_json: str
+
+    # Output
+    final_response:        str | None
 
 
-class AgentState():
-    messages: list[dict[str, Any]]
-    pending_tool_calls: list[dict[str, Any]] | None
-    final_response: str | None
-    iteration: int
-    max_iterations: int
-    tool_catalog: str
-    layout_json_string: str
-    intent: str
-    persona_detected: str | None
-    needs_persona_ask: bool
-    last_scores_json: str
-    last_conflicts_json: str
+# ---------------------------------------------------------------------------
+# Routing functions (conditional edges)
+# ---------------------------------------------------------------------------
+
+def _route_after_preprocess(state: AgentState) -> str:
+    intent = state.get("intent", "chitchat")
+    if intent == "comfort":
+        return "load_layout"
+    if intent == "inspire":
+        return "inspire"
+    return "chitchat"
 
 
-def _route(state: AgentState) -> str:
-    if state["final_response"] is not None:
-        return "finish"
-    return "run_tool"
+def _route_after_analyze(state: AgentState) -> str:
+    depth = state.get("comfort_depth", "analyze")
+    if depth in ("detect", "full"):
+        return "detect"
+    return "respond"
 
+
+def _route_after_detect(state: AgentState) -> str:
+    depth = state.get("comfort_depth", "detect")
+    if depth == "full":
+        return "suggest"
+    return "respond"
+
+
+# ---------------------------------------------------------------------------
+# Graph builder
+# ---------------------------------------------------------------------------
 
 def build_graph(ctx: Any) -> Any:
-    preprocess = build_preprocess_node()
-    reason = build_reason_node(ctx.llm)
-    tool = build_tool_node(
-        ctx.mcp_client,
-        ctx.tools,
-        ctx.edited_layout_path,
-        ctx.layout_input_dir,
+    """Build and compile the Comfort Copilot state graph."""
+
+    # Instantiate all nodes that need context.
+    # route_intent, respond, chitchat use llm_simple (no JSON schema constraint).
+    # llm (structured) is kept in ctx for any future tool-calling nodes.
+    load_layout  = build_load_layout_node(ctx.layout_input_dir)
+    route_intent = build_route_intent_node(ctx.llm_simple)
+    analyze      = build_analyze_node(ctx.mcp_client)
+    detect       = build_detect_node(ctx.mcp_client)
+    suggest      = build_suggest_node(ctx.mcp_client)
+    respond      = build_respond_node(ctx.llm_simple)
+    chitchat     = build_chitchat_node(ctx.llm_simple)
+
+    g = StateGraph(AgentState)
+
+    # ── Add nodes ─────────────────────────────────────────────────────────
+    g.add_node("preprocess",   preprocess_node)
+    g.add_node("load_layout",  load_layout)
+    g.add_node("ask_persona",  ask_persona_node)
+    g.add_node("route_intent", route_intent)
+    g.add_node("analyze",      analyze)
+    g.add_node("detect",       detect)
+    g.add_node("suggest",      suggest)
+    g.add_node("respond",      respond)
+    g.add_node("chitchat",     chitchat)
+    g.add_node("inspire",      inspire_node)
+
+    # ── Add edges ─────────────────────────────────────────────────────────
+    g.add_edge(START, "preprocess")
+
+    g.add_conditional_edges(
+        "preprocess",
+        _route_after_preprocess,
+        {
+            "load_layout": "load_layout",
+            "inspire":     "inspire",
+            "chitchat":    "chitchat",
+        },
     )
 
-    graph = StateGraph(AgentState)
-    graph.add_node("preprocess", preprocess)
-    graph.add_node("reason", reason)
-    graph.add_node("tool", tool)
-    graph.add_edge(START, "preprocess")
-    graph.add_edge("preprocess", "reason")
-    graph.add_conditional_edges("reason", _route, {"run_tool": "tool", "finish": END})
-    graph.add_edge("tool", "reason")
+    # Comfort path — always sequential up to analyze
+    g.add_edge("load_layout",  "ask_persona")
+    g.add_edge("ask_persona",  "route_intent")
+    g.add_edge("route_intent", "analyze")
 
-    return graph.compile()
+    # After analyze: go to detect or straight to respond
+    g.add_conditional_edges(
+        "analyze",
+        _route_after_analyze,
+        {
+            "detect":  "detect",
+            "respond": "respond",
+        },
+    )
+
+    # After detect: go to suggest or straight to respond
+    g.add_conditional_edges(
+        "detect",
+        _route_after_detect,
+        {
+            "suggest": "suggest",
+            "respond": "respond",
+        },
+    )
+
+    g.add_edge("suggest",  "respond")
+    g.add_edge("respond",  END)
+    g.add_edge("chitchat", END)
+    g.add_edge("inspire",  END)
+
+    return g.compile()
 
 
-def run_agent(prompt: str, ctx: Any) -> str:
-    intent = detect_intent(prompt)
+# ---------------------------------------------------------------------------
+# run_agent — called once per user turn from main.py
+# ---------------------------------------------------------------------------
 
-    # Pre-empt layout loading: if the request needs a layout and none is
-    # loaded yet, prompt the user to pick one before the graph starts.
-    if not ctx.layout_data and needs_layout(prompt, intent):
-        print("\n[graph] Prompt mentions layout - running select_layout before LLM reasoning.")
-        scratch: dict[str, Any] = {"layout_json_string": ""}
-        handle_select_layout(ctx.layout_input_dir, scratch)
-        if scratch.get("layout_json_string"):
-            ctx.layout_data = json.loads(scratch["layout_json_string"])
+def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, dict]:
+    """
+    Run one turn of the agent.
 
-    # Pre-empt persona selection: if it's a comfort request and no persona
-    # was mentioned in the prompt, show an interactive picker — same pattern
-    # as layout selection, keeps the LLM out of the conversation flow.
-    selected_persona: str | None = detect_persona_in_text(prompt)
-    if intent.startswith("comfort") and selected_persona is None:
-        selected_persona = _handle_select_persona()
+    Args:
+        prompt   : raw user input for this turn
+        ctx      : Context object from bootstrap()
+        session  : dict carrying persistent state across turns
+                   (layout_json_string, persona_detected, layout_id)
+                   Pass None or {} for the first turn.
+
+    Returns:
+        (final_response, updated_session)
+        updated_session can be passed into the next run_agent() call.
+    """
+    if session is None:
+        session = {}
+
+    initial_state: AgentState = {
+        # This turn's input
+        "raw_prompt":  prompt,
+        "has_image":   False,
+
+        # Carry over persistent fields from the previous turn
+        "layout_json_string": session.get("layout_json_string", ""),
+        "persona_detected":   session.get("persona_detected"),
+        "layout_id":          session.get("layout_id"),
+
+        # Reset per-turn fields
+        "intent":                "",
+        "needs_persona_ask":     False,
+        "comfort_depth":         "analyze",
+        "last_scores_json":      "",
+        "last_conflicts_json":   "",
+        "last_suggestions_json": "",
+        "final_response":        None,
+    }
 
     app = build_graph(ctx)
-    initial_state = _build_initial_state(prompt, ctx, selected_persona)
-    final_state = app.invoke(initial_state)
 
     print("\nWorkflow graph:")
     app.get_graph().print_ascii()
 
+    final_state = app.invoke(initial_state)
+
     final_response = final_state.get("final_response")
     if not isinstance(final_response, str):
-        raise RuntimeError("Agent finished without a final response")
-    return final_response
+        raise RuntimeError("Agent finished without a final response.")
 
-
-def _handle_select_persona() -> str:
-    """
-    Interactive persona picker — mirrors handle_select_layout.
-    Shows all available personas with descriptions and prompts the user
-    to select one by number. Returns the chosen persona name.
-    """
-    persona_names = list(PERSONAS.keys())
-
-    print("\nAvailable personas:")
-    for i, name in enumerate(persona_names, 1):
-        desc = PERSONAS[name]["description"]
-        print(f"  {i}. {name} — {desc}")
-
-    while True:
-        try:
-            choice = input("\nSelect a persona (enter number): ").strip()
-            index = int(choice) - 1
-            if 0 <= index < len(persona_names):
-                selected = persona_names[index]
-                print(f"Persona: {selected}")
-                return selected
-            print(f"Please enter a number between 1 and {len(persona_names)}")
-        except ValueError:
-            print("Invalid input. Please enter a number.")
-
-
-def _build_initial_state(prompt: str, ctx: Any, selected_persona: str | None = None) -> AgentState:
-    layout_loaded = bool(ctx.layout_data)
-
-    if layout_loaded:
-        layout_section = (
-            "Current layout (use rooms[].name for valid room names; "
-            "the full layout JSON is auto-injected into tool calls):\n"
-            f"{_layout_summary(ctx.layout_data)}"
-        )
-        layout_json_string = json.dumps(ctx.layout_data)
+    # Build updated session — persist layout and persona across turns,
+    # but only when this was a comfort turn. Chitchat / inspire should
+    # never overwrite a previously chosen persona with a keyword false-positive.
+    intent = final_state.get("intent", "")
+    if intent == "comfort":
+        updated_session = {
+            "layout_json_string": final_state.get("layout_json_string", ""),
+            "persona_detected":   final_state.get("persona_detected"),
+            "layout_id":          final_state.get("layout_id"),
+        }
     else:
-        layout_section = (
-            "No layout is currently loaded. If - and only if - fulfilling the "
-            "user's request requires a building layout, call the `select_layout` "
-            "tool first; the user will be prompted in the terminal to choose a "
-            "JSON file. If the request can be answered without a layout, respond "
-            "with action 'final' and skip select_layout."
-        )
-        layout_json_string = ""
+        # Non-comfort turn: carry forward whatever was already in the session
+        updated_session = session
 
-    user_message = (
-        f"User request:\n{prompt}\n\n"
-        f"{layout_section}"
-    )
-
-    return {
-        "messages": [{"role": "user", "content": user_message}],
-        "pending_tool_calls": None,
-        "final_response": None,
-        "iteration": 0,
-        "max_iterations": ctx.max_iterations,
-        "tool_catalog": _format_tool_catalog(ctx.tools),
-        "layout_json_string": layout_json_string,
-        "intent": "",
-        "persona_detected": selected_persona,   # pre-filled if picker ran
-        "needs_persona_ask": False,
-        "last_scores_json": "",
-        "last_conflicts_json": "",
-    }
-
-
-def _format_tool_catalog(tools: list[dict[str, Any]]) -> str:
-    lines = []
-    for tool in tools:
-        name = tool.get("name", "<unknown>")
-        description = tool.get("description", "")
-        props = list((tool.get("inputSchema", {}).get("properties") or {}).keys())
-        params = ", ".join(props) if props else "(no params)"
-        lines.append(f"- {name}: {description} [params: {params}]")
-    return "\n".join(lines)
-
-
-def _layout_summary(layout: dict[str, Any]) -> str:
-    """Compact, LLM-friendly summary of a layout — drops geometry arrays."""
-    rooms = layout.get("rooms", []) or []
-    lines = [
-        f"layoutId: {layout.get('layoutId', '?')}",
-        f"name: {layout.get('name', '?')}",
-        f"rooms ({len(rooms)}):",
-    ]
-    for r in rooms:
-        attrs = r.get("attributes", {}) or {}
-        lines.append(
-            f"  - id={r.get('id', '?')} "
-            f"name=\"{r.get('name', '?')}\" "
-            f"type={attrs.get('roomType', '?')} "
-            f"area={attrs.get('area', '?')}"
-        )
-    return "\n".join(lines)
+    return final_response, updated_session
