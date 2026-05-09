@@ -83,7 +83,21 @@ def main() -> None:
 
         # ── Print response ────────────────────────────────────────────────
         print("\nComfort Copilot:\n")
-        safe_response = response.encode("ascii", errors="replace").decode("ascii")
+        # Replace common Unicode punctuation with ASCII equivalents before
+        # encoding, so Windows terminals don't show ? for em dashes etc.
+        safe_response = (
+            response
+            .replace("—", " - ")   # em dash
+            .replace("–", " - ")   # en dash
+            .replace("’", "'")     # right single quote
+            .replace("‘", "'")     # left single quote
+            .replace("“", '"')     # left double quote
+            .replace("”", '"')     # right double quote
+            .replace("•", "-")     # bullet
+            .replace("é", "e")     # é
+            .replace("è", "e")     # è
+        )
+        safe_response = safe_response.encode("ascii", errors="replace").decode("ascii")
         print(safe_response)
         print()
 

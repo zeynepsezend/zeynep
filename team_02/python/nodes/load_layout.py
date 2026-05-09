@@ -26,11 +26,20 @@ def build_load_layout_node(layout_input_dir: Path):
 
     def load_layout_node(state: dict) -> dict:
 
-        # ── Skip if layout already loaded in this session ─────────────────
-        if state.get("layout_json_string"):
-            existing_id = state.get("layout_id", "?")
-            print(f"[load_layout] Layout {existing_id} already loaded — skipping.")
-            return state
+        # ── Skip only if the SAME layout is already loaded ────────────────
+        # If the user asks for a different layout ID, reload even if something
+        # is already in state (e.g. switching from layout 201 to layout 202).
+        if state.get("layout_json_string") and state.get("layout_id"):
+            requested_id = str(state.get("layout_id", ""))
+            try:
+                loaded_data = json.loads(state["layout_json_string"])
+                loaded_id   = str(loaded_data.get("layoutId", ""))
+                # Match e.g. "202" against "Layout-202"
+                if requested_id and (requested_id in loaded_id or loaded_id.endswith(requested_id)):
+                    print(f"[load_layout] Layout {requested_id} already loaded — skipping.")
+                    return state
+            except (json.JSONDecodeError, TypeError):
+                pass  # Fall through and reload
 
         layout_id: str | None = state.get("layout_id")
 

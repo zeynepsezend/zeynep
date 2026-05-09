@@ -29,24 +29,52 @@ _INSPIRE_KEYWORDS: tuple[str, ...] = (
     "vibe", "feel like", "generate image", "create image", "imagine",
 )
 
+# Action keywords that mean "do comfort work on the already-loaded layout".
+# Used only when a layout is already in session — prevents chitchat false
+# positives on follow-up turns like "now detect the conflicts".
+_COMFORT_CONTEXT_KEYWORDS: tuple[str, ...] = (
+    "detect", "conflict", "conflicts",
+    "analyse", "analyze", "analysis",
+    "improve", "suggest", "suggestions", "recommendation",
+    "fix", "enhance", "upgrade",
+    "what's wrong", "what is wrong",
+    "issues", "problems", "assess",
+)
+
 
 # ---------------------------------------------------------------------------
 # Coarse intent detection
 # ---------------------------------------------------------------------------
 
-def detect_coarse_intent(prompt: str, has_image: bool = False) -> str:
+def detect_coarse_intent(
+    prompt: str,
+    has_image: bool = False,
+    has_loaded_layout: bool = False,
+) -> str:
     """
     Classify the prompt into one of three top-level paths.
 
     Returns one of: "comfort", "inspire", "chitchat"
+
+    Priority:
+      1. Image attached            → inspire
+      2. Layout ID in prompt       → comfort (new layout)
+      3. Layout loaded + action kw → comfort (use existing layout)
+      4. Inspire keywords          → inspire
+      5. Everything else           → chitchat
     """
     if has_image:
         return "inspire"
 
     lower = prompt.lower()
 
-    # Layout ID anywhere in the prompt → comfort analysis path
+    # Explicit layout ID → always comfort (may switch to a new layout)
     if any(lid in lower for lid in _LAYOUT_IDS):
+        return "comfort"
+
+    # Layout already loaded + comfort action keyword → stay on comfort path
+    # (covers follow-up turns: "now detect the conflicts", "what should I fix?")
+    if has_loaded_layout and any(kw in lower for kw in _COMFORT_CONTEXT_KEYWORDS):
         return "comfort"
 
     if any(kw in lower for kw in _INSPIRE_KEYWORDS):
@@ -72,10 +100,11 @@ def preprocess_node(state: dict) -> dict:
     raw_prompt: str = state.get("raw_prompt", "")
     has_image: bool = state.get("has_image", False)
 
+    has_loaded_layout: bool = bool(state.get("layout_json_string"))
     print(f"\n[preprocess] Prompt : {raw_prompt[:120]}")
 
     # ── 1. Coarse intent ─────────────────────────────────────────────────
-    intent = detect_coarse_intent(raw_prompt, has_image)
+    intent = detect_coarse_intent(raw_prompt, has_image, has_loaded_layout)
     print(f"[preprocess] Intent : {intent}")
 
     # ── 2. Extract layout ID (if present) ────────────────────────────────
@@ -86,14 +115,20 @@ def preprocess_node(state: dict) -> dict:
             if lid in lower:
                 layout_id = lid
                 break
+        # No new ID in prompt — keep the session's layout_id so load_layout
+        # can correctly match and skip reloading.
+        if layout_id is None:
+            layout_id = state.get("layout_id")
     print(f"[preprocess] Layout : {layout_id or 'none'}")
 
     # ── 3. Detect persona — only relevant on the comfort path ────────────
-    # On chitchat / inspire, keyword overlap (e.g. "sensory" in a general
-    # question) would incorrectly lock a persona into the session.
+    # On chitchat / inspire, keyword overlap would incorrectly lock a persona.
+    # On comfort: prompt keyword WINS over session — so "for a child" always
+    # overrides a previously loaded persona.
     if intent == "comfort":
-        # Respect a persona already carried over from a previous turn.
-        persona: str | None = state.get("persona_detected") or detect_persona_in_text(raw_prompt)
+        prompt_persona  = detect_persona_in_text(raw_prompt)
+        session_persona = state.get("persona_detected")
+        persona: str | None = prompt_persona or session_persona
     else:
         persona = None
     print(f"[preprocess] Persona: {persona or 'not found'}")
