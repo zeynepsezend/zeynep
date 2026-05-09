@@ -5,6 +5,7 @@ from langgraph.graph import END, START, StateGraph
 from nodes.reason import build_reason_node
 from nodes.tools import build_tool_node, handle_select_layout
 from nodes.preprocess import build_preprocess_node, needs_layout, detect_intent
+from personas import PERSONAS, detect_persona_in_text
 
 
 # =============================================================================
@@ -56,20 +57,26 @@ def build_graph(ctx: Any) -> Any:
 
 
 def run_agent(prompt: str, ctx: Any) -> str:
-    # Pre-empt: if the user's prompt clearly involves a layout but none is
-    # loaded yet, run the select_layout pseudo-tool ourselves before the LLM
-    # reasons. We mutate ctx.layout_data so _build_initial_state below uses
-    # the "layout already loaded" branch - keeps the initial user message
-    # consistent (no stale "no layout loaded" text).
-    if not ctx.layout_data and needs_layout(prompt, detect_intent(prompt)):
+    intent = detect_intent(prompt)
+
+    # Pre-empt layout loading: if the request needs a layout and none is
+    # loaded yet, prompt the user to pick one before the graph starts.
+    if not ctx.layout_data and needs_layout(prompt, intent):
         print("\n[graph] Prompt mentions layout - running select_layout before LLM reasoning.")
         scratch: dict[str, Any] = {"layout_json_string": ""}
         handle_select_layout(ctx.layout_input_dir, scratch)
         if scratch.get("layout_json_string"):
             ctx.layout_data = json.loads(scratch["layout_json_string"])
 
+    # Pre-empt persona selection: if it's a comfort request and no persona
+    # was mentioned in the prompt, show an interactive picker — same pattern
+    # as layout selection, keeps the LLM out of the conversation flow.
+    selected_persona: str | None = detect_persona_in_text(prompt)
+    if intent.startswith("comfort") and selected_persona is None:
+        selected_persona = _handle_select_persona()
+
     app = build_graph(ctx)
-    initial_state = _build_initial_state(prompt, ctx)
+    initial_state = _build_initial_state(prompt, ctx, selected_persona)
     final_state = app.invoke(initial_state)
 
     print("\nWorkflow graph:")
@@ -81,15 +88,36 @@ def run_agent(prompt: str, ctx: Any) -> str:
     return final_response
 
 
-def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
+def _handle_select_persona() -> str:
+    """
+    Interactive persona picker — mirrors handle_select_layout.
+    Shows all available personas with descriptions and prompts the user
+    to select one by number. Returns the chosen persona name.
+    """
+    persona_names = list(PERSONAS.keys())
+
+    print("\nAvailable personas:")
+    for i, name in enumerate(persona_names, 1):
+        desc = PERSONAS[name]["description"]
+        print(f"  {i}. {name} — {desc}")
+
+    while True:
+        try:
+            choice = input("\nSelect a persona (enter number): ").strip()
+            index = int(choice) - 1
+            if 0 <= index < len(persona_names):
+                selected = persona_names[index]
+                print(f"Persona: {selected}")
+                return selected
+            print(f"Please enter a number between 1 and {len(persona_names)}")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
+
+def _build_initial_state(prompt: str, ctx: Any, selected_persona: str | None = None) -> AgentState:
     layout_loaded = bool(ctx.layout_data)
 
     if layout_loaded:
-        # Send the LLM a compact summary, NOT the full layout JSON. The full
-        # JSON (with every room's geometry) blows past small-model context
-        # windows. The tool node still has the full layout in state and
-        # injects it into MCP calls; the LLM only needs room names/ids/types
-        # to decide which arguments to pass.
         layout_section = (
             "Current layout (use rooms[].name for valid room names; "
             "the full layout JSON is auto-injected into tool calls):\n"
@@ -120,7 +148,7 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
         "tool_catalog": _format_tool_catalog(ctx.tools),
         "layout_json_string": layout_json_string,
         "intent": "",
-        "persona_detected": None,
+        "persona_detected": selected_persona,   # pre-filled if picker ran
         "needs_persona_ask": False,
         "last_scores_json": "",
         "last_conflicts_json": "",
@@ -128,10 +156,6 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
 
 
 def _format_tool_catalog(tools: list[dict[str, Any]]) -> str:
-    # Compact: name, description, and parameter names only. The strict JSON
-    # schema in llm.py enforces actual argument structure, so we don't feed
-    # the model verbose inputSchema text. Full schemas balloon the prompt
-    # past small-model context limits.
     lines = []
     for tool in tools:
         name = tool.get("name", "<unknown>")
@@ -143,7 +167,7 @@ def _format_tool_catalog(tools: list[dict[str, Any]]) -> str:
 
 
 def _layout_summary(layout: dict[str, Any]) -> str:
-    """Compact, LLM-friendly summary of a layout - drops geometry arrays."""
+    """Compact, LLM-friendly summary of a layout — drops geometry arrays."""
     rooms = layout.get("rooms", []) or []
     lines = [
         f"layoutId: {layout.get('layoutId', '?')}",

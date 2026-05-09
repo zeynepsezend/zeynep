@@ -77,28 +77,18 @@ _ANALYZE = """
 ## Intent: comfort_analyze — compute scores only
 The user wants to see comfort scores. Run ONLY this step:
 1. Call `compute_comfort_scores` — args: persona="{persona}", room_ids="all"
-2. Respond with action "final" using the scores schema below.
+2. Respond with action "final" using the format below.
 
-## Output schema for comfort_analyze
-{{{{
-  "layoutId": "<from layout>",
-  "persona": "<persona used>",
-  "rooms": [
-    {{{{
-      "roomId": "<id>",
-      "roomName": "<name>",
-      "persona": "<persona>",
-      "comfortScores": {{{{
-        "thermal": 0.0, "visual": 0.0, "acoustic": 0.0,
-        "spatial": 0.0, "olfactory": 0.0, "tactile": 0.0
-      }}}},
-      "overallScore": 0.0,
-      "conflicts": [],
-      "suggestions": [],
-      "narrative": "<plain language summary of scores only>"
-    }}}}
-  ]
-}}}}
+## Output format for comfort_analyze
+Write a plain-language report. Do NOT output raw JSON. Use this structure:
+
+Comfort Analysis - [layout name] - Persona: [persona]
+
+[Room Name] — Overall: [score]
+  Thermal: [score] | Visual: [score] | Acoustic: [score] | Spatial: [score] | Olfactory: [score] | Tactile: [score]
+  [One sentence narrative from the tool result]
+
+Repeat for every room. End with a one-line summary of the highest and lowest scoring rooms.
 """
 
 _DETECT = """
@@ -106,28 +96,20 @@ _DETECT = """
 The user wants to know what is wrong. Run ONLY these two steps:
 1. Call `compute_comfort_scores` — args: persona="{persona}", room_ids="all"
 2. Call `detect_sensorial_conflicts` — args: persona="{persona}", scores_json=<full JSON string result from step 1>
-3. Respond with action "final" using the schema below.
+3. Respond with action "final" using the format below.
 
-## Output schema for comfort_detect
-{{{{
-  "layoutId": "<from layout>",
-  "persona": "<persona used>",
-  "rooms": [
-    {{{{
-      "roomId": "<id>",
-      "roomName": "<name>",
-      "persona": "<persona>",
-      "comfortScores": {{{{
-        "thermal": 0.0, "visual": 0.0, "acoustic": 0.0,
-        "spatial": 0.0, "olfactory": 0.0, "tactile": 0.0
-      }}}},
-      "overallScore": 0.0,
-      "conflicts": ["<conflict description>"],
-      "suggestions": [],
-      "narrative": "<plain language summary of scores and conflicts>"
-    }}}}
-  ]
-}}}}
+## Output format for comfort_detect
+Write a plain-language report. Do NOT output raw JSON. Use this structure:
+
+Comfort Issues - [layout name] - Persona: [persona]
+[N] room(s) have comfort conflicts.
+
+[Room Name]
+  - [sense]: [score] below threshold [threshold]
+  - [sense]: [score] below threshold [threshold]
+
+Repeat for each flagged room only. Then add:
+No issues found in: [comma-separated list of rooms with no conflicts].
 """
 
 _FULL = """
@@ -136,32 +118,23 @@ The user wants the full analysis with improvement recommendations. Follow all th
 1. Call `compute_comfort_scores` — args: persona="{persona}", room_ids="all"
 2. Call `detect_sensorial_conflicts` — args: persona="{persona}", scores_json=<full JSON string result from step 1>
 3. Call `generate_suggestions` — args: persona="{persona}", conflicts=<full JSON string result from step 2>
-4. Respond with action "final" using the schema below.
+4. Respond with action "final" using the format below.
 
-## Output schema for comfort_full
-{{{{
-  "layoutId": "<from layout>",
-  "persona": "<persona used>",
-  "rooms": [
-    {{{{
-      "roomId": "<id>",
-      "roomName": "<name>",
-      "persona": "<persona>",
-      "comfortScores": {{{{
-        "thermal": 0.0, "visual": 0.0, "acoustic": 0.0,
-        "spatial": 0.0, "olfactory": 0.0, "tactile": 0.0
-      }}}},
-      "overallScore": 0.0,
-      "conflicts": ["<conflict description>"],
-      "suggestions": ["<suggestion text>"],
-      "narrative": "<plain language summary>"
-    }}}}
-  ]
-}}}}
+## Output format for comfort_full
+Write a plain-language report. Do NOT output raw JSON. Use this structure:
 
-Assemble by combining the three tool results: scores from compute_comfort_scores,
-conflicts from detect_sensorial_conflicts, suggestions from generate_suggestions.
-Match rooms by roomId. For rooms with no conflicts, set conflicts to [] and suggestions to [].
+Comfort Report - [layout name] - Persona: [persona]
+
+[Room Name] — Overall: [score] - [N] issue(s)
+  Issues: [sense] ([score]), [sense] ([score])
+  Recommendations:
+    1. [[sense]] [top suggestion]
+    2. [[sense]] [top suggestion]
+
+Repeat for each room that has issues. Then add:
+No issues found in: [comma-separated list of rooms with no conflicts].
+
+Close with a brief overall summary (2–3 sentences) of the apartment's main comfort challenges for this persona.
 """
 
 _INSPIRE = """

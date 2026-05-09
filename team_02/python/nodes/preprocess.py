@@ -53,6 +53,22 @@ _COMFORT_ANALYZE_KEYWORDS: tuple[str, ...] = (
     "wellbeing", "sensorial", "sensory", "multi-sensory",
 )
 
+# General question patterns — these look like comfort questions because they
+# use domain words, but they are asking for definitions/explanations, not
+# requesting analysis of a specific space.
+_GENERAL_QUESTION_PATTERNS: tuple[str, ...] = (
+    "what is ", "what are ", "what does ", "what do ",
+    "explain ", "define ", "describe ", "tell me about ",
+    "how does ", "how do ", "what means ", "meaning of ",
+)
+
+# Spatial anchors — if any of these are present alongside a general question
+# pattern, the user IS asking about their specific space (not chitchat).
+_SPATIAL_ANCHORS: tuple[str, ...] = (
+    "my ", "this ", "our ",
+    "apartment", "flat", "layout", "floor plan",
+)
+
 
 # ---------------------------------------------------------------------------
 # Intent detection
@@ -63,7 +79,8 @@ def detect_intent(prompt: str, has_image: bool = False) -> str:
     Classify the user prompt into one of five intent strings.
 
     Priority order (highest to lowest):
-      inspire > comfort_full > comfort_detect > comfort_analyze > chitchat
+      chitchat (general question) > inspire > comfort_full >
+      comfort_detect > comfort_analyze > chitchat (fallback)
 
     Args:
         prompt    : raw user input text
@@ -77,6 +94,14 @@ def detect_intent(prompt: str, has_image: bool = False) -> str:
         return "inspire"
 
     lower = prompt.lower()
+
+    # Guard: general knowledge questions ("what is X", "explain X") that
+    # contain domain words (comfort, sensory...) but have no spatial anchor
+    # (my apartment, this layout...) are chitchat, not analysis requests.
+    is_general_question = any(kw in lower for kw in _GENERAL_QUESTION_PATTERNS)
+    has_spatial_anchor  = any(anchor in lower for anchor in _SPATIAL_ANCHORS)
+    if is_general_question and not has_spatial_anchor:
+        return "chitchat"
 
     if any(kw in lower for kw in _INSPIRE_KEYWORDS):
         return "inspire"
@@ -144,7 +169,8 @@ def build_preprocess_node() -> Any:
         print(f"[preprocess] Intent  : {intent}")
 
         # ── 2. Detect persona ────────────────────────────────────────────
-        persona = detect_persona_in_text(raw_prompt)
+        # Respect a persona already set in state (e.g. from interactive picker)
+        persona = state.get("persona_detected") or detect_persona_in_text(raw_prompt)
         print(f"[preprocess] Persona : {persona or 'not found'}")
 
         # ── 3. Flag missing persona for comfort requests ─────────────────

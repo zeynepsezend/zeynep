@@ -80,6 +80,11 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, layout_input_
                         continue
                     tool_args["layout_json"] = state["layout_json_string"]
 
+                # Auto-inject persona from state so the LLM never has to pass
+                # it — small models reliably forget or default it to "Neutral".
+                if "persona" in allowed_props and state.get("persona_detected"):
+                    tool_args["persona"] = state["persona_detected"]
+
                 # Auto-inject chained tool results so the LLM never has to
                 # pass large JSON strings between tools — same pattern as layout_json.
                 if tool_name == "detect_sensorial_conflicts" and state.get("last_scores_json"):
