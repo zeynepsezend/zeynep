@@ -80,18 +80,36 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, layout_input_
                         continue
                     tool_args["layout_json"] = state["layout_json_string"]
 
+                # Auto-inject chained tool results so the LLM never has to
+                # pass large JSON strings between tools — same pattern as layout_json.
+                if tool_name == "detect_sensorial_conflicts" and state.get("last_scores_json"):
+                    tool_args["scores_json"] = state["last_scores_json"]
+                if tool_name == "generate_suggestions" and state.get("last_conflicts_json"):
+                    tool_args["conflicts"] = state["last_conflicts_json"]
+
                 printable_args = {
-                    k: (f"<layout {len(v)} chars>" if k == "layout_json" else v)
+                    k: (f"<layout {len(v)} chars>" if k == "layout_json"
+                        else f"<scores {len(v)} chars>" if k == "scores_json"
+                        else f"<conflicts {len(v)} chars>" if k == "conflicts"
+                        else v)
                     for k, v in tool_args.items()
                 }
                 print(f"Calling tool: {tool_name} with arguments: {printable_args}")
-                
+
                 # Store the layout before the tool call to detect if nothing changed
                 layout_before = state["layout_json_string"]
-                
+
                 tool_output = mcp_client.call_tool(tool_name, tool_args)
 
                 write_tool_result(tool_output, edited_layout_path)
+
+                # Store chained tool results for auto-injection into dependent tools.
+                # Tool output is wrapped as {"result": "<json string>"} — unwrap it
+                # so downstream scripts receive the actual JSON, not the envelope.
+                if tool_name == "compute_comfort_scores":
+                    state["last_scores_json"] = _unwrap_result(tool_output)
+                if tool_name == "detect_sensorial_conflicts":
+                    state["last_conflicts_json"] = _unwrap_result(tool_output)
 
                 # Refresh state['layout_json_string'] only when the result
                 # looks like an updated layout (has a 'rooms' key). Don't let
@@ -199,6 +217,24 @@ def handle_select_layout(layout_input_dir: Path, state: dict) -> str:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _unwrap_result(tool_output: str) -> str:
+    """
+    MCP tool responses arrive as {"result": "<json string>"}.
+    Unwrap the envelope so downstream tools receive the actual JSON payload.
+    Falls back to the original string if the structure is unexpected.
+    """
+    try:
+        outer = json.loads(tool_output)
+        if isinstance(outer, dict) and "result" in outer:
+            inner = outer["result"]
+            # inner is already a JSON string — validate it parses correctly
+            json.loads(inner)
+            return inner
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return tool_output
+
 
 def _append_tool_messages(state: dict, tool_name: str, arguments: dict, tool_output: str) -> None:
     state["messages"].append({

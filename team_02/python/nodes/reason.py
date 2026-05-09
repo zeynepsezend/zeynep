@@ -105,7 +105,7 @@ _DETECT = """
 ## Intent: comfort_detect — scores + conflict detection
 The user wants to know what is wrong. Run ONLY these two steps:
 1. Call `compute_comfort_scores` — args: persona="{persona}", room_ids="all"
-2. Call `detect_sensorial_conflicts` — args: persona="{persona}"
+2. Call `detect_sensorial_conflicts` — args: persona="{persona}", scores_json=<full JSON string result from step 1>
 3. Respond with action "final" using the schema below.
 
 ## Output schema for comfort_detect
@@ -134,8 +134,8 @@ _FULL = """
 ## Intent: comfort_full — scores + conflicts + suggestions
 The user wants the full analysis with improvement recommendations. Follow all three steps:
 1. Call `compute_comfort_scores` — args: persona="{persona}", room_ids="all"
-2. Call `detect_sensorial_conflicts` — args: persona="{persona}"
-3. Call `generate_suggestions` — args: persona="{persona}", conflicts=<full JSON string from step 2>
+2. Call `detect_sensorial_conflicts` — args: persona="{persona}", scores_json=<full JSON string result from step 1>
+3. Call `generate_suggestions` — args: persona="{persona}", conflicts=<full JSON string result from step 2>
 4. Respond with action "final" using the schema below.
 
 ## Output schema for comfort_full

@@ -23,6 +23,8 @@ class AgentState():
     intent: str
     persona_detected: str | None
     needs_persona_ask: bool
+    last_scores_json: str
+    last_conflicts_json: str
 
 
 def _route(state: AgentState) -> str:
@@ -120,6 +122,8 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
         "intent": "",
         "persona_detected": None,
         "needs_persona_ask": False,
+        "last_scores_json": "",
+        "last_conflicts_json": "",
     }
 
 
