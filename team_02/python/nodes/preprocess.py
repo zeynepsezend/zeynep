@@ -23,10 +23,13 @@ from personas import detect_persona_in_text
 # Layout IDs that are valid for this project
 _LAYOUT_IDS: tuple[str, ...] = ("201", "202", "203")
 
-# Words that strongly indicate an inspire / atmosphere request
+# Words that strongly indicate an inspire / atmosphere request.
+# Include inflected forms ("inspired", "inspiring") -- absent forms fall to chitchat.
 _INSPIRE_KEYWORDS: tuple[str, ...] = (
-    "inspire", "inspiration", "atmosphere", "mood", "aesthetic",
-    "vibe", "feel like", "generate image", "create image", "imagine",
+    "inspire", "inspired", "inspiring", "inspiration",
+    "atmosphere", "ambiance", "ambience",
+    "mood", "aesthetic", "vibe",
+    "feel like", "generate image", "create image", "imagine",
 )
 
 # Action keywords that mean "do comfort work on the already-loaded layout".

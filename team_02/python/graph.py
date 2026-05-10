@@ -424,6 +424,7 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
             "persona_detected":   session.get("persona_detected"),  # unchanged
             "layout_id":          final_state.get("layout_id"),
         }
+    else:
         # chitchat / inspire -- nothing layout-related changed
         updated_session = dict(session)
 

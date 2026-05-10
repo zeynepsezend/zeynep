@@ -58,28 +58,20 @@
         "ventilationType": "mechanical",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.71,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.6,
           "comfortScores": {
-            "thermal": 0.74,
-            "visual": 0.44,
-            "acoustic": 0.85,
+            "thermal": 0.56,
+            "visual": 0.4,
+            "acoustic": 0.59,
             "spatial": 1.0,
-            "olfactory": 0.65,
-            "tactile": 0.56
+            "olfactory": 0.59,
+            "tactile": 0.46
           },
-          "conflicts": [
-            "visual score 0.44 below threshold 0.60"
-          ],
-          "suggestions": [
-            {
-              "sense": "visual",
-              "priority": 1,
-              "suggestion": "Add larger windows or skylights"
-            }
-          ]
+          "conflicts": [],
+          "suggestions": []
         }
       }
     },
@@ -117,28 +109,20 @@
         "ventilationType": "natural",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.76,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.67,
           "comfortScores": {
-            "thermal": 0.8,
-            "visual": 1.0,
-            "acoustic": 0.52,
-            "spatial": 0.74,
-            "olfactory": 0.83,
-            "tactile": 0.69
+            "thermal": 0.6,
+            "visual": 0.93,
+            "acoustic": 0.36,
+            "spatial": 0.81,
+            "olfactory": 0.75,
+            "tactile": 0.57
           },
-          "conflicts": [
-            "acoustic score 0.52 below threshold 0.65"
-          ],
-          "suggestions": [
-            {
-              "sense": "acoustic",
-              "priority": 1,
-              "suggestion": "Add rugs and curtains to absorb sound"
-            }
-          ]
+          "conflicts": [],
+          "suggestions": []
         }
       }
     },
@@ -176,17 +160,17 @@
         "ventilationType": "natural",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.75,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.65,
           "comfortScores": {
-            "thermal": 0.74,
-            "visual": 0.83,
-            "acoustic": 0.72,
-            "spatial": 0.89,
-            "olfactory": 0.65,
-            "tactile": 0.65
+            "thermal": 0.56,
+            "visual": 0.75,
+            "acoustic": 0.5,
+            "spatial": 0.98,
+            "olfactory": 0.59,
+            "tactile": 0.53
           },
           "conflicts": [],
           "suggestions": []
@@ -227,34 +211,23 @@
         "ventilationType": "mechanical",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.58,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.51,
           "comfortScores": {
-            "thermal": 0.62,
-            "visual": 0.61,
-            "acoustic": 0.39,
+            "thermal": 0.47,
+            "visual": 0.55,
+            "acoustic": 0.27,
             "spatial": 1.0,
-            "olfactory": 0.3,
-            "tactile": 0.58
+            "olfactory": 0.27,
+            "tactile": 0.48
           },
           "conflicts": [
-            "acoustic score 0.39 below threshold 0.65",
-            "olfactory score 0.30 below threshold 0.55"
+            "acoustic score 0.27 below threshold 0.35",
+            "olfactory score 0.27 below threshold 0.35"
           ],
-          "suggestions": [
-            {
-              "sense": "acoustic",
-              "priority": 1,
-              "suggestion": "Add rugs and curtains to absorb sound"
-            },
-            {
-              "sense": "olfactory",
-              "priority": 2,
-              "suggestion": "Upgrade to mixed or mechanical ventilation for active air exchange"
-            }
-          ]
+          "suggestions": []
         }
       }
     },
@@ -292,17 +265,17 @@
         "ventilationType": "natural",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.89,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.76,
           "comfortScores": {
-            "thermal": 0.92,
-            "visual": 0.86,
-            "acoustic": 0.91,
+            "thermal": 0.69,
+            "visual": 0.78,
+            "acoustic": 0.63,
             "spatial": 1.0,
-            "olfactory": 0.93,
-            "tactile": 0.73
+            "olfactory": 0.84,
+            "tactile": 0.59
           },
           "conflicts": [],
           "suggestions": []
@@ -343,34 +316,20 @@
         "ventilationType": "mechanical",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.7,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.58,
           "comfortScores": {
-            "thermal": 0.78,
-            "visual": 0.44,
-            "acoustic": 0.91,
+            "thermal": 0.59,
+            "visual": 0.4,
+            "acoustic": 0.63,
             "spatial": 1.0,
-            "olfactory": 0.4,
-            "tactile": 0.65
+            "olfactory": 0.36,
+            "tactile": 0.53
           },
-          "conflicts": [
-            "visual score 0.44 below threshold 0.60",
-            "olfactory score 0.40 below threshold 0.55"
-          ],
-          "suggestions": [
-            {
-              "sense": "visual",
-              "priority": 1,
-              "suggestion": "Add larger windows or skylights"
-            },
-            {
-              "sense": "olfactory",
-              "priority": 2,
-              "suggestion": "Upgrade to mixed or mechanical ventilation for active air exchange"
-            }
-          ]
+          "conflicts": [],
+          "suggestions": []
         }
       }
     },
@@ -408,28 +367,20 @@
         "ventilationType": "natural",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.77,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.64,
           "comfortScores": {
-            "thermal": 0.96,
-            "visual": 0.72,
-            "acoustic": 0.91,
-            "spatial": 0.46,
-            "olfactory": 0.85,
-            "tactile": 0.73
+            "thermal": 0.72,
+            "visual": 0.65,
+            "acoustic": 0.63,
+            "spatial": 0.51,
+            "olfactory": 0.77,
+            "tactile": 0.59
           },
-          "conflicts": [
-            "spatial score 0.46 below threshold 0.50"
-          ],
-          "suggestions": [
-            {
-              "sense": "spatial",
-              "priority": 1,
-              "suggestion": "Remove unnecessary furniture"
-            }
-          ]
+          "conflicts": [],
+          "suggestions": []
         }
       }
     },
@@ -467,28 +418,20 @@
         "ventilationType": "natural",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.77,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.64,
           "comfortScores": {
-            "thermal": 0.96,
-            "visual": 0.72,
-            "acoustic": 0.91,
-            "spatial": 0.46,
-            "olfactory": 0.85,
-            "tactile": 0.73
+            "thermal": 0.72,
+            "visual": 0.65,
+            "acoustic": 0.63,
+            "spatial": 0.51,
+            "olfactory": 0.77,
+            "tactile": 0.59
           },
-          "conflicts": [
-            "spatial score 0.46 below threshold 0.50"
-          ],
-          "suggestions": [
-            {
-              "sense": "spatial",
-              "priority": 1,
-              "suggestion": "Remove unnecessary furniture"
-            }
-          ]
+          "conflicts": [],
+          "suggestions": []
         }
       }
     },
@@ -526,34 +469,20 @@
         "ventilationType": "mechanical",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.69,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.58,
           "comfortScores": {
-            "thermal": 0.74,
-            "visual": 0.44,
-            "acoustic": 0.91,
+            "thermal": 0.56,
+            "visual": 0.4,
+            "acoustic": 0.63,
             "spatial": 1.0,
-            "olfactory": 0.4,
-            "tactile": 0.65
+            "olfactory": 0.36,
+            "tactile": 0.53
           },
-          "conflicts": [
-            "visual score 0.44 below threshold 0.60",
-            "olfactory score 0.40 below threshold 0.55"
-          ],
-          "suggestions": [
-            {
-              "sense": "visual",
-              "priority": 1,
-              "suggestion": "Add larger windows or skylights"
-            },
-            {
-              "sense": "olfactory",
-              "priority": 2,
-              "suggestion": "Upgrade to mixed or mechanical ventilation for active air exchange"
-            }
-          ]
+          "conflicts": [],
+          "suggestions": []
         }
       }
     },
@@ -591,34 +520,20 @@
         "ventilationType": "mechanical",
         "analysis": {
           "_source": "Comfort Copilot",
-          "persona": "Elderly 65+",
-          "depth": "full",
-          "timestamp": "2026-05-10T14:07:38",
-          "overallScore": 0.65,
+          "persona": "Young Active",
+          "depth": "detect",
+          "timestamp": "2026-05-10T15:23:10",
+          "overallScore": 0.55,
           "comfortScores": {
-            "thermal": 0.68,
-            "visual": 0.39,
-            "acoustic": 0.78,
+            "thermal": 0.51,
+            "visual": 0.35,
+            "acoustic": 0.54,
             "spatial": 1.0,
-            "olfactory": 0.5,
-            "tactile": 0.56
+            "olfactory": 0.45,
+            "tactile": 0.46
           },
-          "conflicts": [
-            "visual score 0.39 below threshold 0.60",
-            "olfactory score 0.50 below threshold 0.55"
-          ],
-          "suggestions": [
-            {
-              "sense": "visual",
-              "priority": 1,
-              "suggestion": "Add larger windows or skylights"
-            },
-            {
-              "sense": "olfactory",
-              "priority": 2,
-              "suggestion": "Upgrade to mixed or mechanical ventilation for active air exchange"
-            }
-          ]
+          "conflicts": [],
+          "suggestions": []
         }
       }
     }
@@ -1409,10 +1324,10 @@
   ],
   "analysis": {
     "_source": "Comfort Copilot",
-    "persona": "Elderly 65+",
-    "depth": "full",
-    "timestamp": "2026-05-10T14:07:38",
-    "overallScore": 0.727,
+    "persona": "Young Active",
+    "depth": "detect",
+    "timestamp": "2026-05-10T15:23:10",
+    "overallScore": 0.618,
     "bestRoom": "room-5",
     "worstRoom": "room-4"
   }

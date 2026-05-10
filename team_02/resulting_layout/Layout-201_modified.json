@@ -59,8 +59,8 @@
         "analysis": {
           "_source": "Comfort Copilot",
           "persona": "Child under 12",
-          "depth": "detect",
-          "timestamp": "2026-05-10T14:06:47",
+          "depth": "analyze",
+          "timestamp": "2026-05-10T15:22:30",
           "overallScore": 0.75,
           "comfortScores": {
             "thermal": 0.72,
@@ -70,9 +70,7 @@
             "olfactory": 0.7,
             "tactile": 0.79
           },
-          "conflicts": [
-            "acoustic score 0.44 below threshold 0.55"
-          ],
+          "conflicts": [],
           "suggestions": []
         }
       }
@@ -112,8 +110,8 @@
         "analysis": {
           "_source": "Comfort Copilot",
           "persona": "Child under 12",
-          "depth": "detect",
-          "timestamp": "2026-05-10T14:06:47",
+          "depth": "analyze",
+          "timestamp": "2026-05-10T15:22:30",
           "overallScore": 0.58,
           "comfortScores": {
             "thermal": 0.52,
@@ -123,10 +121,7 @@
             "olfactory": 0.27,
             "tactile": 0.68
           },
-          "conflicts": [
-            "acoustic score 0.33 below threshold 0.55",
-            "olfactory score 0.27 below threshold 0.45"
-          ],
+          "conflicts": [],
           "suggestions": []
         }
       }
@@ -166,8 +161,8 @@
         "analysis": {
           "_source": "Comfort Copilot",
           "persona": "Child under 12",
-          "depth": "detect",
-          "timestamp": "2026-05-10T14:06:47",
+          "depth": "analyze",
+          "timestamp": "2026-05-10T15:22:30",
           "overallScore": 0.77,
           "comfortScores": {
             "thermal": 0.72,
@@ -217,8 +212,8 @@
         "analysis": {
           "_source": "Comfort Copilot",
           "persona": "Child under 12",
-          "depth": "detect",
-          "timestamp": "2026-05-10T14:06:47",
+          "depth": "analyze",
+          "timestamp": "2026-05-10T15:22:30",
           "overallScore": 0.73,
           "comfortScores": {
             "thermal": 0.72,
@@ -268,8 +263,8 @@
         "analysis": {
           "_source": "Comfort Copilot",
           "persona": "Child under 12",
-          "depth": "detect",
-          "timestamp": "2026-05-10T14:06:47",
+          "depth": "analyze",
+          "timestamp": "2026-05-10T15:22:30",
           "overallScore": 0.6,
           "comfortScores": {
             "thermal": 0.62,
@@ -279,10 +274,7 @@
             "olfactory": 0.36,
             "tactile": 0.76
           },
-          "conflicts": [
-            "visual score 0.40 below threshold 0.50",
-            "olfactory score 0.36 below threshold 0.45"
-          ],
+          "conflicts": [],
           "suggestions": []
         }
       }
@@ -322,8 +314,8 @@
         "analysis": {
           "_source": "Comfort Copilot",
           "persona": "Child under 12",
-          "depth": "detect",
-          "timestamp": "2026-05-10T14:06:47",
+          "depth": "analyze",
+          "timestamp": "2026-05-10T15:22:30",
           "overallScore": 0.6,
           "comfortScores": {
             "thermal": 0.62,
@@ -333,9 +325,7 @@
             "olfactory": 0.59,
             "tactile": 0.66
           },
-          "conflicts": [
-            "visual score 0.40 below threshold 0.50"
-          ],
+          "conflicts": [],
           "suggestions": []
         }
       }
@@ -890,8 +880,8 @@
   "analysis": {
     "_source": "Comfort Copilot",
     "persona": "Child under 12",
-    "depth": "detect",
-    "timestamp": "2026-05-10T14:06:47",
+    "depth": "analyze",
+    "timestamp": "2026-05-10T15:22:30",
     "overallScore": 0.6717,
     "bestRoom": "room-3",
     "worstRoom": "room-2"

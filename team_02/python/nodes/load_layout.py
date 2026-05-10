@@ -14,6 +14,49 @@ Responsibilities:
 Writes to state:
   layout_json_string  (str)  — full JSON of the loaded layout
   layout_id           (str)  — confirmed layout ID (e.g. "201")
+
+===========================================================================
+INPUT SCHEMA  (randomized_layouts/layout_{id}.json)
+Comfort Copilot | AIA26 Studio Module 03 | Team 02
+===========================================================================
+
+Layout root:
+  "layoutId":  str                   -- e.g. "Layout-201"
+  "name":      str                   -- e.g. "Modern 2-Bedroom Apartment"
+  "outline":   [[float, float], ...] -- perimeter polygon
+
+rooms[]  -- used by compute_comfort_scores  [Form + Use + Site]
+  "id", "name", "geometry"
+  attributes:
+    "area":            float   -- m²                        → spatial score
+    "roomType":        str     -- "living"|"bedroom"|...    → baseline scores
+    "height":          float   -- m                         → spatial score
+    "orientation":     str     -- "N"|"S"|"E"|"W"|...       → thermal score
+    "glazingRatio":    float   -- 0.0–1.0                   → visual score
+    "ventilationType": str     -- "natural"|"mechanical"|"mixed" → olfactory score
+  -- output_writer.py adds "analysis":{...} here after each comfort turn
+
+doors[]  -- used for acoustic score  [Use team]
+  "connectsRooms": [str, str]  -- adjacency penalty if bedroom next to kitchen/living
+
+windows[]  -- used for thermal score  [Form + Site teams]
+  "roomId":      str           -- links window to room
+  "glazingType": str           -- "single"|"double"|"triple" → thermal adjustment
+
+furniture[]  -- used for tactile + olfactory + visual scores  [Use team]
+  "roomId":   str
+  "type":     str              -- "plant" type adds biophilic bonus (olfactory + visual)
+  "material": str              -- mapped to warmth score → tactile score
+
+structure[]  -- used for tactile score  [Structure team]
+  "material": str              -- wall material averaged across layout → tactile score
+
+mep[]  -- NOT used by scoring script  [Structure / MEP team — future]
+  "system":   str              -- ventilationType on rooms is the current proxy
+
+NOTE: source files in randomized_layouts/ are never overwritten.
+      Enriched copies are written to resulting_layout/Layout-{id}_modified.json.
+===========================================================================
 """
 
 from __future__ import annotations
