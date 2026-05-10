@@ -41,6 +41,14 @@ _COMFORT_CONTEXT_KEYWORDS: tuple[str, ...] = (
     "issues", "problems", "assess",
 )
 
+# Words that mean the user just wants to see what rooms exist -- no analysis
+_OVERVIEW_KEYWORDS: tuple[str, ...] = (
+    "what rooms", "list rooms", "list the rooms", "show rooms",
+    "what's in", "what is in", "overview", "what do we have",
+    "show me the layout", "describe the layout", "rooms in layout",
+    "whats in layout", "what's in layout",
+)
+
 
 # ---------------------------------------------------------------------------
 # Coarse intent detection
@@ -68,11 +76,16 @@ def detect_coarse_intent(
 
     lower = prompt.lower()
 
-    # Explicit layout ID → always comfort (may switch to a new layout)
+    # Overview intent: user wants to see what rooms exist -- no analysis
+    if (any(lid in lower for lid in _LAYOUT_IDS) or has_loaded_layout):
+        if any(kw in lower for kw in _OVERVIEW_KEYWORDS):
+            return "overview"
+
+    # Explicit layout ID -> always comfort (may switch to a new layout)
     if any(lid in lower for lid in _LAYOUT_IDS):
         return "comfort"
 
-    # Layout already loaded + comfort action keyword → stay on comfort path
+    # Layout already loaded + comfort action keyword -> stay on comfort path
     # (covers follow-up turns: "now detect the conflicts", "what should I fix?")
     if has_loaded_layout and any(kw in lower for kw in _COMFORT_CONTEXT_KEYWORDS):
         return "comfort"
@@ -92,7 +105,7 @@ def preprocess_node(state: dict) -> dict:
     Read the raw user prompt, run coarse routing, detect persona.
 
     Writes to state:
-      intent            (str)        — "comfort" | "inspire" | "chitchat"
+      intent            (str)        — "comfort" | "overview" | "inspire" | "chitchat"
       layout_id         (str | None) — e.g. "201" if found in prompt
       persona_detected  (str | None) — persona name, or None
       needs_persona_ask (bool)       — True when comfort but no persona found
@@ -108,22 +121,23 @@ def preprocess_node(state: dict) -> dict:
     print(f"[preprocess] Intent : {intent}")
 
     # ── 2. Extract layout ID (if present) ────────────────────────────────
+    # Both comfort and overview need the layout ID extracted the same way.
     layout_id: str | None = None
-    if intent == "comfort":
+    if intent in ("comfort", "overview"):
         lower = raw_prompt.lower()
         for lid in _LAYOUT_IDS:
             if lid in lower:
                 layout_id = lid
                 break
-        # No new ID in prompt — keep the session's layout_id so load_layout
+        # No new ID in prompt -- keep the session's layout_id so load_layout
         # can correctly match and skip reloading.
         if layout_id is None:
             layout_id = state.get("layout_id")
     print(f"[preprocess] Layout : {layout_id or 'none'}")
 
     # ── 3. Detect persona — only relevant on the comfort path ────────────
-    # On chitchat / inspire, keyword overlap would incorrectly lock a persona.
-    # On comfort: prompt keyword WINS over session — so "for a child" always
+    # On chitchat / inspire / overview, skip persona detection entirely.
+    # On comfort: prompt keyword WINS over session -- so "for a child" always
     # overrides a previously loaded persona.
     if intent == "comfort":
         prompt_persona  = detect_persona_in_text(raw_prompt)
