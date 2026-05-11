@@ -42,6 +42,33 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, cost_db: dict
             # ENFORCE: compute_room_cost always receives the FULL layout_schema JSON.
             # This is the ONLY sanctioned path for room/space area + cost.
             if tool_name == "compute_room_cost":
+                # Optional overrides: if the LLM passes a custom rate_per_m2 or
+                # area_m2, patch them into the matching room of the layout BEFORE
+                # injecting. Recompute total_cost when both are known.
+                override_rate = tool_args.pop("rate_per_m2", None)
+                override_area = tool_args.pop("area_m2", None)
+                room_name = tool_args.get("room_name")
+                if (override_rate is not None or override_area is not None) and room_name:
+                    try:
+                        _layout_obj = json.loads(state["layout_json_string"])
+                        for _room in _layout_obj.get("rooms", []):
+                            if str(_room.get("name", "")).strip().lower() == str(room_name).strip().lower():
+                                if override_rate is not None:
+                                    _room["rate_per_m2"] = override_rate
+                                    print(f"[OVERRIDE] {room_name} rate_per_m2 -> {override_rate}")
+                                if override_area is not None:
+                                    _room["area_m2"] = override_area
+                                    # Invalidate polygon so the GH script trusts area_m2
+                                    _room.pop("polygon", None)
+                                    print(f"[OVERRIDE] {room_name} area_m2 -> {override_area} (polygon dropped)")
+                                _r = _room.get("rate_per_m2")
+                                _a = _room.get("area_m2")
+                                if _r is not None and _a is not None:
+                                    _room["total_cost"] = round(float(_r) * float(_a), 2)
+                                break
+                        state["layout_json_string"] = json.dumps(_layout_obj)
+                    except (json.JSONDecodeError, AttributeError, TypeError) as exc:
+                        print(f"[OVERRIDE] Failed to apply overrides ({exc})")
                 tool_args["layout_schema"] = state["layout_json_string"]
                 print(
                     f"[ENFORCE] compute_room_cost via Grasshopper MCP | room='{tool_args.get('room_name')}' | "
@@ -60,8 +87,16 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, cost_db: dict
             else:
                 tool_output = mcp_client.call_tool(tool_name, tool_args)
 
-            # Store the updated layout returned by the MCP tool to a json file
-            write_tool_result(tool_output, edited_layout_path)
+            # Store the updated layout returned by the MCP tool to a json file.
+            # Only persist when the response is a full layout schema (has rooms),
+            # so non-layout tools (e.g. count_elements_by_type) don't overwrite it.
+            try:
+                _parsed_for_persist = json.loads(tool_output.strip())
+            except (json.JSONDecodeError, AttributeError):
+                _parsed_for_persist = None
+            if isinstance(_parsed_for_persist, dict) and isinstance(_parsed_for_persist.get("rooms"), list) and _parsed_for_persist["rooms"]:
+                write_tool_result(tool_output, edited_layout_path)
+                print(f"[PERSIST] Updated layout saved to {edited_layout_path.name}")
 
             # If the tool returned valid JSON, update the layout in state so
             # subsequent tool calls in this loop receive the latest layout.

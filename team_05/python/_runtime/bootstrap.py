@@ -27,10 +27,24 @@ def bootstrap() -> Context:
     """
     settings = load_settings()
 
-    # Read the layout schema that will be given to the agent as context (team_05-specific)
+    # Read the layout schema that will be given to the agent as context (team_05-specific).
+    # Prefer the previously edited layout (carries forward updated room costs across runs);
+    # fall back to the original schema on first run or if the edited file is invalid.
     repo_root = Path(__file__).resolve().parents[3]
     layout_path = repo_root / "team_05" / "gh" / "layout_schema-team05.json"
-    layout_data: dict[str, Any] = json.loads(layout_path.read_text(encoding="utf-8"))
+    team_dir_for_layout = repo_root / "team_05"
+    edited_layout_for_load = team_dir_for_layout / f"{team_dir_for_layout.name}_edited_layout.json"
+    if edited_layout_for_load.exists():
+        try:
+            layout_data: dict[str, Any] = json.loads(edited_layout_for_load.read_text(encoding="utf-8"))
+            if not (isinstance(layout_data, dict) and isinstance(layout_data.get("rooms"), list) and layout_data["rooms"]):
+                raise ValueError("edited layout missing rooms")
+            print(f"[BOOTSTRAP] Reusing edited layout: {edited_layout_for_load.name}")
+        except (json.JSONDecodeError, ValueError, OSError) as exc:
+            print(f"[BOOTSTRAP] Edited layout unusable ({exc}); falling back to original schema")
+            layout_data = json.loads(layout_path.read_text(encoding="utf-8"))
+    else:
+        layout_data = json.loads(layout_path.read_text(encoding="utf-8"))
 
     # Connect to the Grasshopper MCP server and list available tools
     mcp_client = McpClient(settings.mcp_endpoint, settings.request_timeout_seconds)
