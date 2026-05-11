@@ -3,23 +3,26 @@ from typing import List, Tuple, Dict, Any
 from pathlib import Path
 
 
+def line_to_coords(line) ->   List[Tuple[float, float]]:
+    """Convert Rhino Line to list of [x, y] coordinates"""
+    start = point3d_to_coords(line.PointAtStart)
+    end = point3d_to_coords(line.PointAtEnd)
+    coords = [start, end]
+    return coords
+
+
 def polyline_to_coords(polyline) -> List[Tuple[float, float]]:
     """Convert Rhino Polyline to list of [x, y] coordinates"""
     coords = []
     for i in range(polyline.PointCount):
         pt = polyline.Point(i)
-        coords.append([pt.X, pt.Y])
+        coords.append([round(pt.X,3), round(pt.Y,3)])
     return coords
 
 
 def point3d_to_coords(point) -> Tuple[float, float]:
     """Convert Rhino Point3d to [x, y]"""
-    return [point.X, point.Y]
-
-
-def point3d_to_coords(point) -> Tuple[float, float]:
-    """Convert Rhino Point3d to [x, y]"""
-    return [point.X, point.Y]
+    return [round(point.X,3), round(point.Y,3)]
 
 
 def calculate_polygon_area(coords: List[List[float]]) -> float:
@@ -30,7 +33,7 @@ def calculate_polygon_area(coords: List[List[float]]) -> float:
     for i in range(len(coords) - 1):
         area += coords[i][0] * coords[i + 1][1]
         area -= coords[i + 1][0] * coords[i][1]
-    return abs(area) / 2.0
+    return round((abs(area) / 2.0), 3)
 
 
 def calculate_polyline_length(coords: List[List[float]]) -> float:
@@ -42,7 +45,7 @@ def calculate_polyline_length(coords: List[List[float]]) -> float:
         dx = coords[i + 1][0] - coords[i][0]
         dy = coords[i + 1][1] - coords[i][1]
         length += (dx**2 + dy**2) ** 0.5
-    return round(length, 2)
+    return round(length, 3)
 
 
 def find_adjacent_rooms(door_coords: List[List[float]], rooms_coords: Dict[str, List[List[float]]]) -> List[str]:
@@ -56,7 +59,7 @@ def find_adjacent_rooms(door_coords: List[List[float]], rooms_coords: Dict[str, 
             p1 = coords[i]
             p2 = coords[i + 1]
             dist = point_to_line_distance(door_pt, p1, p2)
-            if dist < 0.5:  # Threshold: door within 0.5 units of boundary
+            if dist < 0.1:  # Threshold: door within 0.1 units of boundary
                 if room_id not in adjacent:
                     adjacent.append(room_id)
                 break
@@ -95,11 +98,6 @@ def schema_to_desc(schema):
         if isinstance(schema, str):
             schema = json.loads(schema)
         
-        apt = schema.get("apartment", {})
-        name = apt.get("name", "?")
-        apt_id = apt.get("id", "?")
-        area = apt.get("attributes", {}).get("area", 0)
-        
         # Count rooms by program
         rooms = schema.get("rooms", [])
         room_counts = {}
@@ -111,7 +109,7 @@ def schema_to_desc(schema):
         room_str = ", ".join([f"{count} {prog}" for prog, count in sorted(room_counts.items())])
         
         # Simple format
-        desc = f"{name} (ID: {apt_id}). {room_str}. Area: {area:.0f} m2."
+        desc = f"{room_str}."
         return desc
     
     except:
@@ -222,7 +220,7 @@ def geometry_to_layout_schema(
     circulation = []
     if crvCirc:
         for i, circ_polyline in enumerate(crvCirc):
-            circ_coords = polyline_to_coords(circ_polyline)
+            circ_coords = line_to_coords(circ_polyline)
             circ_length = calculate_polyline_length(circ_coords)
             circ = {
                 "id": f"circulation-{i + 1}",
@@ -250,5 +248,19 @@ def geometry_to_layout_schema(
         "structure": []
     }
     description = schema_to_desc(schema)
-    schema["description"] = description
+    schema["apartment"]["attributes"]["description"] = description
     return schema
+
+""""""""""""""""
+#For Grasshopper
+
+layout = geometry_to_layout_schema(
+    crvBounds,
+    crv,
+    u,
+    crvFacade,
+    crvCirc,
+    ptCirc)
+
+a = json.dumps(layout)
+"""""""""""""""
