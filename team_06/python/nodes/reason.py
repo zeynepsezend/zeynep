@@ -6,12 +6,12 @@ from typing import Any
 from _runtime.llm import call_llm
 
 
-_INSTRUCTION_PATH = Path(__file__).parent / "instruction.json"
+_INSTRUCTION_PATH = Path(__file__).parent / "json" / "instruction.json"
 if not _INSTRUCTION_PATH.exists():
     raise FileNotFoundError(str(_INSTRUCTION_PATH.resolve()))
 INSTRUCTION_DATA = json.loads(_INSTRUCTION_PATH.read_text(encoding="utf-8"))
 
-_DATASET_SUMMARY_PATH = Path(__file__).parent / "dataset_summary.json"
+_DATASET_SUMMARY_PATH = Path(__file__).parent / "json" / "dataset_summary.json"
 if not _DATASET_SUMMARY_PATH.exists():
     raise FileNotFoundError(str(_DATASET_SUMMARY_PATH.resolve()))
 DATASET_SUMMARY = json.loads(_DATASET_SUMMARY_PATH.read_text(encoding="utf-8"))

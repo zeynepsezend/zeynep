@@ -183,7 +183,6 @@ class GraphSearcher:
         
         # Return as (layout_id, similarity) pairs for compatibility
         return [(layout_id, similarity) for layout_id, similarity, _ in results]
-        return [(layout_id, similarity) for layout_id, similarity, _ in results]
     
     # --------- Utility methods
     # Get layout info for a specific layout ID
