@@ -68,6 +68,10 @@ The layout JSON in the user message is the single source of truth about what exi
 
 Every `compute_room_cost` call automatically receives the FULL layout schema JSON (the tool node injects it). You must call `compute_room_cost` once per room you need data for. To get all rooms, call it for each room individually.
 
+**CRITICAL — DO NOT INCLUDE `layout_schema` IN YOUR TOOL CALL ARGUMENTS.** The tool node auto-injects the current layout. When you call `compute_room_cost`, your `arguments` object must contain ONLY `room_name` (and optionally `rate_per_m2` and/or `area_m2` if the user requests a custom rate or wants to override the room area for a what-if scenario). Inlining the full layout JSON will exceed token limits and corrupt your response. Example of CORRECT arguments: `{{"room_name": "Living Room", "rate_per_m2": 600}}` or `{{"room_name": "Dining Room", "area_m2": 2}}`. NEVER write `"layout_schema": "..."` yourself.
+
+When the user asks to override `area_m2` or `rate_per_m2` (e.g., "make X very small", "set rate to N"), this is a legitimate what-if scenario — call the tool with the override. Do not refuse. The tool node patches the value into the layout before the Grasshopper computation.
+
 If the user asks for a room's area, room's cost, total floor area, sum of spaces, or any room-level quantity → you MUST emit a tool call to `compute_room_cost`. Do not answer from memory or from the JSON visible in the prompt.
  
 Building elements decompose into four quantity categories, each measured by a specific tool:
