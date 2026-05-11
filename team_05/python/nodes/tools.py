@@ -77,12 +77,24 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, cost_db: dict
 
             # Call the tool (local cost DB lookup or MCP)
             if tool_name == "get_unit_cost_by_type" and cost_db is not None:
-                element_type = str(tool_args.get("element_type", "")).lower().replace(" ", "_")
-                cost = cost_db.get(element_type)
+                element_type = str(tool_args.get("element_type", ""))
+                norm = element_type.lower().strip().replace(" ", "_").replace("-", "_")
+                flat = cost_db.get("_flat") if isinstance(cost_db, dict) else None
+                # Backward compat: cost_db may be a flat dict from a legacy bootstrap.
+                if not isinstance(flat, dict):
+                    flat = {k: v for k, v in (cost_db or {}).items() if not str(k).startswith("_")}
+                cost = flat.get(norm)
+                if cost is None:
+                    # Tolerate partial matches (e.g. "porcelain" -> "porcelain_tile")
+                    for k, v in flat.items():
+                        if norm and (norm in k or k in norm):
+                            cost = v
+                            break
+                currency = (cost_db or {}).get("_currency", "AED") if isinstance(cost_db, dict) else "AED"
                 tool_output = json.dumps(
-                    {"element_type": element_type, "unit_cost": cost, "currency": "EUR"}
+                    {"element_type": norm, "unit_cost": cost, "currency": currency}
                     if cost is not None
-                    else {"error": f"No cost data for '{element_type}'", "known_types": list(cost_db.keys())}
+                    else {"error": f"No cost data for '{element_type}'", "known_types": sorted(flat.keys())}
                 )
             else:
                 tool_output = mcp_client.call_tool(tool_name, tool_args)
