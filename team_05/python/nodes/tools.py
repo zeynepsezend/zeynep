@@ -35,9 +35,18 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, cost_db: dict
             # Cleanup any null values accidentally included by the LLM
             tool_args = {k: v for k, v in call["arguments"].items() if v is not None}
 
-            # Inject layout_json
+            # Inject layout_json for any tool that needs it
             if "layout_json" in tool_args:
                 tool_args["layout_json"] = state["layout_json_string"]
+            
+            # ENFORCE: compute_room_cost always receives the FULL layout_schema JSON.
+            # This is the ONLY sanctioned path for room/space area + cost.
+            if tool_name == "compute_room_cost":
+                tool_args["layout_schema"] = state["layout_json_string"]
+                print(
+                    f"[ENFORCE] compute_room_cost via Grasshopper MCP | room='{tool_args.get('room_name')}' | "
+                    f"layout_schema bytes={len(state['layout_json_string'])}"
+                )
 
             # Call the tool (local cost DB lookup or MCP)
             if tool_name == "get_unit_cost_by_type" and cost_db is not None:

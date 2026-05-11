@@ -13,6 +13,11 @@ from nodes.tools import build_tool_node
 # Each red/blue box from the diagram is its own node here.
 # Each green box (tool) is dispatched through the tool node, which routes
 # to the correct MCP tool (grasshopper, python, cost_db, heatmap).
+#
+# *** CRITICAL ARCHITECTURE CONSTRAINT ***
+# ANY room area or room cost calculations MUST use the compute_room_cost MCP tool.
+# The full layout_schema JSON is ALWAYS sent with every compute_room_cost call.
+# The tool node enforces this in the tool execution phase.
 # =============================================================================
 
 
@@ -678,5 +683,5 @@ def _format_tool_catalog(tools: list[dict[str, Any]]) -> str:
         name = tool.get("name", "<unknown>")
         description = tool.get("description", "")
         schema = json.dumps(tool.get("inputSchema", {}))
-        lines.append(f"- {name}: {description} | inputSchema={schema}")
+        lines.append(f"- **Tool name: '{name}'**\n  Description: {description}\n  Input schema: {schema}")
     return "\n".join(lines)

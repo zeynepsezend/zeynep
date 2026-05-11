@@ -1,5 +1,3 @@
 {
-  "element_type": "wooden_door",
-  "unit_cost": 350,
-  "currency": "EUR"
+  "door_count": "1"
 }

@@ -27,9 +27,9 @@ def bootstrap() -> Context:
     """
     settings = load_settings()
 
-    # Read the layout schema that will be given to the agent as context (shared at repo root)
+    # Read the layout schema that will be given to the agent as context (team_05-specific)
     repo_root = Path(__file__).resolve().parents[3]
-    layout_path = repo_root / "layout_input" / "layout_schema.json"
+    layout_path = repo_root / "team_05" / "gh" / "layout_schema-team05.json"
     layout_data: dict[str, Any] = json.loads(layout_path.read_text(encoding="utf-8"))
 
     # Connect to the Grasshopper MCP server and list available tools
