@@ -37,17 +37,17 @@
           5.0
         ]
       ],
-      "rate_per_m2": 400,
+      "rate_per_m2": 3200.0,
       "area_m2": 40.0,
-      "total_cost": 16000.0,
-      "heat_t": 0.0,
-      "cost_rank": 0,
+      "total_cost": 128000.0,
+      "heat_t": 1.0,
+      "cost_rank": 6,
       "color_rgb": [
-        255,
-        245,
-        220
+        189,
+        0,
+        38
       ],
-      "color_hex": "#FFF5DC"
+      "color_hex": "#BD0026"
     },
     {
       "id": "dining",
@@ -71,9 +71,9 @@
           5.0
         ]
       ],
-      "rate_per_m2": 2800,
+      "rate_per_m2": 4200,
       "area_m2": 30.0,
-      "total_cost": 84000,
+      "total_cost": 126000.0,
       "heat_t": 0.8333,
       "cost_rank": 5,
       "color_rgb": [
@@ -105,17 +105,17 @@
           6.5
         ]
       ],
-      "rate_per_m2": 1500,
+      "rate_per_m2": 1500.0,
       "area_m2": 21.0,
-      "total_cost": 31500,
-      "heat_t": 0.3333,
-      "cost_rank": 2,
+      "total_cost": 31500.0,
+      "heat_t": 0.1667,
+      "cost_rank": 1,
       "color_rgb": [
         254,
-        204,
-        104
+        226,
+        152
       ],
-      "color_hex": "#FECC68"
+      "color_hex": "#FEE298"
     },
     {
       "id": "master_bed",
@@ -139,9 +139,9 @@
           11.0
         ]
       ],
-      "rate_per_m2": 2800,
+      "rate_per_m2": 2800.0,
       "area_m2": 22.5,
-      "total_cost": 63000,
+      "total_cost": 63000.0,
       "heat_t": 0.6667,
       "cost_rank": 4,
       "color_rgb": [
@@ -173,17 +173,17 @@
           11.0
         ]
       ],
-      "rate_per_m2": 8500,
+      "rate_per_m2": 2200.0,
       "area_m2": 15.75,
-      "total_cost": 133875.0,
-      "heat_t": 1.0,
-      "cost_rank": 6,
+      "total_cost": 34650.0,
+      "heat_t": 0.3333,
+      "cost_rank": 2,
       "color_rgb": [
-        189,
-        0,
-        38
+        254,
+        204,
+        104
       ],
-      "color_hex": "#BD0026"
+      "color_hex": "#FECC68"
     },
     {
       "id": "bedroom_3",
@@ -207,17 +207,17 @@
           11.0
         ]
       ],
-      "rate_per_m2": 2200,
+      "rate_per_m2": 2200.0,
       "area_m2": 13.5,
-      "total_cost": 29700,
-      "heat_t": 0.1667,
-      "cost_rank": 1,
+      "total_cost": 29700.0,
+      "heat_t": 0.0,
+      "cost_rank": 0,
       "color_rgb": [
-        254,
-        226,
-        152
+        255,
+        245,
+        220
       ],
-      "color_hex": "#FEE298"
+      "color_hex": "#FFF5DC"
     },
     {
       "id": "bathroom",
@@ -241,9 +241,9 @@
           11.0
         ]
       ],
-      "rate_per_m2": 4500,
+      "rate_per_m2": 4500.0,
       "area_m2": 11.25,
-      "total_cost": 50625,
+      "total_cost": 50625.0,
       "heat_t": 0.5,
       "cost_rank": 3,
       "color_rgb": [
@@ -277,7 +277,7 @@
           0.1
         ]
       ],
-      "cost": 4500,
+      "cost": 4500.0,
       "linked_rooms": [
         "living"
       ],
@@ -312,7 +312,7 @@
           5.1
         ]
       ],
-      "cost": 1800,
+      "cost": 1800.0,
       "linked_rooms": [
         "living",
         "corridor"
@@ -348,7 +348,7 @@
           5.1
         ]
       ],
-      "cost": 1800,
+      "cost": 1800.0,
       "linked_rooms": [
         "dining",
         "corridor"
@@ -384,7 +384,7 @@
           6.6
         ]
       ],
-      "cost": 1800,
+      "cost": 1800.0,
       "linked_rooms": [
         "master_bed",
         "corridor"
@@ -420,7 +420,7 @@
           6.6
         ]
       ],
-      "cost": 1800,
+      "cost": 1800.0,
       "linked_rooms": [
         "bedroom_2",
         "corridor"
@@ -456,7 +456,7 @@
           6.6
         ]
       ],
-      "cost": 1800,
+      "cost": 1800.0,
       "linked_rooms": [
         "bedroom_3",
         "corridor"
@@ -492,7 +492,7 @@
           6.6
         ]
       ],
-      "cost": 2200,
+      "cost": 2200.0,
       "linked_rooms": [
         "bathroom",
         "corridor"
@@ -528,7 +528,7 @@
           0.1
         ]
       ],
-      "cost": 5500,
+      "cost": 5500.0,
       "linked_rooms": [
         "living"
       ],
@@ -563,7 +563,7 @@
           4.0
         ]
       ],
-      "cost": 5500,
+      "cost": 5500.0,
       "linked_rooms": [
         "living"
       ],
@@ -598,7 +598,7 @@
           0.1
         ]
       ],
-      "cost": 5500,
+      "cost": 5500.0,
       "linked_rooms": [
         "dining"
       ],
@@ -633,7 +633,7 @@
           11.1
         ]
       ],
-      "cost": 4000,
+      "cost": 4000.0,
       "linked_rooms": [
         "master_bed"
       ],
@@ -668,7 +668,7 @@
           11.1
         ]
       ],
-      "cost": 2800,
+      "cost": 2800.0,
       "linked_rooms": [
         "bedroom_2"
       ],
@@ -703,7 +703,7 @@
           11.1
         ]
       ],
-      "cost": 2800,
+      "cost": 2800.0,
       "linked_rooms": [
         "bedroom_3"
       ],
@@ -738,7 +738,7 @@
           9.5
         ]
       ],
-      "cost": 1800,
+      "cost": 1800.0,
       "linked_rooms": [
         "bathroom"
       ],
@@ -779,16 +779,16 @@
           0.3
         ]
       ],
-      "cost": 5000,
+      "cost": 1800.0,
       "location": "perimeter_corner",
-      "heat_t": 0.5,
-      "cost_rank": 1,
+      "heat_t": 0.0,
+      "cost_rank": 0,
       "color_rgb": [
-        130,
-        130,
-        130
+        200,
+        200,
+        200
       ],
-      "color_hex": "#828282"
+      "color_hex": "#C8C8C8"
     },
     {
       "id": "col_corner_se",
@@ -816,16 +816,16 @@
           0.3
         ]
       ],
-      "cost": 5000,
+      "cost": 1800.0,
       "location": "perimeter_corner",
-      "heat_t": 0.5,
-      "cost_rank": 1,
+      "heat_t": 0.0,
+      "cost_rank": 0,
       "color_rgb": [
-        130,
-        130,
-        130
+        200,
+        200,
+        200
       ],
-      "color_hex": "#828282"
+      "color_hex": "#C8C8C8"
     },
     {
       "id": "col_corner_ne",
@@ -853,16 +853,16 @@
           11.0
         ]
       ],
-      "cost": 5000,
+      "cost": 1800.0,
       "location": "perimeter_corner",
-      "heat_t": 0.5,
-      "cost_rank": 1,
+      "heat_t": 0.0,
+      "cost_rank": 0,
       "color_rgb": [
-        130,
-        130,
-        130
+        200,
+        200,
+        200
       ],
-      "color_hex": "#828282"
+      "color_hex": "#C8C8C8"
     },
     {
       "id": "col_corner_nw",
@@ -890,16 +890,16 @@
           11.0
         ]
       ],
-      "cost": 5000,
+      "cost": 1800.0,
       "location": "perimeter_corner",
-      "heat_t": 0.5,
-      "cost_rank": 1,
+      "heat_t": 0.0,
+      "cost_rank": 0,
       "color_rgb": [
-        130,
-        130,
-        130
+        200,
+        200,
+        200
       ],
-      "color_hex": "#828282"
+      "color_hex": "#C8C8C8"
     },
     {
       "id": "col_edge_south",
@@ -927,16 +927,16 @@
           0.3
         ]
       ],
-      "cost": 4000,
+      "cost": 2000.0,
       "location": "perimeter_edge",
-      "heat_t": 0.0,
-      "cost_rank": 0,
+      "heat_t": 0.5,
+      "cost_rank": 1,
       "color_rgb": [
-        200,
-        200,
-        200
+        130,
+        130,
+        130
       ],
-      "color_hex": "#C8C8C8"
+      "color_hex": "#828282"
     },
     {
       "id": "col_edge_north",
@@ -964,16 +964,16 @@
           11.0
         ]
       ],
-      "cost": 4000,
+      "cost": 2000.0,
       "location": "perimeter_edge",
-      "heat_t": 0.0,
-      "cost_rank": 0,
+      "heat_t": 0.5,
+      "cost_rank": 1,
       "color_rgb": [
-        200,
-        200,
-        200
+        130,
+        130,
+        130
       ],
-      "color_hex": "#C8C8C8"
+      "color_hex": "#828282"
     },
     {
       "id": "col_edge_east",
@@ -1001,16 +1001,16 @@
           5.15
         ]
       ],
-      "cost": 4000,
+      "cost": 2000.0,
       "location": "perimeter_edge",
-      "heat_t": 0.0,
-      "cost_rank": 0,
+      "heat_t": 0.5,
+      "cost_rank": 1,
       "color_rgb": [
-        200,
-        200,
-        200
+        130,
+        130,
+        130
       ],
-      "color_hex": "#C8C8C8"
+      "color_hex": "#828282"
     },
     {
       "id": "col_edge_west",
@@ -1038,16 +1038,16 @@
           5.15
         ]
       ],
-      "cost": 4000,
+      "cost": 2000.0,
       "location": "perimeter_edge",
-      "heat_t": 0.0,
-      "cost_rank": 0,
+      "heat_t": 0.5,
+      "cost_rank": 1,
       "color_rgb": [
-        200,
-        200,
-        200
+        130,
+        130,
+        130
       ],
-      "color_hex": "#C8C8C8"
+      "color_hex": "#828282"
     },
     {
       "id": "col_center",
@@ -1075,7 +1075,7 @@
           5.25
         ]
       ],
-      "cost": 11000,
+      "cost": 2200.0,
       "location": "interior",
       "notes": "Larger 0.5x0.5 m section due to higher tributary load at the Living/Dining/Corridor tri-junction",
       "heat_t": 1.0,
@@ -1089,31 +1089,31 @@
     }
   ],
   "summary": {
-    "rooms_total": 421475,
-    "doors_total": 15700,
-    "windows_total": 27900,
-    "columns_total": 47000,
-    "openings_total": 43600,
-    "structure_total": 47000,
-    "grand_total": 512075
+    "rooms_total": 421475.0,
+    "doors_total": 15700.0,
+    "windows_total": 27900.0,
+    "columns_total": 17400.0,
+    "openings_total": 43600.0,
+    "structure_total": 17400.0,
+    "grand_total": 482475.0
   },
   "heatmap": {
     "ranges": {
       "rooms": {
-        "min": 16000.0,
-        "max": 133875.0
+        "min": 29700.0,
+        "max": 128000.0
       },
       "doors": {
-        "min": 1800,
-        "max": 4500
+        "min": 1800.0,
+        "max": 4500.0
       },
       "windows": {
-        "min": 1800,
-        "max": 5500
+        "min": 1800.0,
+        "max": 5500.0
       },
       "columns": {
-        "min": 4000,
-        "max": 11000
+        "min": 1800.0,
+        "max": 2200.0
       }
     },
     "ramps": {
