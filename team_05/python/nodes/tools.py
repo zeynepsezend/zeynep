@@ -3,6 +3,10 @@ import json
 from pathlib import Path
 from typing import Any
 from _runtime.llm import write_tool_result
+from opencost_database import get_opencost_db
+
+# Initialize OpenCost database
+sheets_db = get_opencost_db()
 
 
 # ---------------------------------------------------------------------------
@@ -48,14 +52,15 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, cost_db: dict
                     f"layout_schema bytes={len(state['layout_json_string'])}"
                 )
 
-            # Call the tool (local cost DB lookup or MCP)
-            if tool_name == "get_unit_cost_by_type" and cost_db is not None:
+            # Call the tool (OpenCost lookup or MCP)
+            if tool_name == "get_unit_cost_by_type":
                 element_type = str(tool_args.get("element_type", "")).lower().replace(" ", "_")
-                cost = cost_db.get(element_type)
+                # Query OpenCost instead of cost_db
+                cost = sheets_db.get_cost(element_type)
                 tool_output = json.dumps(
                     {"element_type": element_type, "unit_cost": cost, "currency": "EUR"}
                     if cost is not None
-                    else {"error": f"No cost data for '{element_type}'", "known_types": list(cost_db.keys())}
+                    else {"error": f"No cost data for '{element_type}' in OpenCost"}
                 )
             else:
                 tool_output = mcp_client.call_tool(tool_name, tool_args)

@@ -2,8 +2,12 @@ from __future__ import annotations
 from copy import deepcopy
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+from openai import api_key
+
 
 
 # ---------------------------------------------------------------------------
@@ -16,26 +20,54 @@ def create_chat_llm(
     llm_model: str,
     timeout_seconds: float,
     model_kwargs: dict[str, Any] | None = None,
-) -> ChatAnthropic:
-    return ChatAnthropic(
-        api_key=api_key,
-        base_url=base_url,
-        model=llm_model,
-        timeout=timeout_seconds,
-        temperature=0,
-        model_kwargs=model_kwargs or {},
-        max_tokens=2000
-    )
-# ) -> ChatOpenAI:
-#     return ChatOpenAI(
-#         api_key=api_key,
-#         base_url=base_url,
-#         model=llm_model,
-#         timeout=timeout_seconds,
-#         temperature=0,
-#         model_kwargs=model_kwargs or {},
-#     )
-
+) -> Union[ChatAnthropic, ChatOpenAI]:
+    if "claude" in llm_model.lower():
+        return ChatAnthropic(
+            api_key=api_key,
+            base_url=base_url,
+            model=llm_model,
+            timeout=timeout_seconds,
+            temperature=0,
+            model_kwargs=model_kwargs or {},
+            max_tokens=2000
+        )
+    elif "gpt" in llm_model.lower():
+        return ChatOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            model=llm_model,
+            timeout=timeout_seconds,
+            temperature=0,
+            model_kwargs=model_kwargs or {},
+            max_tokens=2000
+        )
+    elif "gemini" in llm_model.lower():
+        return ChatGoogleGenerativeAI(
+            api_key=api_key,
+            model=llm_model,
+            timeout=timeout_seconds,
+            temperature=0,
+            model_kwargs=model_kwargs or {},
+            max_tokens=2000)
+    elif "ChatAnthropic" in llm_model:
+        return ChatAnthropic(
+            api_key=api_key,
+            base_url=base_url,
+            model=llm_model,
+            timeout=timeout_seconds,
+            temperature=0,
+            model_kwargs=model_kwargs or {},
+            max_tokens=2000
+        )
+    else:
+        return ChatGoogleGenerativeAI(
+            api_key=api_key,
+            model=llm_model,
+            timeout=timeout_seconds,
+            temperature=0,
+            model_kwargs=model_kwargs or {},
+            max_tokens=2000)
+    
 
 # ---------------------------------------------------------------------------
 # Structured-output schema builders
