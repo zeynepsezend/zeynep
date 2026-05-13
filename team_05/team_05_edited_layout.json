@@ -71,9 +71,9 @@
           5.0
         ]
       ],
-      "rate_per_m2": 4200,
+      "rate_per_m2": 2800.0,
       "area_m2": 30.0,
-      "total_cost": 126000.0,
+      "total_cost": 84000.0,
       "heat_t": 0.8333,
       "cost_rank": 5,
       "color_rgb": [
@@ -149,7 +149,37 @@
         129,
         38
       ],
-      "color_hex": "#F48126"
+      "color_hex": "#F48126",
+      "slabs": [
+        {
+          "material": "post_tensioned",
+          "thickness_m": 0.9,
+          "rate_per_m3": 2400.0,
+          "cost": 48600.0,
+          "currency": "AED"
+        }
+      ],
+      "thickness_m": 0.9,
+      "slab_material": "post_tensioned",
+      "slab_rate_per_m3": 2400.0,
+      "slab_cost": 48600.0,
+      "slabs_total_cost": 48600.0,
+      "finishes": [
+        {
+          "surface": "wall",
+          "material": "gypsum_paint",
+          "area_m2": 57.0,
+          "rate_per_m2": 95.0,
+          "cost": 5415.0,
+          "currency": "AED"
+        }
+      ],
+      "wall_material": "gypsum_paint",
+      "wall_rate_per_m2": 95.0,
+      "wall_area_m2": 57.0,
+      "wall_cost": 5415.0,
+      "finishes_total_cost": 5415.0,
+      "base_rate_per_m2": 2800.0
     },
     {
       "id": "bedroom_2",
@@ -173,9 +203,9 @@
           11.0
         ]
       ],
-      "rate_per_m2": 2200.0,
+      "rate_per_m2": 2489.52,
       "area_m2": 15.75,
-      "total_cost": 34650.0,
+      "total_cost": 39209.94,
       "heat_t": 0.3333,
       "cost_rank": 2,
       "color_rgb": [
@@ -183,7 +213,23 @@
         204,
         104
       ],
-      "color_hex": "#FECC68"
+      "color_hex": "#FECC68",
+      "finishes": [
+        {
+          "surface": "wall",
+          "material": "gypsum_paint",
+          "area_m2": 48.0,
+          "rate_per_m2": 95.0,
+          "cost": 4560.0,
+          "currency": "AED"
+        }
+      ],
+      "wall_material": "gypsum_paint",
+      "wall_rate_per_m2": 95.0,
+      "wall_area_m2": 48.0,
+      "wall_cost": 4560.0,
+      "finishes_total_cost": 4560.0,
+      "base_rate_per_m2": 2200.0
     },
     {
       "id": "bedroom_3",
@@ -217,7 +263,23 @@
         245,
         220
       ],
-      "color_hex": "#FFF5DC"
+      "color_hex": "#FFF5DC",
+      "finishes": [
+        {
+          "surface": "wall",
+          "material": "gypsum_paint",
+          "area_m2": 45.0,
+          "rate_per_m2": 95.0,
+          "cost": 4275.0,
+          "currency": "AED"
+        }
+      ],
+      "wall_material": "gypsum_paint",
+      "wall_rate_per_m2": 95.0,
+      "wall_area_m2": 45.0,
+      "wall_cost": 4275.0,
+      "finishes_total_cost": 4275.0,
+      "base_rate_per_m2": 2200.0
     },
     {
       "id": "bathroom",
@@ -251,7 +313,23 @@
         178,
         76
       ],
-      "color_hex": "#FEB24C"
+      "color_hex": "#FEB24C",
+      "finishes": [
+        {
+          "surface": "wall",
+          "material": "gypsum_paint",
+          "area_m2": 42.0,
+          "rate_per_m2": 95.0,
+          "cost": 3990.0,
+          "currency": "AED"
+        }
+      ],
+      "wall_material": "gypsum_paint",
+      "wall_rate_per_m2": 95.0,
+      "wall_area_m2": 42.0,
+      "wall_cost": 3990.0,
+      "finishes_total_cost": 3990.0,
+      "base_rate_per_m2": 4500.0
     }
   ],
   "openings": [
