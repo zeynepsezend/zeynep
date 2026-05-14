@@ -37,17 +37,32 @@
           5.0
         ]
       ],
-      "rate_per_m2": 3200.0,
+      "rate_per_m2": 2800.0,
       "area_m2": 40.0,
-      "total_cost": 128000.0,
+      "total_cost": 112000.0,
       "heat_t": 1.0,
-      "cost_rank": 6,
+      "cost_rank": 5,
       "color_rgb": [
         189,
         0,
         38
       ],
-      "color_hex": "#BD0026"
+      "color_hex": "#BD0026",
+      "slabs": [
+        {
+          "material": "post_tensioned",
+          "thickness_m": 1.0,
+          "rate_per_m3": 2400.0,
+          "cost": 96000.0,
+          "currency": "AED"
+        }
+      ],
+      "thickness_m": 1.0,
+      "slab_material": "post_tensioned",
+      "slab_rate_per_m3": 2400.0,
+      "slab_cost": 96000.0,
+      "slabs_total_cost": 96000.0,
+      "base_rate_per_m2": 3200.0
     },
     {
       "id": "dining",
@@ -74,14 +89,30 @@
       "rate_per_m2": 2800.0,
       "area_m2": 30.0,
       "total_cost": 84000.0,
-      "heat_t": 0.8333,
-      "cost_rank": 5,
+      "heat_t": 0.8,
+      "cost_rank": 4,
       "color_rgb": [
-        223,
-        69,
-        25
+        229,
+        83,
+        22
       ],
-      "color_hex": "#DF4519"
+      "color_hex": "#E55316",
+      "finishes": [
+        {
+          "surface": "floor",
+          "material": "ceramic_tile",
+          "area_m2": 30.0,
+          "rate_per_m2": 150.0,
+          "cost": 4500.0,
+          "currency": "AED"
+        }
+      ],
+      "floor_material": "ceramic_tile",
+      "floor_rate_per_m2": 150.0,
+      "floor_area_m2": 30.0,
+      "floor_cost": 4500.0,
+      "finishes_total_cost": 4500.0,
+      "base_rate_per_m2": 2800.0
     },
     {
       "id": "corridor",
@@ -108,14 +139,14 @@
       "rate_per_m2": 1500.0,
       "area_m2": 21.0,
       "total_cost": 31500.0,
-      "heat_t": 0.1667,
-      "cost_rank": 1,
+      "heat_t": 0.0,
+      "cost_rank": 0,
       "color_rgb": [
-        254,
-        226,
-        152
+        255,
+        245,
+        220
       ],
-      "color_hex": "#FEE298"
+      "color_hex": "#FFF5DC"
     },
     {
       "id": "master_bed",
@@ -142,14 +173,14 @@
       "rate_per_m2": 2800.0,
       "area_m2": 22.5,
       "total_cost": 63000.0,
-      "heat_t": 0.6667,
-      "cost_rank": 4,
+      "heat_t": 0.6,
+      "cost_rank": 3,
       "color_rgb": [
-        244,
-        129,
-        38
+        248,
+        148,
+        53
       ],
-      "color_hex": "#F48126",
+      "color_hex": "#F89435",
       "slabs": [
         {
           "material": "post_tensioned",
@@ -203,17 +234,17 @@
           11.0
         ]
       ],
-      "rate_per_m2": 2489.52,
+      "rate_per_m2": 2800.0,
       "area_m2": 15.75,
-      "total_cost": 39209.94,
-      "heat_t": 0.3333,
+      "total_cost": 44100.0,
+      "heat_t": 0.4,
       "cost_rank": 2,
       "color_rgb": [
         254,
-        204,
-        104
+        193,
+        92
       ],
-      "color_hex": "#FECC68",
+      "color_hex": "#FEC15C",
       "finishes": [
         {
           "surface": "wall",
@@ -222,14 +253,40 @@
           "rate_per_m2": 95.0,
           "cost": 4560.0,
           "currency": "AED"
+        },
+        {
+          "surface": "floor",
+          "material": "marble",
+          "area_m2": 15.75,
+          "rate_per_m2": 550.0,
+          "cost": 8662.5,
+          "currency": "AED"
         }
       ],
       "wall_material": "gypsum_paint",
       "wall_rate_per_m2": 95.0,
       "wall_area_m2": 48.0,
       "wall_cost": 4560.0,
-      "finishes_total_cost": 4560.0,
-      "base_rate_per_m2": 2200.0
+      "finishes_total_cost": 13222.5,
+      "base_rate_per_m2": 2200.0,
+      "slabs": [
+        {
+          "material": "post_tensioned",
+          "thickness_m": 1.0,
+          "rate_per_m3": 2400.0,
+          "cost": 37800.0,
+          "currency": "AED"
+        }
+      ],
+      "thickness_m": 1.0,
+      "slab_material": "post_tensioned",
+      "slab_rate_per_m3": 2400.0,
+      "slab_cost": 37800.0,
+      "slabs_total_cost": 37800.0,
+      "floor_material": "marble",
+      "floor_rate_per_m2": 550.0,
+      "floor_area_m2": 15.75,
+      "floor_cost": 8662.5
     },
     {
       "id": "bedroom_3",
@@ -253,17 +310,17 @@
           11.0
         ]
       ],
-      "rate_per_m2": 2200.0,
+      "rate_per_m2": 3066.67,
       "area_m2": 13.5,
-      "total_cost": 29700.0,
-      "heat_t": 0.0,
-      "cost_rank": 0,
+      "total_cost": 41400.04,
+      "heat_t": 0.2,
+      "cost_rank": 1,
       "color_rgb": [
-        255,
-        245,
-        220
+        254,
+        222,
+        138
       ],
-      "color_hex": "#FFF5DC",
+      "color_hex": "#FEDE8A",
       "finishes": [
         {
           "surface": "wall",
@@ -272,14 +329,26 @@
           "rate_per_m2": 95.0,
           "cost": 4275.0,
           "currency": "AED"
+        },
+        {
+          "surface": "floor",
+          "material": "marble",
+          "area_m2": 13.5,
+          "rate_per_m2": 550.0,
+          "cost": 7425.0,
+          "currency": "AED"
         }
       ],
       "wall_material": "gypsum_paint",
       "wall_rate_per_m2": 95.0,
       "wall_area_m2": 45.0,
       "wall_cost": 4275.0,
-      "finishes_total_cost": 4275.0,
-      "base_rate_per_m2": 2200.0
+      "finishes_total_cost": 11700.0,
+      "base_rate_per_m2": 2200.0,
+      "floor_material": "marble",
+      "floor_rate_per_m2": 550.0,
+      "floor_area_m2": 13.5,
+      "floor_cost": 7425.0
     },
     {
       "id": "bathroom",
@@ -303,17 +372,17 @@
           11.0
         ]
       ],
-      "rate_per_m2": 4500.0,
+      "rate_per_m2": 2800.0,
       "area_m2": 11.25,
-      "total_cost": 50625.0,
-      "heat_t": 0.5,
-      "cost_rank": 3,
+      "total_cost": 31500.0,
+      "heat_t": 0.0,
+      "cost_rank": 0,
       "color_rgb": [
-        254,
-        178,
-        76
+        255,
+        245,
+        220
       ],
-      "color_hex": "#FEB24C",
+      "color_hex": "#FFF5DC",
       "finishes": [
         {
           "surface": "wall",
@@ -322,14 +391,40 @@
           "rate_per_m2": 95.0,
           "cost": 3990.0,
           "currency": "AED"
+        },
+        {
+          "surface": "floor",
+          "material": "marble",
+          "area_m2": 11.25,
+          "rate_per_m2": 550.0,
+          "cost": 6187.5,
+          "currency": "AED"
         }
       ],
       "wall_material": "gypsum_paint",
       "wall_rate_per_m2": 95.0,
       "wall_area_m2": 42.0,
       "wall_cost": 3990.0,
-      "finishes_total_cost": 3990.0,
-      "base_rate_per_m2": 4500.0
+      "finishes_total_cost": 10177.5,
+      "base_rate_per_m2": 4500.0,
+      "slabs": [
+        {
+          "material": "post_tensioned",
+          "thickness_m": 1.0,
+          "rate_per_m3": 2400.0,
+          "cost": 27000.0,
+          "currency": "AED"
+        }
+      ],
+      "thickness_m": 1.0,
+      "slab_material": "post_tensioned",
+      "slab_rate_per_m3": 2400.0,
+      "slab_cost": 27000.0,
+      "slabs_total_cost": 27000.0,
+      "floor_material": "marble",
+      "floor_rate_per_m2": 550.0,
+      "floor_area_m2": 11.25,
+      "floor_cost": 6187.5
     }
   ],
   "openings": [
@@ -1167,19 +1262,19 @@
     }
   ],
   "summary": {
-    "rooms_total": 421475.0,
+    "rooms_total": 395800.0,
     "doors_total": 15700.0,
     "windows_total": 27900.0,
     "columns_total": 17400.0,
     "openings_total": 43600.0,
     "structure_total": 17400.0,
-    "grand_total": 482475.0
+    "grand_total": 456800.0
   },
   "heatmap": {
     "ranges": {
       "rooms": {
-        "min": 29700.0,
-        "max": 128000.0
+        "min": 31500.0,
+        "max": 112000.0
       },
       "doors": {
         "min": 1800.0,

@@ -29,9 +29,12 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, cost_db: dict
                 raise RuntimeError("Max iterations exceeded")
 
 
-            # Get the tool name and check its valid
+            # Get the tool name and check it is valid.
+            # Some workflows may request local helpers that are not advertised
+            # by MCP in allowed_tools.
             tool_name = call["name"]
-            if tool_name not in allowed_names:
+            local_fallback_tools = {"compute_room_cost", "compute_surface_cost", "compute_volume_cost"}
+            if tool_name not in allowed_names and tool_name not in local_fallback_tools:
                 raise RuntimeError(f"Tool '{tool_name}' is not in the allowed tools list")
             
             print(f"Calling tool: {tool_name} with arguments: {call['arguments']}")
@@ -98,6 +101,23 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, cost_db: dict
                     if cost is not None
                     else {"error": f"No cost data for '{element_type}'"}
                 )
+            elif tool_name == "compute_surface_cost":
+                tool_output = compute_surface_cost(
+                    tool_args, state, cost_db, mcp_client, allowed_names
+                )
+            elif tool_name == "compute_volume_cost":
+                tool_output = compute_volume_cost(
+                    tool_args, state, cost_db, mcp_client, allowed_names
+                )
+            elif tool_name == "compute_room_cost":
+                # Prefer MCP implementation when available; otherwise use local fallback.
+                try:
+                    tool_output = mcp_client.call_tool(tool_name, tool_args)
+                except Exception as exc:
+                    print(f"[compute_room_cost] MCP unavailable, using local fallback: {exc}")
+                    tool_output = _compute_room_cost_local(
+                        tool_args, state, cost_db, mcp_client, allowed_names
+                    )
             else:
                 tool_output = mcp_client.call_tool(tool_name, tool_args)
 
@@ -177,6 +197,57 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, cost_db: dict
 
 def _norm(s: Any) -> str:
     return str(s or "").strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _forward_layout_update_to_gh(
+    *,
+    mcp_client,
+    allowed_names: set | None,
+    room_name: str,
+    updated_layout_str: str,
+    preferred_tool: str,
+    context_label: str,
+) -> tuple[str, str | None]:
+    """Try to forward an updated layout to Grasshopper using available tools.
+
+    Some GH definitions expose custom names (e.g. "Area-Based Cost Calculator Tool")
+    and expect slightly different argument keys. Send a tolerant payload so both
+    new and legacy clusters can consume it.
+    """
+    if mcp_client is None:
+        return "skipped", None
+
+    if allowed_names is None:
+        candidates = [preferred_tool, "Area-Based Cost Calculator Tool", "Volume-Based Cost Calculator Tool", "compute_element_cost"]
+    else:
+        candidates = [
+            name
+            for name in [preferred_tool, "Area-Based Cost Calculator Tool", "Volume-Based Cost Calculator Tool", "compute_element_cost"]
+            if name in allowed_names
+        ]
+
+    if not candidates:
+        return "skipped", None
+
+    # Include multiple key aliases to match varying GH cluster inputs.
+    payload = {
+        "room_name": room_name,
+        "eoom_name": room_name,
+        "layout_json": updated_layout_str,
+        "layout_schema": updated_layout_str,
+    }
+
+    last_error = None
+    for tool_name in candidates:
+        try:
+            gh_response = mcp_client.call_tool(tool_name, payload)
+            print(f"[{context_label}] Grasshopper updated via {tool_name} for '{room_name}'")
+            return f"updated ({tool_name})", gh_response
+        except Exception as exc:  # pragma: no cover
+            last_error = f"{tool_name}: {exc}"
+            print(f"[{context_label}] GH update via {tool_name} failed: {exc}")
+
+    return f"error: {last_error}", None
 
 
 def _sync_rate_to_extras(room: dict) -> None:
@@ -316,26 +387,23 @@ def _compute_slab_cost_local(
         updated_layout_str = json.dumps(layout_obj)
         state["layout_json_string"] = updated_layout_str
 
-        # Forward to Grasshopper if compute_element_cost is exposed via MCP.
-        if mcp_client is not None and (allowed_names is None or "compute_element_cost" in allowed_names):
+        # Always forward the updated layout to Grasshopper after any material/cost update
+        gh_status, gh_response = _forward_layout_update_to_gh(
+            mcp_client=mcp_client,
+            allowed_names=allowed_names,
+            room_name=room_name,
+            updated_layout_str=updated_layout_str,
+            preferred_tool="Volume-Based Cost Calculator Tool",
+            context_label="Slab Cost Calculation"
+        )
+        # If GH returned a full layout, adopt it.
+        if gh_response:
             try:
-                gh_payload = {
-                    "update elentmet json": room_name,  # GH tool uses this exact key
-                    "layout_schema": updated_layout_str,
-                }
-                gh_response = mcp_client.call_tool("compute_element_cost", gh_payload)
-                # If GH returned a full layout, adopt it.
-                try:
-                    gh_parsed = json.loads(gh_response)
-                    if isinstance(gh_parsed, dict) and isinstance(gh_parsed.get("rooms"), list) and gh_parsed["rooms"]:
-                        state["layout_json_string"] = json.dumps(gh_parsed)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-                gh_status = "updated"
-                print(f"[compute_slab_cost] Grasshopper updated via compute_element_cost for '{room_name}'")
-            except Exception as exc:  # pragma: no cover
-                gh_status = f"error: {exc}"
-                print(f"[compute_slab_cost] GH update failed: {exc}")
+                gh_parsed = json.loads(gh_response)
+                if isinstance(gh_parsed, dict) and isinstance(gh_parsed.get("rooms"), list) and gh_parsed["rooms"]:
+                    state["layout_json_string"] = json.dumps(gh_parsed)
+            except (json.JSONDecodeError, TypeError):
+                pass
 
     return json.dumps({
         "room_name": room_name,
@@ -504,24 +572,21 @@ def _compute_finish_cost_local(
         updated_layout_str = json.dumps(layout_obj)
         state["layout_json_string"] = updated_layout_str
 
-        if mcp_client is not None and (allowed_names is None or "compute_element_cost" in allowed_names):
+        gh_status, gh_response = _forward_layout_update_to_gh(
+            mcp_client=mcp_client,
+            allowed_names=allowed_names,
+            room_name=room_name,
+            updated_layout_str=updated_layout_str,
+            preferred_tool="Area-Based Cost Calculator Tool",
+            context_label="compute_finish_cost",
+        )
+        if gh_response:
             try:
-                gh_payload = {
-                    "update elentmet json": room_name,
-                    "layout_schema": updated_layout_str,
-                }
-                gh_response = mcp_client.call_tool("compute_element_cost", gh_payload)
-                try:
-                    gh_parsed = json.loads(gh_response)
-                    if isinstance(gh_parsed, dict) and isinstance(gh_parsed.get("rooms"), list) and gh_parsed["rooms"]:
-                        state["layout_json_string"] = json.dumps(gh_parsed)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-                gh_status = "updated"
-                print(f"[compute_finish_cost] Grasshopper updated via compute_element_cost for '{room_name}'")
-            except Exception as exc:  # pragma: no cover
-                gh_status = f"error: {exc}"
-                print(f"[compute_finish_cost] GH update failed: {exc}")
+                gh_parsed = json.loads(gh_response)
+                if isinstance(gh_parsed, dict) and isinstance(gh_parsed.get("rooms"), list) and gh_parsed["rooms"]:
+                    state["layout_json_string"] = json.dumps(gh_parsed)
+            except (json.JSONDecodeError, TypeError):
+                pass
 
     return json.dumps({
         "room_name": room_name,
@@ -532,5 +597,224 @@ def _compute_finish_cost_local(
         "rate_source": rate_source,
         "currency": currency,
         "finish_cost": cost,
+        "grasshopper_update": gh_status,
+    })
+
+
+def _compute_room_cost_local(
+    args: dict,
+    state: dict,
+    cost_db: dict | None,
+    mcp_client=None,
+    allowed_names: set | None = None,
+) -> str:
+    """Local fallback for room total-cost requests when MCP compute_room_cost is unavailable."""
+    layout_json_string = state.get("layout_json_string", "")
+    room_name = args.get("room_name")
+    if not room_name:
+        return json.dumps({"error": "room_name is required"})
+
+    try:
+        layout_obj = json.loads(layout_json_string) if layout_json_string else {}
+    except (json.JSONDecodeError, TypeError):
+        layout_obj = {}
+
+    target_room = None
+    for room in layout_obj.get("rooms", []) or []:
+        if _norm(room.get("name")) == _norm(room_name):
+            target_room = room
+            break
+
+    if target_room is None:
+        return json.dumps({"error": f"Room '{room_name}' not found in layout"})
+
+    try:
+        area = float(target_room.get("area_m2") or 0)
+    except (TypeError, ValueError):
+        area = 0.0
+    try:
+        rate = float(target_room.get("rate_per_m2") or 0)
+    except (TypeError, ValueError):
+        rate = 0.0
+
+    base_total = round(area * rate, 2)
+    finishes_total = round(sum(float(f.get("cost") or 0) for f in (target_room.get("finishes") or [])), 2)
+    slabs_total = round(sum(float(s.get("cost") or 0) for s in (target_room.get("slabs") or [])), 2)
+
+    # If rate_per_m2 already includes extras (via _sync_rate_to_extras), keep base_total as total.
+    # Otherwise include explicit extras.
+    if "base_rate_per_m2" in target_room:
+        total_cost = base_total
+    else:
+        total_cost = round(base_total + finishes_total + slabs_total, 2)
+
+    target_room["total_cost"] = total_cost
+    updated_layout_str = json.dumps(layout_obj)
+    state["layout_json_string"] = updated_layout_str
+
+    gh_status, _ = _forward_layout_update_to_gh(
+        mcp_client=mcp_client,
+        allowed_names=allowed_names,
+        room_name=room_name,
+        updated_layout_str=updated_layout_str,
+        preferred_tool="Area-Based Cost Calculator Tool",
+        context_label="compute_room_cost_local",
+    )
+
+    currency = (cost_db or {}).get("_currency", "AED")
+    return json.dumps(
+        {
+            "room_name": room_name,
+            "area_m2": area,
+            "rate_per_m2": rate,
+            "finishes_total_cost": finishes_total,
+            "slabs_total_cost": slabs_total,
+            "total_cost": total_cost,
+            "currency": currency,
+            "grasshopper_update": gh_status,
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# General-purpose surface cost calculator (area-based)
+# ---------------------------------------------------------------------------
+def compute_surface_cost(args: dict, state: dict, cost_db: dict | None,
+    mcp_client=None, allowed_names: set | None = None) -> str:
+    """
+    Calculate cost for any surface (floor, wall, ceiling, etc.) or element by area.
+    Args must include: room_name, surface (e.g. 'floor', 'wall'), material, area_m2.
+    """
+    layout_json_string = state.get("layout_json_string", "")
+    room_name = args.get("room_name")
+    material = args.get("material")
+    surface = _norm(args.get("surface"))
+    area = args.get("area_m2")
+    try:
+        area = float(area)
+    except (TypeError, ValueError):
+        return json.dumps({"error": "area_m2 is required and must be a number"})
+    if not room_name or not material or not surface:
+        return json.dumps({"error": "room_name, surface, and material are required"})
+    # Rate lookup: cost_db._rates.room_finishes.{surface}_finish
+    rates = (cost_db or {}).get("_rates") or {}
+    section = (rates.get("room_finishes") or {}).get(f"{surface}_finish") or {}
+    by_material = {_norm(k): v for k, v in (section.get("by_material") or {}).items()}
+    rate = by_material.get(_norm(material))
+    if rate is None and section.get("default") is not None:
+        rate = section["default"]
+    if rate is None:
+        return json.dumps({"error": f"No rate available for {surface} material '{material}'."})
+    rate = float(rate)
+    cost = round(area * rate, 2)
+    currency = (cost_db or {}).get("_currency", "AED")
+    # Update layout
+    try:
+        layout_obj = json.loads(layout_json_string) if layout_json_string else {}
+    except (json.JSONDecodeError, TypeError):
+        layout_obj = {}
+    for room in layout_obj.get("rooms", []):
+        if _norm(room.get("name")) == _norm(room_name):
+            finishes = room.setdefault("finishes", [])
+            finishes[:] = [f for f in finishes if _norm(f.get("surface")) != surface]
+            finishes.append({
+                "surface": surface,
+                "material": material,
+                "area_m2": area,
+                "rate_per_m2": rate,
+                "cost": cost,
+                "currency": currency,
+            })
+            room[f"{surface}_material"] = material
+            room[f"{surface}_rate_per_m2"] = rate
+            room[f"{surface}_area_m2"] = area
+            room[f"{surface}_cost"] = cost
+            break
+    updated_layout_str = json.dumps(layout_obj)
+    state["layout_json_string"] = updated_layout_str
+    gh_status, gh_response = _forward_layout_update_to_gh(
+        mcp_client=mcp_client,
+        allowed_names=allowed_names,
+        room_name=room_name,
+        updated_layout_str=updated_layout_str,
+        preferred_tool="Area-Based Cost Calculator Tool",
+        context_label="compute_surface_cost",
+    )
+    return json.dumps({
+        "room_name": room_name,
+        "surface": surface,
+        "material": material,
+        "area_m2": area,
+        "rate_per_m2": rate,
+        "cost": cost,
+        "currency": currency,
+        "grasshopper_update": gh_status,
+    })
+
+
+# ---------------------------------------------------------------------------
+# General-purpose volumetric cost calculator (volume-based)
+# ---------------------------------------------------------------------------
+def compute_volume_cost(args: dict, state: dict, cost_db: dict | None,
+    mcp_client=None, allowed_names: set | None = None) -> str:
+    """
+    Calculate cost for any volumetric element (slab, beam, column, etc.).
+    Args must include: element_name, material, volume_m3.
+    """
+    layout_json_string = state.get("layout_json_string", "")
+    element_name = args.get("element_name") or args.get("room_name")
+    material = args.get("material")
+    volume = args.get("volume_m3")
+    try:
+        volume = float(volume)
+    except (TypeError, ValueError):
+        return json.dumps({"error": "volume_m3 is required and must be a number"})
+    if not element_name or not material:
+        return json.dumps({"error": "element_name and material are required"})
+    # Rate lookup: cost_db._rates.room_finishes.slab_material (for slabs/beams/columns)
+    rates = (cost_db or {}).get("_rates") or {}
+    section = (rates.get("room_finishes") or {}).get("slab_material") or {}
+    by_material = {_norm(k): v for k, v in (section.get("by_material") or {}).items()}
+    rate = by_material.get(_norm(material))
+    if rate is None and section.get("default") is not None:
+        rate = section["default"]
+    if rate is None:
+        return json.dumps({"error": f"No rate available for volumetric material '{material}'."})
+    rate = float(rate)
+    cost = round(volume * rate, 2)
+    currency = (cost_db or {}).get("_currency", "AED")
+    # Update layout (store under 'volumes' for generality)
+    try:
+        layout_obj = json.loads(layout_json_string) if layout_json_string else {}
+    except (json.JSONDecodeError, TypeError):
+        layout_obj = {}
+    for room in layout_obj.get("rooms", []):
+        if _norm(room.get("name")) == _norm(element_name):
+            volumes = room.setdefault("volumes", [])
+            volumes.append({
+                "material": material,
+                "volume_m3": volume,
+                "rate_per_m3": rate,
+                "cost": cost,
+                "currency": currency,
+            })
+            break
+    updated_layout_str = json.dumps(layout_obj)
+    state["layout_json_string"] = updated_layout_str
+    gh_status, gh_response = _forward_layout_update_to_gh(
+        mcp_client=mcp_client,
+        allowed_names=allowed_names,
+        room_name=element_name,
+        updated_layout_str=updated_layout_str,
+        preferred_tool="Volume-Based Cost Calculator Tool",
+        context_label="compute_volume_cost",
+    )
+    return json.dumps({
+        "element_name": element_name,
+        "material": material,
+        "volume_m3": volume,
+        "rate_per_m3": rate,
+        "cost": cost,
+        "currency": currency,
         "grasshopper_update": gh_status,
     })

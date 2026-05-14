@@ -5,10 +5,30 @@ Tests connectivity to Grasshopper MCP server and verifies tool availability
 """
 import sys
 import json
+import os
 
 # Import the MCP client
 sys.path.insert(0, "team_05/python/_runtime")
 from mcp_client import McpClient
+
+
+def _load_endpoint_from_mcp_json(default="http://localhost:3002/mcp/"):
+    """Read the MCP endpoint from mcp.json so the test stays in sync with config."""
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "mcp.json"), "r") as f:
+            cfg = json.load(f)
+        for srv in cfg.get("mcpServers", {}).values():
+            args = srv.get("args", [])
+            for a in args:
+                if isinstance(a, str) and a.startswith("http"):
+                    return a
+    except Exception:
+        pass
+    return default
+
+
+ENDPOINT = _load_endpoint_from_mcp_json()
+
 
 def test_mcp_connection():
     """Test MCP connection and tool discovery"""
@@ -19,8 +39,8 @@ def test_mcp_connection():
     
     try:
         # Initialize MCP client
-        print("\n[1] Initializing MCP client at http://localhost:3003/mcp/...")
-        client = McpClient(endpoint="http://localhost:3003/mcp/", timeout_seconds=10)
+        print(f"\n[1] Initializing MCP client at {ENDPOINT}...")
+        client = McpClient(endpoint=ENDPOINT, timeout_seconds=10)
         
         # Initialize connection
         print("[2] Initializing MCP connection...")
@@ -49,26 +69,26 @@ def test_mcp_connection():
         except:
             pass
         
-        # Test compute_room_cost with sample layout
-        print("\n[5] Testing compute_room_cost tool...")
+        # Test compute_element_cost with sample layout
+        print("\n[5] Testing compute_element_cost tool...")
         
         # Load layout from file
         with open("team_05/gh/layout_schema-team05.json", "r") as f:
             layout_schema = json.load(f)
         
         layout_str = json.dumps(layout_schema)
-        result = client.call_tool("compute_room_cost", {
+        result = client.call_tool("compute_element_cost", {
             "room_name": "Living Room",
             "layout_schema": layout_str
         })
-        print(f"✅ compute_room_cost call successful!")
+        print(f"✅ compute_element_cost call successful!")
         
         try:
             result_json = json.loads(result)
             if isinstance(result_json, dict) and "rooms" in result_json:
                 for room in result_json.get("rooms", []):
                     if room.get("name") == "Living Room":
-                        print(f"   Living Room: {room.get('area_m2')} m² @ {room.get('rate_per_m2')} AED/m² = {room.get('cost')} AED")
+                        print(f"   Living Room total_cost: {room.get('total_cost')}")
         except:
             print(f"   Response: {result[:200]}...")
         
@@ -84,10 +104,10 @@ def test_mcp_connection():
         print(f"Error: {str(e)}")
         print("\nTroubleshooting steps:")
         print("1. Check that Swiftlet Bridge is running:")
-        print("   Start-Process 'C:\\Users\\merof\\AppData\\Roaming\\McNeel\\Rhinoceros\\packages\\8.0\\swiftlet\\0.2.0\\SwiftletBridge.exe' -ArgumentList 'http://localhost:3003/mcp/'")
-        print("2. Verify mcp.json has correct endpoint: http://localhost:3003/mcp/")
+        print(f"   Start-Process 'C:\\Users\\merof\\AppData\\Roaming\\McNeel\\Rhinoceros\\packages\\8.0\\swiftlet\\0.2.0\\SwiftletBridge.exe' -ArgumentList '{ENDPOINT}'")
+        print(f"2. Verify mcp.json has correct endpoint: {ENDPOINT}")
         print("3. Check that Grasshopper is open with team_05_working.gh loaded")
-        print("4. Verify network connectivity to localhost:3003")
+        print(f"4. Verify network connectivity to {ENDPOINT}")
         return False
 
 if __name__ == "__main__":

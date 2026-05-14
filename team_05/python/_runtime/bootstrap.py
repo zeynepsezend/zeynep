@@ -268,6 +268,65 @@ def bootstrap() -> Context:
     mcp_client = McpClient(settings.mcp_endpoint, settings.request_timeout_seconds)
     mcp_client.initialize()
     tools = mcp_client.list_tools()
+
+    # Register virtual (locally-handled) tools.
+    # compute_slab_cost: per-m3 slab pricing (area * thickness * rate). Rate is
+    # resolved from cost_rates.json (room_finishes.slab_material), with a fallback
+    # to OnlineCostFetcher when the material is unknown.
+    tools.append({
+        "name": "compute_slab_cost",
+        "description": (
+            "Compute the cost of a slab for a room using a per-cubic-metre rate. "
+            "cost = area_m2 * thickness_m * rate_per_m3. The rate is looked up from "
+            "the slab_material table in cost_rates.json by `material` "
+            "(e.g. post_tensioned, rc_solid, timber_joist). Use this tool whenever "
+            "the user mentions a slab thickness or asks for slab cost. "
+            "Provide `room_name` and `thickness_m` and `material`. `area_m2` is "
+            "optional - omit it to use the room's area from the layout."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "room_name": {"type": "string"},
+                "thickness_m": {"type": "number"},
+                "material": {"type": "string"},
+                "area_m2": {"type": "number"},
+            },
+            "required": ["room_name", "thickness_m", "material"],
+        },
+    })
+
+    # compute_finish_cost: per-m2 finish pricing for floor, wall, or ceiling.
+    # Looks up the rate from cost_rates.json[room_finishes][<surface>_finish or
+    # ceiling_material] by material. Computes surface area from the layout
+    # (floor/ceiling = room.area_m2; wall = perimeter * height_m).
+    tools.append({
+        "name": "compute_finish_cost",
+        "description": (
+            "Compute the cost of a floor, wall, or ceiling finish for a room "
+            "using a per-square-metre rate. cost = surface_area_m2 * rate_per_m2. "
+            "Rate is looked up from cost_rates.json room_finishes by `surface` "
+            "(`floor`, `wall`, or `ceiling`) and `material` "
+            "(e.g. gypsum_paint, porcelain_tile, marble, wood_panel). "
+            "Use this whenever the user asks for the cost of a floor/wall/ceiling "
+            "material or finish in a room. Provide `room_name`, `surface`, and "
+            "`material`. For walls, `height_m` is optional (defaults to 3.0 m); "
+            "wall area is computed from the room polygon perimeter * height. "
+            "`area_m2` is optional - omit it to compute from the layout."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "room_name": {"type": "string"},
+                "surface": {"type": "string", "enum": ["floor", "wall", "ceiling"]},
+                "material": {"type": "string"},
+                "height_m": {"type": "number"},
+                "area_m2": {"type": "number"},
+            },
+            "required": ["room_name", "surface", "material"],
+        },
+    })
+
     print(f"Discovered MCP tools: {[t.get('name') for t in tools]}")
 
     # Load cost_rates.json — single source of truth for all unit prices.
