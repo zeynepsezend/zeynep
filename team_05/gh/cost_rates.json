@@ -3,7 +3,7 @@
     "currency": "AED",
     "units": "meters",
     "notes": "Edit these numbers to update the heatmap and the JSON exporter. Rooms use rate_per_m2 (multiplied by surface area). Doors/windows/columns use lump-sum cost per element. Lookup order: id -> subtype -> category -> default.",
-    "room_finishes_notes": "Per-material/finish supply+install rates (AED per m2 of the relevant surface). Join keys are the room user-text values: floor-finish, wall-finish, ceiling-material, slab-material. Lookup is case-insensitive; spaces, '-' and '_' are interchangeable. Falls back to 'default' when the material is missing or unknown. Rates only - no per-room totals."
+    "room_finishes_notes": "Per-material/finish supply+install rates. Floor/wall/ceiling rates are AED per m2 of the relevant surface. SLAB rates are AED per m3 (multiplied by slab area * thickness). Join keys are the room user-text values: floor-finish, wall-finish, ceiling-material, slab-material. Lookup is case-insensitive; spaces, '-' and '_' are interchangeable. Falls back to 'default' when the material is missing or unknown. Rates only - no per-room totals."
   },
 
   "room_finishes": {
@@ -58,16 +58,17 @@
       }
     },
     "slab_material": {
-      "default": 320,
+      "unit": "AED/m3",
+      "default": 1600,
       "by_material": {
-        "rc_solid":           350,
-        "rc_waffle":          420,
-        "rc_ribbed":          400,
-        "post_tensioned":     480,
-        "hollow_core":        300,
-        "composite_steel":    450,
-        "precast":            380,
-        "timber_joist":       260
+        "rc_solid":           1750,
+        "rc_waffle":          2100,
+        "rc_ribbed":          2000,
+        "post_tensioned":     2400,
+        "hollow_core":        1500,
+        "composite_steel":    2250,
+        "precast":            1900,
+        "timber_joist":       1300
       }
     }
   },
