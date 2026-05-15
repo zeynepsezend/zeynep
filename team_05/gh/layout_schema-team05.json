@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "Small Villa - Cost Heat Map",
-    "currency": "AED",
+    "currency": "USD",
     "units": "meters",
     "footprint_m2": 154.0,
     "cost_basis": "rate_per_m2 * area_m2 for rooms; lump-sum per element for openings and columns",
