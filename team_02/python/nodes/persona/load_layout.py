@@ -1,62 +1,7 @@
 """
-nodes/load_layout.py — LOAD_LAYOUT node for the Comfort Copilot state graph.
-
-Pure Python — no LLM, no MCP calls. Runs after PREPROCESS on the comfort path.
-
-Responsibilities:
-  1. If a layout_id was detected in the prompt (e.g. "201"), find and load
-     the matching JSON file from layout_input_dir automatically.
-  2. If no layout_id was found (or the file is not found), show the
-     interactive terminal picker so the user can select a layout.
-  3. Skip loading entirely if a layout is already in state from a previous
-     turn in the multi-turn session.
-
-Writes to state:
-  layout_json_string  (str)  — full JSON of the loaded layout
-  layout_id           (str)  — confirmed layout ID (e.g. "201")
-
-===========================================================================
-INPUT SCHEMA  (randomized_layouts/layout_{id}.json)
-Comfort Copilot | AIA26 Studio Module 03 | Team 02
-===========================================================================
-
-Layout root:
-  "layoutId":  str                   -- e.g. "Layout-201"
-  "name":      str                   -- e.g. "Modern 2-Bedroom Apartment"
-  "outline":   [[float, float], ...] -- perimeter polygon
-
-rooms[]  -- used by compute_comfort_scores  [Form + Use + Site]
-  "id", "name", "geometry"
-  attributes:
-    "area":            float   -- m²                        → spatial score
-    "roomType":        str     -- "living"|"bedroom"|...    → baseline scores
-    "height":          float   -- m                         → spatial score
-    "orientation":     str     -- "N"|"S"|"E"|"W"|...       → thermal score
-    "glazingRatio":    float   -- 0.0–1.0                   → visual score
-    "ventilationType": str     -- "natural"|"mechanical"|"mixed" → olfactory score
-  -- output_writer.py adds "analysis":{...} here after each comfort turn
-
-doors[]  -- used for acoustic score  [Use team]
-  "connectsRooms": [str, str]  -- adjacency penalty if bedroom next to kitchen/living
-
-windows[]  -- used for thermal score  [Form + Site teams]
-  "roomId":      str           -- links window to room
-  "glazingType": str           -- "single"|"double"|"triple" → thermal adjustment
-
-furniture[]  -- used for tactile + olfactory + visual scores  [Use team]
-  "roomId":   str
-  "type":     str              -- "plant" type adds biophilic bonus (olfactory + visual)
-  "material": str              -- mapped to warmth score → tactile score
-
-structure[]  -- used for tactile score  [Structure team]
-  "material": str              -- wall material averaged across layout → tactile score
-
-mep[]  -- NOT used by scoring script  [Structure / MEP team — future]
-  "system":   str              -- ventilationType on rooms is the current proxy
-
-NOTE: source files in randomized_layouts/ are never overwritten.
-      Enriched copies are written to resulting_layout/Layout-{id}_modified.json.
-===========================================================================
+LOAD_LAYOUT node — pure Python, no LLM.
+Loads a layout JSON by ID (auto-match from prompt) or interactive terminal picker.
+Skips loading if the same layout is already in session state.
 """
 
 from __future__ import annotations

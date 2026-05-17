@@ -1,20 +1,10 @@
 """
-nodes/detect.py — DETECT node for the Comfort Copilot state graph.
-
-Pure Python — no LLM. Directly calls the detect_sensorial_conflicts MCP tool.
-
-Always runs after ANALYZE, so last_scores_json is guaranteed to be in state.
-
-Reads from state:
-  last_scores_json   (str)  — output of compute_comfort_scores
-  persona_detected   (str)  — persona name (e.g. "Elderly 65+")
-
-Writes to state:
-  last_conflicts_json  (str)  — unwrapped JSON string from detect_sensorial_conflicts
+DETECT node — calls MCP detect_sensorial_conflicts on the scores from ANALYZE.
+Pure Python, no LLM. Flags senses below persona threshold. Writes last_conflicts_json.
 """
 
 from __future__ import annotations
-from nodes.utils import unwrap_mcp_result
+from nodes._shared.utils import unwrap_mcp_result
 
 
 def build_detect_node(mcp_client):

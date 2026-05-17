@@ -1,10 +1,7 @@
 """
-nodes/respond.py -- RESPOND node for the Comfort Copilot state graph.
-
-Intent-driven output: response format changes based on analysis depth.
-  analyze -> score interpretation only
-  detect  -> conflict-focused, scores as evidence
-  full    -> suggestion-led, conflicts and scores as backing
+RESPOND node — generates the final user-facing response.
+Format adapts to comfort_depth (analyze/detect/full) and user_type register.
+Incorporates specialist interpretations and any evaluator/fact-checker feedback.
 """
 
 from __future__ import annotations
@@ -13,7 +10,7 @@ from _runtime.llm import call_llm_simple
 
 
 _SYSTEM_PROMPT = (
-    "You are Comfort Copilot, an architectural comfort analyst specialising in "
+    "You are Sensi, an architectural comfort analyst specialising in "
     "multi-sensory wellbeing: thermal, visual, acoustic, spatial, olfactory, tactile.\n\n"
     "Write a plain-language response shaped around what the user asked for.\n"
     "Use ONLY the data provided. Never invent scores, conflicts, or suggestions.\n\n"
@@ -27,6 +24,9 @@ _SYSTEM_PROMPT = (
     "- No markdown tables. No JSON. No tool names. Plain ASCII only.\n"
     "- Use a hyphen (-) not an em dash. No special characters.\n"
     "- Be concise. One room = one short block. No padding.\n"
+    "- If SCORE INTERPRETATION context is provided, use it to enrich your language.\n"
+    "- If REVISION INSTRUCTION is provided, apply it exactly before generating.\n"
+    "- If FACT CHECK DISCREPANCY is provided, fix it exactly before generating.\n"
 )
 
 _FORMAT_ANALYZE = (
@@ -148,13 +148,36 @@ def build_respond_node(llm):
     """Return the respond node function, capturing the LLM instance."""
 
     def respond_node(state):
-        persona     = state.get("persona_detected", "Neutral")
+        # Persona: support both new persona_profile (dict) and old persona_detected (str)
+        persona_profile = state.get("persona_profile") or {}
+        persona_detected = state.get("persona_detected", "")
+        if persona_profile:
+            primary = persona_profile.get("primary_user", {})
+            persona = primary.get("description", "Neutral")
+            secondary = persona_profile.get("secondary_user")
+            if secondary:
+                sec_desc = secondary.get("description", "secondary user")
+                persona = persona + " + " + sec_desc
+        else:
+            persona = persona_detected or "Neutral"
+
         layout_id   = state.get("layout_id", "?")
         depth       = state.get("comfort_depth", "analyze")
         scores      = state.get("last_scores_json", "")
         conflicts   = state.get("last_conflicts_json", "")
         suggestions = state.get("last_suggestions_json", "")
         raw_prompt  = state.get("raw_prompt", "")
+        user_type   = state.get("user_type", "architect")
+
+        # Specialist interpretations from new pipeline
+        score_interpretation    = state.get("score_interpretation", "")
+        conflict_reasoning      = state.get("conflict_reasoning", "")
+        suggestion_critique     = state.get("suggestion_critique", "")
+        compare_versions        = state.get("compare_versions_summary", "")
+        biophilic_summary       = state.get("biophilic_summary", "")
+        persona_comparison      = state.get("persona_comparison_summary", "")
+        evaluator_feedback      = state.get("evaluator_feedback", "")
+        fact_check_feedback     = state.get("fact_check_feedback", "")
 
         processed_scores      = _preprocess_scores(scores)
         processed_conflicts   = _preprocess_conflicts(conflicts) if conflicts else "not run"
@@ -167,10 +190,18 @@ def build_respond_node(llm):
         else:
             fmt = _FORMAT_ANALYZE
 
-        user_message = "\n".join([
-            "User request: {}".format(raw_prompt),
-            "Persona: {}".format(persona),
-            "Layout ID: {}".format(layout_id),
+        register_map = {
+            "architect": "Use professional, concise language. Technical terms are fine.",
+            "client":    "Use warm, plain language. No jargon. Focus on daily life impact.",
+            "learner":   "Use clear, educational language. Briefly explain what each term means.",
+        }
+        register_note = register_map.get(user_type, register_map["architect"])
+
+        sections = [
+            "User request: " + raw_prompt,
+            "Persona: " + persona,
+            "Layout ID: " + str(layout_id),
+            "Register: " + register_note,
             "",
             "--- FORMAT INSTRUCTIONS (follow exactly) ---",
             fmt,
@@ -183,7 +214,26 @@ def build_respond_node(llm):
             "",
             "--- SUGGESTIONS ---",
             processed_suggestions,
-        ])
+        ]
+
+        if score_interpretation:
+            sections += ["", "--- SCORE INTERPRETATION (use this context) ---", score_interpretation]
+        if conflict_reasoning:
+            sections += ["", "--- CONFLICT ROOT CAUSES ---", conflict_reasoning]
+        if suggestion_critique:
+            sections += ["", "--- SUGGESTION CRITIQUE (incorporate warnings) ---", suggestion_critique]
+        if compare_versions:
+            sections += ["", "--- VERSION COMPARISON (lead with delta) ---", compare_versions]
+        if biophilic_summary:
+            sections += ["", "--- BIOPHILIC AUDIT ---", biophilic_summary]
+        if persona_comparison:
+            sections += ["", "--- PERSONA COMPARISON ---", persona_comparison]
+        if evaluator_feedback:
+            sections += ["", "--- REVISION INSTRUCTION (apply this) ---", evaluator_feedback]
+        if fact_check_feedback:
+            sections += ["", "--- FACT CHECK DISCREPANCY (fix this) ---", fact_check_feedback]
+
+        user_message = "\n".join(sections)
 
         print("[respond] Generating natural language report...")
         response = call_llm_simple(llm, _SYSTEM_PROMPT, user_message)
