@@ -176,15 +176,25 @@ def build_reason_node(llm: Any):
         if context_injection:
             messages = [{"role": "user", "content": context_injection}] + messages
 
-        try:
-            result = call_llm(llm, SYSTEM_PROMPT, messages, state["tool_catalog"])
-        except Exception as exc:
-            print(f"[reason] LLM call failed: {exc}")
-            return {
-                "final_response": f"LLM error: {exc}",
-                "pending_tool_calls": [],
-                "object_to_place": {},
-            }
+        import time as _time
+        result = None
+        _max_retries = 3
+        for _attempt in range(1, _max_retries + 1):
+            try:
+                result = call_llm(llm, SYSTEM_PROMPT, messages, state["tool_catalog"])
+                break
+            except Exception as exc:
+                print(f"[reason] LLM call failed (attempt {_attempt}/{_max_retries}): {exc}")
+                if _attempt < _max_retries:
+                    _wait = _attempt * 5  # 5s, 10s
+                    print(f"[reason] Retrying in {_wait}s...")
+                    _time.sleep(_wait)
+                else:
+                    return {
+                        "final_response": f"LLM error after {_max_retries} attempts: {exc}",
+                        "pending_tool_calls": [],
+                        "object_to_place": {},
+                    }
 
         # Build an update dict — never mutate state directly.
         updates: dict = {}

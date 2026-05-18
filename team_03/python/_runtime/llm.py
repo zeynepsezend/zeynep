@@ -364,17 +364,32 @@ def call_llm_simple(
         # because pre-agents return free-form JSON (e.g. {"profile_type": ...}),
         # not the {"action": "final", "tool_calls": [...]} schema that
         # _normalize_llm_decision expects.
+        # Retries up to 3 times on transient errors (529 overloaded, timeouts).
         if isinstance(llm, dict) and llm.get("_type") == "anthropic":
+            import time as _time
             client  = llm["_client"]
             model   = llm["_model"]
             timeout = llm["_timeout"]
-            response = client.messages.create(
-                model=model,
-                max_tokens=4096,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_message}],
-                timeout=timeout,
-            )
+            _max_retries = 3
+            response = None
+            for _attempt in range(1, _max_retries + 1):
+                try:
+                    response = client.messages.create(
+                        model=model,
+                        max_tokens=4096,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_message}],
+                        timeout=timeout,
+                    )
+                    break
+                except Exception as _retry_exc:
+                    print(f"[llm_simple] Failed: {_retry_exc}")
+                    if _attempt < _max_retries:
+                        _wait = _attempt * 5
+                        print(f"[llm_simple] Retrying in {_wait}s...")
+                        _time.sleep(_wait)
+                    else:
+                        raise
             content = response.content[0].text
             print(f"\n[llm_simple] Raw response preview:\n{content[:400]}")
             cleaned = _strip_markdown_code_fence(content)
