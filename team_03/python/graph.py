@@ -207,144 +207,233 @@ def group1_join_node(state: AgentState) -> dict:
     return {}
 
 
-def user_checkpoint_node(state: AgentState) -> dict:
-    # Present the current score to the user and let them decide whether to
-    # approve the layout or describe further changes.
-    # This is the only node that blocks on user input — all other nodes are
-    # fully automated.
+def build_user_checkpoint_node(mcp_client):
+    """Return a checkpoint node with access to MCP for viewport toggles."""
 
-    # ── Structural integrity check ──────────────────────────────────────
-    # Verify that doors, windows, structure, and outline haven't been lost
-    # during the pipeline. If any are missing, restore from the original.
-    original = state.get("original_layout") or {}
-    current_layout = json.loads(state["layout_json_string"])
-    integrity_warnings = []
-    restored = False
+    def _send_layout_to_viewport(layout_data: dict, profile_config: dict | None, label: str):
+        """Push a layout to the GH viewport via collision-detector-grid."""
+        profile = profile_config or {}
+        gh_user_type = profile.get("profile_type", "wheelchair_user").replace("_user", "")
+        gh_profile = {
+            "user_type": gh_user_type,
+            "body_width_m": profile.get("body_width", 0.70),
+            "min_corridor_width_m": profile.get("min_path_width", 0.90),
+            "min_door_width_m": profile.get("min_door_width", 0.85),
+            "turning_radius_m": profile.get("turning_radius", 1.50),
+        }
+        try:
+            mcp_client.call_tool("collision-detector-grid", {
+                "layout_json": json.dumps(layout_data),
+                "user_profile": json.dumps(gh_profile),
+                "wall_thickness": 0.20,
+            })
+            print(f"  -> {label} sent to viewport")
+        except Exception as exc:
+            print(f"  -> Failed to send {label}: {exc}")
 
-    for layer in ("doors", "windows", "mep", "structure", "outline"):
-        orig_data = original.get(layer)
-        curr_data = current_layout.get(layer)
-        if orig_data and not curr_data:
-            current_layout[layer] = orig_data
-            restored = True
-            if layer == "outline":
-                integrity_warnings.append(f"  {layer}: RESTORED (was missing)")
-            else:
-                integrity_warnings.append(f"  {layer}: RESTORED — {len(orig_data)} items recovered")
-        elif isinstance(orig_data, list) and isinstance(curr_data, list):
-            if len(curr_data) < len(orig_data):
+    def _send_visibility_to_viewport(layout_json_string: str, visibility_results: list | None):
+        """Push visibility lines to the GH viewport."""
+        if not visibility_results:
+            print("  -> No visibility data to display")
+            return
+        try:
+            mcp_client.call_tool("visualize_visibility", {
+                "layout_json": layout_json_string,
+                "visibility_json": json.dumps(visibility_results),
+            })
+            print("  -> Visibility analysis sent to viewport")
+        except Exception as exc:
+            print(f"  -> Failed to send visibility: {exc}")
+
+    def _send_paths_to_viewport(layout_json_string: str, path_results: dict | None):
+        """Push path lines to the GH viewport."""
+        if not path_results:
+            print("  -> No path data to display")
+            return
+        try:
+            mcp_client.call_tool("visualize_paths", {
+                "layout_json": layout_json_string,
+                "paths_json": json.dumps(path_results),
+            })
+            print("  -> Path analysis sent to viewport")
+        except Exception as exc:
+            print(f"  -> Failed to send paths: {exc}")
+
+    def user_checkpoint_node(state: AgentState) -> dict:
+        # Present the current score to the user and let them decide whether to
+        # approve the layout or describe further changes.
+        # This is the only node that blocks on user input — all other nodes are
+        # fully automated.
+
+        # ── Structural integrity check ──────────────────────────────────
+        # Verify that doors, windows, structure, and outline haven't been
+        # lost during the pipeline. If any are missing, restore from original.
+        original = state.get("original_layout") or {}
+        current_layout = json.loads(state["layout_json_string"])
+        integrity_warnings = []
+        restored = False
+
+        for layer in ("doors", "windows", "mep", "structure", "outline"):
+            orig_data = original.get(layer)
+            curr_data = current_layout.get(layer)
+            if orig_data and not curr_data:
                 current_layout[layer] = orig_data
                 restored = True
-                integrity_warnings.append(
-                    f"  {layer}: RESTORED — had {len(curr_data)}, restored to {len(orig_data)}"
+                if layer == "outline":
+                    integrity_warnings.append(f"  {layer}: RESTORED (was missing)")
+                else:
+                    integrity_warnings.append(f"  {layer}: RESTORED — {len(orig_data)} items recovered")
+            elif isinstance(orig_data, list) and isinstance(curr_data, list):
+                if len(curr_data) < len(orig_data):
+                    current_layout[layer] = orig_data
+                    restored = True
+                    integrity_warnings.append(
+                        f"  {layer}: RESTORED — had {len(curr_data)}, restored to {len(orig_data)}"
+                    )
+
+        if restored:
+            from _runtime.session import save_session
+            save_session(current_layout, state["workspace_path"])
+            print("\n[checkpoint] Structural integrity issues detected and fixed:")
+            for w in integrity_warnings:
+                print(w)
+
+        # ── Door change detection ───────────────────────────────────────
+        orig_doors = {d.get("id"): d for d in original.get("doors", [])}
+        curr_doors = {d.get("id"): d for d in current_layout.get("doors", [])}
+        door_changes = []
+        for door_id, orig_door in orig_doors.items():
+            curr_door = curr_doors.get(door_id)
+            if not curr_door:
+                door_changes.append(f"  REMOVED: {orig_door.get('name', door_id)}")
+            elif orig_door.get("geometry") != curr_door.get("geometry"):
+                door_changes.append(f"  MODIFIED: {orig_door.get('name', door_id)}")
+        for door_id in curr_doors:
+            if door_id not in orig_doors:
+                door_changes.append(f"  ADDED: {curr_doors[door_id].get('name', door_id)}")
+
+        scoring = state.get("scoring_results") or {}
+        score = scoring.get("total_score", 0)
+        grade = scoring.get("grade", "?")
+        rec   = scoring.get("recommendation", "")
+        breakdown = scoring.get("breakdown", {})
+
+        # ── Display report ──────────────────────────────────────────────
+        print(f"\n{'=' * 60}")
+        print(f"LAYOUT SCORE: {score:.1f}/100  Grade: {grade}")
+        print(f"Recommendation: {rec}")
+        print(f"{'=' * 60}")
+
+        print("\nScore breakdown:")
+        for tool_name, details in breakdown.items():
+            s = details.get("score", 0)
+            w = details.get("weight", 0)
+            ws = details.get("weighted", 0)
+            print(f"  {tool_name:15s}  {s:5.1f}/100  (weight {w:.2f}, contribution {ws:.2f})")
+
+        collision = state.get("collision_results") or {}
+        violations = collision.get("violations", [])
+        if violations:
+            print(f"\nCollision violations ({len(violations)}):")
+            for v in violations[:5]:
+                if isinstance(v, str):
+                    print(f"  - {v}")
+                elif isinstance(v, dict):
+                    print(f"  - {v.get('type', '?')}: {v.get('description', str(v))}")
+
+        history = state.get("placement_history")
+        if history:
+            print(f"\nFurniture changes made ({len(history)} items):")
+            for c in history:
+                name = c.get("name", "?")
+                action = c.get("action", "?")
+                room = c.get("room", "?")
+                if action == "moved":
+                    fr = c.get("from", [0, 0])
+                    to = c.get("to", [0, 0])
+                    print(f"  MOVED  {name:30s}  ({fr[0]:6.1f}, {fr[1]:6.1f}) -> ({to[0]:6.1f}, {to[1]:6.1f})  [{room}]")
+                else:
+                    to = c.get("to", [0, 0])
+                    print(f"  ADDED  {name:30s}  at ({to[0]:6.1f}, {to[1]:6.1f})  [{room}]")
+
+        if integrity_warnings:
+            print(f"\nStructural integrity fixes applied:")
+            for w in integrity_warnings:
+                print(w)
+
+        if door_changes:
+            print(f"\nDoor changes detected:")
+            for dc in door_changes:
+                print(dc)
+            print("  (Review carefully — door modifications may affect accessibility)")
+
+        # ── Interactive toggle loop ─────────────────────────────────────
+        # The user can switch viewport views before approving or requesting
+        # changes. Each number sends data to GH via MCP; the viewport
+        # updates in real time. Non-numeric input exits the loop.
+        profile_config = state.get("profile_config")
+
+        print(f"\n{'=' * 60}")
+        print("Viewport toggles:")
+        print("  1 = BEFORE layout (original)")
+        print("  2 = AFTER layout (current)")
+        print("  3 = Collision analysis")
+        print("  4 = Visibility analysis")
+        print("  5 = Path analysis")
+        print(f"{'=' * 60}")
+        print("Actions:")
+        print("  'approve' -> save final layout and finish")
+        print("  anything else -> describe what to change")
+        print()
+
+        while True:
+            user_input = input("Your decision: ").strip()
+
+            if user_input == "1":
+                print("  Sending BEFORE (original) layout to viewport...")
+                _send_layout_to_viewport(original, profile_config, "BEFORE layout")
+                continue
+            elif user_input == "2":
+                print("  Sending AFTER (current) layout to viewport...")
+                _send_layout_to_viewport(current_layout, profile_config, "AFTER layout")
+                continue
+            elif user_input == "3":
+                print("  Sending collision analysis to viewport...")
+                _send_layout_to_viewport(current_layout, profile_config, "Collision grid")
+                continue
+            elif user_input == "4":
+                print("  Sending visibility analysis to viewport...")
+                _send_visibility_to_viewport(
+                    state["layout_json_string"],
+                    state.get("visibility_results"),
                 )
-
-    if restored:
-        layout_json_string = json.dumps(current_layout)
-        from _runtime.session import save_session
-        save_session(current_layout, state["workspace_path"])
-        print("\n[checkpoint] Structural integrity issues detected and fixed:")
-        for w in integrity_warnings:
-            print(w)
-
-    # ── Door change detection ───────────────────────────────────────────
-    # Check if any doors were modified (position or size changed).
-    orig_doors = {d.get("id"): d for d in original.get("doors", [])}
-    curr_doors = {d.get("id"): d for d in current_layout.get("doors", [])}
-    door_changes = []
-    for door_id, orig_door in orig_doors.items():
-        curr_door = curr_doors.get(door_id)
-        if not curr_door:
-            door_changes.append(f"  REMOVED: {orig_door.get('name', door_id)}")
-        elif orig_door.get("geometry") != curr_door.get("geometry"):
-            door_changes.append(f"  MODIFIED: {orig_door.get('name', door_id)}")
-    for door_id in curr_doors:
-        if door_id not in orig_doors:
-            door_changes.append(f"  ADDED: {curr_doors[door_id].get('name', door_id)}")
-
-    scoring = state.get("scoring_results") or {}
-    score = scoring.get("total_score", 0)
-    grade = scoring.get("grade", "?")
-    rec   = scoring.get("recommendation", "")
-    breakdown = scoring.get("breakdown", {})
-
-    print(f"\n{'=' * 60}")
-    print(f"LAYOUT SCORE: {score:.1f}/100  Grade: {grade}")
-    print(f"Recommendation: {rec}")
-    print(f"{'=' * 60}")
-
-    # Show score breakdown per tool
-    print("\nScore breakdown:")
-    for tool_name, details in breakdown.items():
-        s = details.get("score", 0)
-        w = details.get("weight", 0)
-        ws = details.get("weighted", 0)
-        print(f"  {tool_name:15s}  {s:5.1f}/100  (weight {w:.2f}, contribution {ws:.2f})")
-
-    # Show collision violations if any
-    collision = state.get("collision_results") or {}
-    violations = collision.get("violations", [])
-    if violations:
-        print(f"\nCollision violations ({len(violations)}):")
-        for v in violations[:5]:
-            if isinstance(v, str):
-                print(f"  - {v}")
-            elif isinstance(v, dict):
-                print(f"  - {v.get('type', '?')}: {v.get('description', str(v))}")
-
-    # Show placement history — what objects were moved/added
-    history = state.get("placement_history")
-    if history:
-        print(f"\nFurniture changes made ({len(history)} items):")
-        for c in history:
-            name = c.get("name", "?")
-            action = c.get("action", "?")
-            room = c.get("room", "?")
-            if action == "moved":
-                fr = c.get("from", [0, 0])
-                to = c.get("to", [0, 0])
-                print(f"  MOVED  {name:30s}  ({fr[0]:6.1f}, {fr[1]:6.1f}) -> ({to[0]:6.1f}, {to[1]:6.1f})  [{room}]")
+                continue
+            elif user_input == "5":
+                print("  Sending path analysis to viewport...")
+                _send_paths_to_viewport(
+                    state["layout_json_string"],
+                    state.get("path_results"),
+                )
+                continue
             else:
-                to = c.get("to", [0, 0])
-                print(f"  ADDED  {name:30s}  at ({to[0]:6.1f}, {to[1]:6.1f})  [{room}]")
+                # Not a toggle — exit the loop and handle as approve/change
+                break
 
-    # Show structural integrity warnings
-    if integrity_warnings:
-        print(f"\nStructural integrity fixes applied:")
-        for w in integrity_warnings:
-            print(w)
+        # Build base updates — include restored layout if integrity was fixed
+        updates: dict = {}
+        if restored:
+            updates["layout_json_string"] = json.dumps(current_layout)
 
-    # Show door changes — alert user before they approve
-    if door_changes:
-        print(f"\nDoor changes detected:")
-        for dc in door_changes:
-            print(dc)
-        print("  (Review carefully — door modifications may affect accessibility)")
+        if user_input.lower() in ("approve", "yes", "ok", "done"):
+            updates["user_approved"] = True
+            return updates
+        else:
+            updates["user_approved"] = False
+            updates["messages"] = [{"role": "user", "content": user_input}]
+            updates["iteration"] = 0
+            return updates
 
-    print(f"\n{'=' * 60}")
-    print("Options:")
-    print("  'approve' -> save final layout and finish")
-    print("  anything else -> describe what to change")
-    print()
-
-    user_input = input("Your decision: ").strip()
-
-    # Build base updates — include restored layout if integrity was fixed
-    updates: dict = {}
-    if restored:
-        updates["layout_json_string"] = json.dumps(current_layout)
-
-    if user_input.lower() in ("approve", "yes", "ok", "done"):
-        updates["user_approved"] = True
-        return updates
-    else:
-        # User wants further changes — inject their message so the reason node
-        # picks up their instruction on the next iteration.
-        # Reset iteration counter so the new round gets the full budget.
-        updates["user_approved"] = False
-        updates["messages"] = [{"role": "user", "content": user_input}]
-        updates["iteration"] = 0
-        return updates
+    return user_checkpoint_node
 
 
 # ---------------------------------------------------------------------------
@@ -469,6 +558,7 @@ def build_graph(ctx: Any) -> Any:
     orientation      = build_orientation_node(ctx.mcp_client)
     collision        = build_collision_node(ctx.mcp_client, ctx.workspace_path)
     scoring          = build_scoring_node()
+    user_checkpoint  = build_user_checkpoint_node(ctx.mcp_client)
 
     graph = StateGraph(AgentState)
 
@@ -486,7 +576,7 @@ def build_graph(ctx: Any) -> Any:
     graph.add_node("collision",        collision)
     graph.add_node("group1_join",      group1_join_node)
     graph.add_node("scoring",          scoring)
-    graph.add_node("user_checkpoint",  user_checkpoint_node)
+    graph.add_node("user_checkpoint",  user_checkpoint)
     graph.add_node("explain",          explain_node)
     graph.add_node("output",           output_node)
 
