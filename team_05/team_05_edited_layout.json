@@ -37,9 +37,15 @@
           5.0
         ]
       ],
+<<<<<<< Updated upstream
       "rate_per_m2": 3200,
       "area_m2": 40.0,
       "total_cost": 128000,
+=======
+      "rate_per_m2": 1250.8,
+      "area_m2": 40.0,
+      "total_cost": 50032.0,
+>>>>>>> Stashed changes
       "heat_t": 1.0,
       "cost_rank": 6,
       "color_rgb": [
@@ -47,7 +53,26 @@
         0,
         38
       ],
+<<<<<<< Updated upstream
       "color_hex": "#BD0026"
+=======
+      "color_hex": "#BD0026",
+      "slabs": [
+        {
+          "material": "rc_solid",
+          "thickness_m": 0.1,
+          "rate_per_m3": 476.0,
+          "cost": 1904.0,
+          "currency": "USD"
+        }
+      ],
+      "thickness_m": 0.1,
+      "slab_material": "rc_solid",
+      "slab_rate_per_m3": 476.0,
+      "slab_cost": 1904.0,
+      "slabs_total_cost": 1904.0,
+      "base_rate_per_m2": 870.0
+>>>>>>> Stashed changes
     },
     {
       "id": "dining",
@@ -71,9 +96,15 @@
           5.0
         ]
       ],
+<<<<<<< Updated upstream
       "rate_per_m2": 2800,
       "area_m2": 30.0,
       "total_cost": 84000,
+=======
+      "rate_per_m2": 761.0,
+      "area_m2": 30.0,
+      "total_cost": 22830.0,
+>>>>>>> Stashed changes
       "heat_t": 0.8333,
       "cost_rank": 5,
       "color_rgb": [
@@ -105,9 +136,15 @@
           6.5
         ]
       ],
+<<<<<<< Updated upstream
       "rate_per_m2": 1500,
       "area_m2": 21.0,
       "total_cost": 31500,
+=======
+      "rate_per_m2": 408.0,
+      "area_m2": 21.0,
+      "total_cost": 8568.0,
+>>>>>>> Stashed changes
       "heat_t": 0.1667,
       "cost_rank": 1,
       "color_rgb": [
@@ -139,9 +176,15 @@
           11.0
         ]
       ],
+<<<<<<< Updated upstream
       "rate_per_m2": 2800,
       "area_m2": 22.5,
       "total_cost": 63000,
+=======
+      "rate_per_m2": 761.0,
+      "area_m2": 22.5,
+      "total_cost": 17122.5,
+>>>>>>> Stashed changes
       "heat_t": 0.6667,
       "cost_rank": 4,
       "color_rgb": [
@@ -173,9 +216,15 @@
           11.0
         ]
       ],
+<<<<<<< Updated upstream
       "rate_per_m2": 2200,
       "area_m2": 15.75,
       "total_cost": 34650,
+=======
+      "rate_per_m2": 699.0,
+      "area_m2": 15.75,
+      "total_cost": 11009.25,
+>>>>>>> Stashed changes
       "heat_t": 0.3333,
       "cost_rank": 2,
       "color_rgb": [
@@ -207,9 +256,15 @@
           11.0
         ]
       ],
+<<<<<<< Updated upstream
       "rate_per_m2": 2200,
       "area_m2": 13.5,
       "total_cost": 29700,
+=======
+      "rate_per_m2": 598.0,
+      "area_m2": 13.5,
+      "total_cost": 8073.0,
+>>>>>>> Stashed changes
       "heat_t": 0.0,
       "cost_rank": 0,
       "color_rgb": [
@@ -217,7 +272,27 @@
         245,
         220
       ],
+<<<<<<< Updated upstream
       "color_hex": "#FFF5DC"
+=======
+      "color_hex": "#FFF5DC",
+      "finishes": [
+        {
+          "surface": "floor",
+          "material": "marble",
+          "area_m2": 13.5,
+          "rate_per_m2": 150.0,
+          "cost": 2025.0,
+          "currency": "USD"
+        }
+      ],
+      "floor_material": "marble",
+      "floor_rate_per_m2": 150.0,
+      "floor_area_m2": 13.5,
+      "floor_cost": 2025.0,
+      "finishes_total_cost": 2025.0,
+      "base_rate_per_m2": 598.0
+>>>>>>> Stashed changes
     },
     {
       "id": "bathroom",
@@ -241,9 +316,15 @@
           11.0
         ]
       ],
+<<<<<<< Updated upstream
       "rate_per_m2": 4500,
       "area_m2": 11.25,
       "total_cost": 50625,
+=======
+      "rate_per_m2": 1223.0,
+      "area_m2": 11.25,
+      "total_cost": 13758.75,
+>>>>>>> Stashed changes
       "heat_t": 0.5,
       "cost_rank": 3,
       "color_rgb": [
@@ -277,7 +358,11 @@
           0.1
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 4500,
+=======
+      "cost": 1223.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "living"
       ],
@@ -312,7 +397,11 @@
           5.1
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 1800,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "living",
         "corridor"
@@ -348,7 +437,11 @@
           5.1
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 1800,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "dining",
         "corridor"
@@ -384,7 +477,11 @@
           6.6
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 1800,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "master_bed",
         "corridor"
@@ -420,7 +517,11 @@
           6.6
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 1800,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "bedroom_2",
         "corridor"
@@ -456,7 +557,11 @@
           6.6
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 1800,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "bedroom_3",
         "corridor"
@@ -492,7 +597,11 @@
           6.6
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 2200,
+=======
+      "cost": 598.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "bathroom",
         "corridor"
@@ -528,7 +637,11 @@
           0.1
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 5500,
+=======
+      "cost": 1495.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "living"
       ],
@@ -563,7 +676,11 @@
           4.0
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 5500,
+=======
+      "cost": 1495.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "living"
       ],
@@ -598,7 +715,11 @@
           0.1
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 5500,
+=======
+      "cost": 1495.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "dining"
       ],
@@ -633,7 +754,11 @@
           11.1
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 4000,
+=======
+      "cost": 1088.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "master_bed"
       ],
@@ -668,7 +793,11 @@
           11.1
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 2800,
+=======
+      "cost": 761.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "bedroom_2"
       ],
@@ -703,7 +832,11 @@
           11.1
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 2800,
+=======
+      "cost": 761.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "bedroom_3"
       ],
@@ -738,7 +871,11 @@
           9.5
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 1800,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "linked_rooms": [
         "bathroom"
       ],
@@ -779,7 +916,11 @@
           0.3
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 5000,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "location": "perimeter_corner",
       "heat_t": 0.5,
       "cost_rank": 1,
@@ -816,7 +957,11 @@
           0.3
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 5000,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "location": "perimeter_corner",
       "heat_t": 0.5,
       "cost_rank": 1,
@@ -853,7 +998,11 @@
           11.0
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 5000,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "location": "perimeter_corner",
       "heat_t": 0.5,
       "cost_rank": 1,
@@ -890,7 +1039,11 @@
           11.0
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 5000,
+=======
+      "cost": 489.0,
+>>>>>>> Stashed changes
       "location": "perimeter_corner",
       "heat_t": 0.5,
       "cost_rank": 1,
@@ -927,7 +1080,11 @@
           0.3
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 4000,
+=======
+      "cost": 544.0,
+>>>>>>> Stashed changes
       "location": "perimeter_edge",
       "heat_t": 0.0,
       "cost_rank": 0,
@@ -964,7 +1121,11 @@
           11.0
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 4000,
+=======
+      "cost": 544.0,
+>>>>>>> Stashed changes
       "location": "perimeter_edge",
       "heat_t": 0.0,
       "cost_rank": 0,
@@ -1001,7 +1162,11 @@
           5.15
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 4000,
+=======
+      "cost": 544.0,
+>>>>>>> Stashed changes
       "location": "perimeter_edge",
       "heat_t": 0.0,
       "cost_rank": 0,
@@ -1038,7 +1203,11 @@
           5.15
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 4000,
+=======
+      "cost": 544.0,
+>>>>>>> Stashed changes
       "location": "perimeter_edge",
       "heat_t": 0.0,
       "cost_rank": 0,
@@ -1075,7 +1244,11 @@
           5.25
         ]
       ],
+<<<<<<< Updated upstream
       "cost": 11000,
+=======
+      "cost": 598.0,
+>>>>>>> Stashed changes
       "location": "interior",
       "notes": "Larger 0.5x0.5 m section due to higher tributary load at the Living/Dining/Corridor tri-junction",
       "heat_t": 1.0,
@@ -1089,6 +1262,7 @@
     }
   ],
   "summary": {
+<<<<<<< Updated upstream
     "rooms_total": 421475,
     "doors_total": 15700,
     "windows_total": 27900,
@@ -1096,10 +1270,20 @@
     "openings_total": 43600,
     "structure_total": 47000,
     "grand_total": 512075
+=======
+    "rooms_total": 103130.75,
+    "doors_total": 4266.0,
+    "windows_total": 7584.0,
+    "columns_total": 4730.0,
+    "openings_total": 11850.0,
+    "structure_total": 4730.0,
+    "grand_total": 119710.75
+>>>>>>> Stashed changes
   },
   "heatmap": {
     "ranges": {
       "rooms": {
+<<<<<<< Updated upstream
         "min": 29700,
         "max": 128000
       },
@@ -1114,6 +1298,22 @@
       "columns": {
         "min": 4000,
         "max": 11000
+=======
+        "min": 8073.0,
+        "max": 50032.0
+      },
+      "doors": {
+        "min": 489.0,
+        "max": 1223.0
+      },
+      "windows": {
+        "min": 489.0,
+        "max": 1495.0
+      },
+      "columns": {
+        "min": 489.0,
+        "max": 598.0
+>>>>>>> Stashed changes
       }
     },
     "ramps": {
@@ -1184,5 +1384,13 @@
     },
     "seed": null,
     "notes": "Rank-based per category: each distinct cost gets a distinct ramp position; ties share a color. color_hex / color_rgb / heat_t / cost_rank stored on each room, opening and column."
+  },
+  "totals": {
+    "currency": "USD",
+    "rooms": 131393.5,
+    "doors": 4266.0,
+    "windows": 7584.0,
+    "columns": 4730.0,
+    "grand": 147973.5
   }
 }
