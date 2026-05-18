@@ -55,8 +55,9 @@ START → profile_agent → space_type_agent → reason
                            scoring
                               │
                               ▼
-                       user_checkpoint (interactive toggle loop)
+                       user_checkpoint (interactive toggle + suggestions)
                         │  1=BEFORE  2=AFTER  3=collision  4=visibility  5=paths
+                        │  0=clear overlays  s1..s5=smart suggestions
                         ┌────┴────┐
                      approved   continue → reason (new round)
                         │
@@ -65,7 +66,12 @@ START → profile_agent → space_type_agent → reason
 ```
 
 - **`main.py`** — CLI entry point, takes a prompt and `--layout <name>` argument
-- **`graph.py`** — Phase 3 LangGraph StateGraph with parallel analysis groups, conditional routing, user checkpoint, and output pipeline. Contains `AgentState` (TypedDict with `_keep_last` reducers for parallel writes), routing functions, `build_user_checkpoint_node(mcp_client)` (factory with viewport toggles), `explain_node`, and `output_node`. `layout_json_string` stores the **full** layout (all 7 layers) for MCP tools; `_slim_layout` is used only in the LLM prompt message to save tokens. The checkpoint node has an interactive toggle loop: `1`=BEFORE layout, `2`=AFTER layout, `3`=collision, `4`=visibility, `5`=paths — each sends data to GH via MCP for real-time viewport preview. Structural integrity check auto-restores doors/windows/mep/structure if lost.
+- **`graph.py`** — Phase 3 LangGraph StateGraph with parallel analysis groups, conditional routing, user checkpoint, and output pipeline. Contains `AgentState` (TypedDict with `_keep_last` reducers for parallel writes), routing functions, `build_user_checkpoint_node(mcp_client)` (factory with viewport toggles + smart suggestions), `explain_node`, and `output_node`. `layout_json_string` stores the **full** layout (all 7 layers) for MCP tools; `_slim_layout` is used only in the LLM prompt message to save tokens. The checkpoint node features:
+  - **Viewport toggles:** `1`=BEFORE, `2`=AFTER (disabled if no changes), `3`=collision overlay, `4`=visibility overlay, `5`=path overlay, `0`=clear overlays. Overlays (3/4/5) use `collision-detector-grid` as layout base (always works) + the analysis tool on top. Tracks which layout is "active" (before/after) — overlays apply to the active layout.
+  - **Smart suggestions:** Auto-generated `s1`..`s5` prompts based on lowest-scoring tools. Mentions specific furniture names from collision violations. Selecting a suggestion sends it as a user instruction to the reason node.
+  - **Score comparison:** ANSI-colored output with ▲/▼ deltas vs previous checkpoint visit. Per-tool breakdown with color coding (green >=80, yellow 50-79, red <50).
+  - **Structural integrity:** Auto-restores doors/windows/mep/structure if lost during pipeline.
+  - **MCP timeout:** `set_viewport` calls use 10s timeout; auto-disabled for session if it fails. Falls back to `collision-detector-grid`.
 - **`nodes/profile_agent.py`** — LLM-based node that analyses user needs and outputs a structured profile (reach, path width, turning radius, etc.) using RAG knowledge base
 - **`nodes/space_type_agent.py`** — LLM-based node that detects space type (residential/industrial) and outputs analysis priorities, clearances, and tool weights using RAG knowledge base
 - **`nodes/reason.py`** — calls the LLM with system prompt + profile/space context + conversation history, decides next action. Sets `object_to_place`, `pending_tool_calls`, or `final_response` to control routing.
@@ -79,7 +85,7 @@ START → profile_agent → space_type_agent → reason
 - **`nodes/scoring.py`** — Weighted multi-tool quality score (0-100) with letter grade (A-F). Default weights: collision 0.30, path 0.25, visibility 0.20, reachability 0.15, orientation 0.10. Space config can override weights.
 - **`_runtime/bootstrap.py`** — `Context` dataclass. Loads settings, resolves layout by name via `rglob`, manages session lifecycle, connects to MCP, builds LLM. `--layout` takes a name (e.g. `industrial_005`), not a file path.
 - **`_runtime/llm.py`** — LangChain `ChatOpenAI` wrapper with structured JSON output schema + `call_llm_simple()` for preprocessing agents. Includes `_extract_tool_name()` and `_normalize_tool_calls()` helpers to handle LLM format variations (`name` vs `tool_name` vs `function`). Anthropic path handles both dict and LangChain message objects, maps `"human"`→`"user"` and `"ai"`→`"assistant"` roles.
-- **`_runtime/mcp_client.py`** — HTTP JSON-RPC client for the Swiftlet MCP server
+- **`_runtime/mcp_client.py`** — HTTP JSON-RPC client for the Swiftlet MCP server. `call_tool()` accepts optional `timeout` parameter (overrides global httpx timeout for that call).
 - **`_runtime/config.py`** — loads `.env` from repo root
 - **`_runtime/session.py`** — Workspace session lifecycle: `create_session()` copies base layout to `workspace/session_active.json`, `save_session()` persists state after each mutation, `close_session()` writes timestamped final layout to `output/` and cleans up, `detect_existing_session()` checks for resumable sessions.
 
@@ -95,7 +101,7 @@ Discovered at runtime from Swiftlet. Currently:
 - `place_objects` — places objects in a room. Params: `layout_json`, `room_name`, `objects_list` (JSON array of `{name, position, size}`), `user_profile`, `clear_room`
 - `visualize_visibility` — pushes visibility results to GH for rendering
 - `visualize_paths` — pushes path results to GH for rendering
-- `set_viewport` — lightweight layout renderer for viewport toggles (no analysis). Params: `layout_json`, `mode` (`"all"`, `"rooms"`, `"furniture"`, `"doors"`, `"structure"`, `"outline_only"`). GHPython script at `gh/set_viewport.py`. Used by the checkpoint toggle for instant before/after switching.
+- `set_viewport` — lightweight layout renderer for viewport toggles (no analysis). Params: `layout_json`, `mode` (`"all"`, `"rooms"`, `"furniture"`, `"doors"`, `"structure"`, `"outline_only"`, `"none"`). GHPython script at `gh/set_viewport.py`. Mode `"none"` clears all geometry outputs. Used by checkpoint for layout-only views (1/2/0). **Note:** may stay "pending" in Swiftlet if the Result cluster isn't wired — checkpoint has 10s timeout + auto-fallback to `collision-detector-grid`.
 
 All tool calls automatically receive `layout_json` (current layout state) injected by `nodes/tools.py` or `nodes/add_objects.py`.
 
@@ -235,7 +241,11 @@ Checks facing direction for objects with an `orientation` field. Resolves target
 
 ### 6. Scoring (`nodes/scoring.py`)
 
-Aggregates all tool results into a weighted 0-100 score with letter grade (A/B/C/D/F). Grades: A>=90, B>=75, C>=60, D>=40, F<40. Collision=0 is a hard blocker ("Fix collision violations before approving"). Space config can override default weights.
+Aggregates all tool results into a weighted 0-100 score with letter grade (A/B/C/D/F). Grades: A>=90, B>=75, C>=60, D>=40, F<40. Space config can override default weights.
+
+**Structure vs Furniture scoring:** Collision violations caused by **structure** (walls) are penalized at 20% weight because the agent can't move them. **Furniture/MEP** violations get full penalty (actionable). This prevents wall-adjacent clearance violations from dominating the score.
+
+**Score comparison:** The checkpoint displays ANSI-colored deltas (green ▲/red ▼) comparing current vs previous score, both total and per-tool. Previous scoring stored in `previous_scoring` state field, updated each checkpoint exit.
 
 ## User Profiles
 
@@ -335,6 +345,21 @@ After placing objects, if collision violations persisted (e.g. structural issues
 ### 23. `explain_node` crash on `.format()` with JSON content (FIXED — 2026-05-17)
 `call_llm()` and `_call_anthropic()` used `system_prompt.format(tool_catalog=tool_catalog)` which crashes with `"unmatched '{' in format spec"` when the system prompt contains JSON with `{}` braces (e.g. layout data, collision results). Fix: both functions changed to `system_prompt.replace("{tool_catalog}", tool_catalog)` in `_runtime/llm.py`.
 
+### 24. `object_to_place` / `pending_tool_calls` never clearing — `_keep_last` reducer bug (FIXED — 2026-05-17)
+`_keep_last(old, None) = old` — setting state fields to `None` doesn't clear them. `reason.py` set `object_to_place = None` and `pending_tool_calls = None` to indicate "no action", but the old values persisted, causing duplicate placements and stale tool calls. Fix: use `{}` for dicts and `[]` for lists instead of `None` in `reason.py` and `add_objects.py`.
+
+### 25. Doors lost after furniture placement (FIXED — 2026-05-17)
+When `place_objects` MCP tool returned a full layout, it sometimes omitted doors/windows/mep/structure/outline. The state's `layout_json_string` was overwritten with this incomplete layout, losing 3 doors → 0 doors. Fix: both `add_objects.py` and `tools.py` now merge missing layers from the current state before updating. Checkpoint node has structural integrity check that auto-restores lost layers from `original_layout`.
+
+### 26. Collision score dominated by wall violations (FIXED — 2026-05-17)
+The collision scoring treated all `blocked_area_m2` equally — walls generated huge clearance violation zones along the entire perimeter, making scores very low even with good furniture placement. Fix: `scoring.py` now separates violations by `object_type`: **structure** violations penalized at 20% weight (not actionable), **furniture/MEP** at full weight (actionable by the agent).
+
+### 27. `set_viewport` MCP tool stays "pending" (PARTIALLY FIXED — 2026-05-17)
+The `set_viewport` GHPython component never returned a response through Swiftlet, blocking the pipeline indefinitely. Root causes: (a) `info` output was a plain string, not valid JSON — Swiftlet couldn't parse it as an MCP response; (b) the Swiftlet Result cluster may not be wired. Fix (a): all `info` outputs now return `json.dumps({...})`. Fix (b): requires GH-side wiring of the Result cluster. Mitigation: `mcp_client.call_tool()` now accepts optional `timeout` parameter; `set_viewport` calls use 10s timeout; auto-disabled for the session after first failure, falls back to `collision-detector-grid`.
+
+### 28. Viewport overlay: layout + analysis not visible simultaneously (OPEN — 2026-05-17)
+When toggling to analysis views (3/4/5), both `set_viewport` (layout) and the analysis tool should show simultaneously via separate GH Custom Preview components. In practice, `set_viewport` often fails (issue #27), leaving only the analysis visible. Current workaround: overlays (3/4/5) use `collision-detector-grid` as the layout base (its clearance mesh provides spatial context) instead of relying on `set_viewport`. Full fix requires `set_viewport` working reliably as an MCP tool (Result cluster wiring in GH).
+
 ## MCP Server (`mcp.json` at repo root)
 
 ```json
@@ -401,8 +426,9 @@ The Grasshopper definition (`gh/team_03_working.gh`) contains GHPython scripts t
 
 ### Script 7 — set_viewport (Viewport Toggle)
 **Source:** `gh/set_viewport.py`
-**Input:** `layout_json` (full layout JSON string), `mode` (string: `"all"`, `"rooms"`, `"furniture"`, `"doors"`, `"structure"`, `"outline_only"`)
-**Output:** `room_curves`, `room_names`, `door_curves`, `door_names`, `furniture_curves`, `furniture_names`, `window_curves`, `structure_curves`, `mep_curves`, `outline_curve`, `info`
+**Input:** `layout_json` (full layout JSON string), `mode` (string: `"all"`, `"rooms"`, `"furniture"`, `"doors"`, `"structure"`, `"outline_only"`, `"none"`)
+**Output:** `room_curves`, `room_names`, `door_curves`, `door_names`, `furniture_curves`, `furniture_names`, `window_curves`, `structure_curves`, `mep_curves`, `outline_curve`, `info` (JSON string)
+**Note:** `info` output must be valid JSON (e.g. `{"status":"ok","mode":"all",...}`) for Swiftlet to return the MCP response. Mode `"none"` clears all geometry outputs (used when switching to analysis-only views).
 
 **Setup in GH:**
 1. Add a new GHPython component to `team_03_working.gh`

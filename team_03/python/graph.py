@@ -469,108 +469,179 @@ def build_user_checkpoint_node(mcp_client):
         # updates in real time. Non-numeric input exits the loop.
         has_changes = bool(state.get("placement_history"))
 
-        print(f"\n{'=' * 60}")
-        print("Viewport toggles (via set_viewport):")
+        # ── Generate smart suggestions based on lowest scores ─────────
+        suggestions = []
+        # Build a simple score map even if breakdown is missing
+        score_map = {}
+        if breakdown:
+            score_map = {k: v.get("score", 100) for k, v in breakdown.items()}
+        else:
+            # Fallback: infer from raw results if scoring didn't run properly
+            if collision.get("pass") is False:
+                score_map["collision"] = 40.0
+            if state.get("visibility_results"):
+                vis = state["visibility_results"]
+                if isinstance(vis, list) and vis:
+                    avg = sum(1 for v in vis if v.get("visible", True)) / len(vis) * 100
+                    score_map["visibility"] = avg
+
+        if score_map:
+            sorted_tools = sorted(score_map.items(), key=lambda x: x[1])
+            for tool_name, s in sorted_tools:
+                if s >= 80:
+                    continue  # Only suggest for weak scores
+                if tool_name == "collision" and s < 80:
+                    # Check what's causing the collision issues
+                    objs = collision.get("objects", [])
+                    furniture_objs = [o for o in objs if o.get("object_type") == "furniture" and o.get("clearance_violation")]
+                    if furniture_objs:
+                        worst = sorted(furniture_objs, key=lambda o: o["clearance_violation"].get("blocked_area_m2", 0), reverse=True)
+                        names = [o.get("name", "?") for o in worst[:3]]
+                        suggestions.append({
+                            "key": "s1",
+                            "prompt": f"Move {', '.join(names)} away from walls and other furniture to increase clearance to at least {profile_config.get('min_path_width', 0.90) if profile_config else 0.90}m",
+                            "label": f"Fix collisions ({', '.join(names[:2])}...)",
+                        })
+                    else:
+                        suggestions.append({
+                            "key": "s1",
+                            "prompt": "Rearrange furniture to increase corridor clearance and reduce blocked areas",
+                            "label": "Fix collision clearance",
+                        })
+                elif tool_name == "visibility" and s < 80:
+                    suggestions.append({
+                        "key": "s2",
+                        "prompt": "Reposition furniture that blocks line-of-sight between the entrance and key areas. Prioritize clear sightlines from doors to workstations",
+                        "label": "Improve visibility / sightlines",
+                    })
+                elif tool_name == "path" and s < 80:
+                    suggestions.append({
+                        "key": "s3",
+                        "prompt": "Reorganize furniture to create wider, more direct paths between doors and all workstations. Ensure minimum corridor width is maintained throughout",
+                        "label": "Improve path accessibility",
+                    })
+                elif tool_name == "reachability" and s < 80:
+                    suggestions.append({
+                        "key": "s4",
+                        "prompt": "Move furniture blocking access to use points. Ensure every workstation's use_point is reachable from the nearest door without obstruction",
+                        "label": "Fix unreachable furniture",
+                    })
+                elif tool_name == "orientation" and s < 80:
+                    suggestions.append({
+                        "key": "s5",
+                        "prompt": "Rotate or reposition furniture so use points face toward open space and away from walls",
+                        "label": "Fix furniture orientation",
+                    })
+
+        print(f"\n{BOLD}{'=' * 60}{RESET}")
+        print(f"{BOLD}Viewport:{RESET}")
         print("  1 = BEFORE layout (original)")
         if has_changes:
             print("  2 = AFTER layout (current)")
         else:
-            print("  2 = AFTER layout (disabled — no changes made yet)")
-        print("  3 = Collision analysis")
-        print("  4 = Visibility analysis")
-        print("  5 = Path analysis")
-        print("  6 = Furniture only")
-        print("  7 = Rooms + doors only")
-        print("  8 = Structure only")
-        print("  9 = Outline only")
-        print(f"{'=' * 60}")
-        print("Actions:")
+            print(f"  2 = AFTER layout {DIM}(disabled — no changes yet){RESET}")
+        print("  3 = + Collision overlay")
+        print("  4 = + Visibility overlay")
+        print("  5 = + Path overlay")
+        print("  0 = Clear overlays (layout only)")
+
+        if not suggestions and score < 80:
+            # Generic fallback suggestion when no specific tool analysis matched
+            suggestions.append({
+                "key": "s1",
+                "prompt": "Rearrange furniture to improve overall accessibility. Increase clearance between objects, ensure paths to all use points are unobstructed, and maintain minimum corridor widths",
+                "label": "Improve overall accessibility",
+            })
+
+        if suggestions:
+            print(f"\n{BOLD}Suggestions:{RESET}")
+            for sug in suggestions:
+                print(f"  {CYAN}{sug['key']}{RESET} = {sug['label']}")
+
+        print(f"\n{BOLD}Actions:{RESET}")
         print("  'approve' -> save final layout and finish")
         print("  anything else -> describe what to change")
+        print(f"{'=' * 60}")
         print()
+
+        # Track which layout is active in the viewport (default: current)
+        active_layout = current_layout
+        active_label = "AFTER" if has_changes else "CURRENT"
+
+        def _send_collision(layout_data, label):
+            """Send layout to collision-detector-grid (always works, shows layout context via clearance mesh)."""
+            layout_json = json.dumps(layout_data)
+            profile = profile_config or {}
+            gh_user_type = profile.get("profile_type", "wheelchair_user").replace("_user", "")
+            gh_profile = {
+                "user_type": gh_user_type,
+                "body_width_m": profile.get("body_width", 0.70),
+                "min_corridor_width_m": profile.get("min_path_width", 0.90),
+                "min_door_width_m": profile.get("min_door_width", 0.85),
+                "turning_radius_m": profile.get("turning_radius", 1.50),
+            }
+            args = {
+                "layout_json": layout_json,
+                "user_profile": json.dumps(gh_profile),
+                "wall_thickness": 0.20,
+            }
+            mcp_client.call_tool("collision-detector-grid", args, timeout=30.0)
+            print(f"  -> {label} sent to collision-detector-grid")
 
         while True:
             user_input = input("Your decision: ").strip()
 
             try:
                 if user_input == "1":
-                    print("  Sending BEFORE (original) layout to viewport...")
-                    _send_layout_to_viewport(original, profile_config, "BEFORE layout")
+                    active_layout = original
+                    active_label = "BEFORE"
+                    print(f"  Layout: {active_label} (original)")
+                    # Try set_viewport first, fall back to collision-detector-grid
+                    _send_layout_to_viewport(active_layout, profile_config, active_label)
                     continue
                 elif user_input == "2":
                     if not has_changes:
-                        print("  -> No changes made yet — AFTER view not available.")
-                        print("     Describe changes first, then toggle AFTER to compare.")
+                        print("  -> No changes yet — AFTER not available.")
                         continue
-                    print("  Sending AFTER (current) layout to viewport...")
-                    _send_layout_to_viewport(current_layout, profile_config, "AFTER layout")
+                    active_layout = current_layout
+                    active_label = "AFTER"
+                    print(f"  Layout: {active_label} (current)")
+                    _send_layout_to_viewport(active_layout, profile_config, active_label)
                     continue
                 elif user_input == "3":
-                    print("  Switching to collision analysis view...")
-                    # Clear set_viewport so it doesn't overlap
-                    _send_layout_to_viewport(current_layout, profile_config,
-                                              "clear", mode="none")
-                    # Send collision analysis to its own GH component
-                    layout_json = json.dumps(current_layout)
-                    profile = profile_config or {}
-                    gh_user_type = profile.get("profile_type", "wheelchair_user").replace("_user", "")
-                    gh_profile = {
-                        "user_type": gh_user_type,
-                        "body_width_m": profile.get("body_width", 0.70),
-                        "min_corridor_width_m": profile.get("min_path_width", 0.90),
-                        "min_door_width_m": profile.get("min_door_width", 0.85),
-                        "turning_radius_m": profile.get("turning_radius", 1.50),
-                    }
-                    try:
-                        mcp_client.call_tool("collision-detector-grid", {
-                            "layout_json": layout_json,
-                            "user_profile": json.dumps(gh_profile),
-                            "wall_thickness": 0.20,
-                        }, timeout=30.0)
-                        print("  -> Collision analysis sent to viewport")
-                    except Exception as exc:
-                        print(f"  -> Failed: {exc}")
+                    print(f"  {active_label} + Collision overlay")
+                    _send_collision(active_layout, active_label)
                     continue
                 elif user_input == "4":
-                    print("  Switching to visibility analysis view...")
-                    _send_layout_to_viewport(current_layout, profile_config,
-                                              "clear", mode="none")
+                    print(f"  {active_label} + Visibility overlay")
+                    # Send collision first as layout base (it always works)
+                    _send_collision(active_layout, active_label)
                     _send_visibility_to_viewport(
-                        state["layout_json_string"],
+                        json.dumps(active_layout),
                         state.get("visibility_results"),
                     )
                     continue
                 elif user_input == "5":
-                    print("  Switching to path analysis view...")
-                    _send_layout_to_viewport(current_layout, profile_config,
-                                              "clear", mode="none")
+                    print(f"  {active_label} + Path overlay")
+                    _send_collision(active_layout, active_label)
                     _send_paths_to_viewport(
-                        state["layout_json_string"],
+                        json.dumps(active_layout),
                         state.get("path_results"),
                     )
                     continue
-                elif user_input == "6":
-                    print("  Sending furniture-only view to viewport...")
-                    _send_layout_to_viewport(current_layout, profile_config,
-                                              "Furniture view", mode="furniture")
-                    continue
-                elif user_input == "7":
-                    print("  Sending rooms + doors view to viewport...")
-                    _send_layout_to_viewport(current_layout, profile_config,
-                                              "Rooms + doors view", mode="rooms")
-                    continue
-                elif user_input == "8":
-                    print("  Sending structure view to viewport...")
-                    _send_layout_to_viewport(current_layout, profile_config,
-                                              "Structure view", mode="structure")
-                    continue
-                elif user_input == "9":
-                    print("  Sending outline-only view to viewport...")
-                    _send_layout_to_viewport(current_layout, profile_config,
-                                              "Outline view", mode="outline_only")
+                elif user_input == "0":
+                    print(f"  Layout only: {active_label}")
+                    _send_layout_to_viewport(active_layout, profile_config, active_label)
                     continue
                 else:
-                    # Not a toggle — exit the loop and handle as approve/change
+                    # Check if it's a suggestion key (s1, s2, etc.)
+                    matched_sug = next((s for s in suggestions if s["key"] == user_input.lower()), None)
+                    if matched_sug:
+                        print(f"\n  {CYAN}Applying suggestion: {matched_sug['label']}{RESET}")
+                        print(f"  {DIM}> {matched_sug['prompt']}{RESET}\n")
+                        user_input = matched_sug["prompt"]
+                        break
+                    # Not a toggle or suggestion — exit loop as user instruction
                     break
             except Exception as exc:
                 print(f"  -> Viewport toggle failed: {exc}")
