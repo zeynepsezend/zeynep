@@ -1,5 +1,8 @@
 .env
 *.pyc
 mcp.json
-
+**/__pycache__/
+.venv/
+team_06/output/
+.vscode/
 team_03 - backup
