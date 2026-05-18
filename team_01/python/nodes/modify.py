@@ -88,7 +88,9 @@ def build_modify_node(mcp_client, allowed_tools, edited_layout_path):
     allowed_names = {t["name"] for t in allowed_tools if t.get("name")}
 
     def modify_node(state):
-        print("\nModifying layout...")
+        print(f"\n{'='*50}")
+        print(f"  NODE: MODIFY")
+        print(f"{'='*50}")
 
         # Save original layout before first modification
         if not state.get("original_layout_json_string"):

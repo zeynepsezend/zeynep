@@ -73,7 +73,10 @@ If action is final: tool_calls must be []. If action is tool: final_response mus
 def build_reason_node(llm):
 
     def reason_node(state):
-        print("\nReasoning with LLM...")
+        cycle = state.get("cycle", 0)
+        print(f"\n{'='*50}")
+        print(f"  NODE: REASON  (cycle {cycle})")
+        print(f"{'='*50}")
 
         # Trim history to stay within token limit
         # Cap each message at 600 chars so tool results (full layout JSON) don't blow the context

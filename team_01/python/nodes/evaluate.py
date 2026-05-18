@@ -3,28 +3,28 @@ import json
 import math
 import re
 
-# ── Material library (working stress, IS 456 / IS 800 / IS 883) ───────────────
+# ── Material library (working stress, EC2 / EC3 / EN338) ─────────────────────
 MATERIALS: dict[str, dict] = {
     "RCC": {
-        "E_MPa":        25_000,   # M25 concrete
+        "E_MPa":        31_000,   # EC2, C25/30
         "density_kNm3": 25.0,
-        "allow_bend_MPa":  8.5,   # IS 456 Table 21, σ_cbc M25
-        "allow_comp_MPa":  6.0,   # IS 456 Table 21, σ_cc  M25
-        "allow_shear_MPa": 2.8,   # IS 456 Table 23, max τ_v
+        "allow_bend_MPa":  14.2,  # EC2, fcd = 0.85 × 25 / 1.5
+        "allow_comp_MPa":  14.2,  # EC2, fcd = 0.85 × 25 / 1.5
+        "allow_shear_MPa":  2.8,  # EC2, VRd reinforced section
     },
     "STEEL": {
         "E_MPa":        200_000,
         "density_kNm3": 78.5,
-        "allow_bend_MPa":  165.0,  # IS 800, Fe250
-        "allow_comp_MPa":  150.0,
-        "allow_shear_MPa": 100.0,
+        "allow_bend_MPa":  235.0,  # EC3, fyd = fy / γM0, S235
+        "allow_comp_MPa":  235.0,  # EC3, fyd = fy / γM0, S235
+        "allow_shear_MPa": 135.7,  # EC3, fvd = fy / (√3 × γM0)
     },
     "TIMBER": {
-        "E_MPa":        12_500,
-        "density_kNm3": 8.0,
-        "allow_bend_MPa":  12.0,  # IS 883, Group B
-        "allow_comp_MPa":   8.0,
-        "allow_shear_MPa":  1.5,
+        "E_MPa":        8_000,
+        "density_kNm3": 5.0,
+        "allow_bend_MPa":  12.3,  # EN338 C16, fm,d = kmod × fm,k / γM = 0.8 × 16 / 1.3
+        "allow_comp_MPa":  10.5,  # EN338 C16, fc,0,d = kmod × fc,0,k / γM = 0.8 × 17 / 1.3
+        "allow_shear_MPa":  1.1,  # EN338 C16, fv,d = kmod × fv,k / γM = 0.8 × 1.8 / 1.3
     },
 }
 
@@ -820,6 +820,10 @@ def build_evaluate_node(_):
     """Structural first-principles check node — unused arg kept for graph API compatibility."""
 
     def evaluate_node(state: dict) -> dict:
+        print(f"\n{'='*50}")
+        print(f"  NODE: EVALUATE")
+        print(f"{'='*50}")
+
         # Skip full evaluation when tag_and_audit just generated a fresh grid
         if state.get("came_from") == "tag_and_audit":
             layout = json.loads(state["layout_json_string"])

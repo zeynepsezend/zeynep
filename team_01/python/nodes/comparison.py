@@ -48,7 +48,9 @@ def _structural_diff(original_json: str, modified_json: str) -> str:
 def build_comparison_node(llm):
 
     def comparison_node(state):
-        print("\nComparing layouts...")
+        print(f"\n{'='*50}")
+        print(f"  NODE: COMPARISON  (cycle {state.get('cycle', 0) + 1})")
+        print(f"{'='*50}")
 
         original = state.get("original_layout_json_string") or state["layout_json_string"]
         diff = _structural_diff(original, state["layout_json_string"])
