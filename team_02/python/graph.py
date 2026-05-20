@@ -1,28 +1,53 @@
 """
-graph.py -- Comfort Copilot state graph  (v2 — Phase 2 redesign)
+graph.py -- Sensi state graph  (v3 — simplified onboarding + mandatory inspire)
 
 ===========================================================================
-WHAT CHANGED FROM v1
+WHAT CHANGED FROM v2
 ===========================================================================
 
-Phase 1 graph (retired):
-  preprocess [PY keyword] → load_layout → ask_persona [PY rigid picker]
-  → route_intent [LLM, analyze/detect/full only] → analyze → detect → suggest
-  → respond → END
+Onboarding (redesigned):
+  Old: greet → user_profiler → intent_classifier → persona_builder loop → advisor
+  New: greet → quiz (multi-turn) → inspire (mandatory) → persona_compiler
 
-Phase 2 graph (this file):
-  ┌─ ENTRY (first turn only) ────────────────────────────────────────────┐
-  │  greet [LLM]  →  (next turn)  user_profiler [LLM]                   │
-  └──────────────────────────────────────────────────────────────────────┘
+  Removed nodes: user_profiler, persona_builder, persona_validator, advisor
+  Added nodes:   quiz, persona_compiler
+  Changed node:  inspire — now a factory (needs LLM), mandatory in onboarding,
+                 placeholder in layout mode. No longer reached via intent_classifier.
+
+  Onboarding is now a strict linear sequence gated by:
+    greeted → quiz_complete → inspire_complete → onboarding_complete
+
+  persona.json is written to disk by persona_compiler so returning users
+  skip onboarding entirely (detected in main.py on startup).
+
+Layout mode (unchanged from v2):
+  intent_classifier → load_layout → route_intent → analysis chain → quality loop
+  All placeholder tool nodes retained in the graph for visibility.
+
+===========================================================================
+ONBOARDING FLOW  (first session only)
+===========================================================================
+
+  Turn 1:  START → greet  → END
+  Turn 2:  START → quiz (step 0: store intro, ask Q1)  → END
+  Turn 3:  START → quiz (step 1: store Q1, ask Q2)     → END
+  Turn 4:  START → quiz (step 2: store Q2, ask Q3)     → END
+  Turn 5:  START → quiz (step 3: store Q3, ask Q4)     → END
+  Turn 6:  START → quiz (step 4: store Q4, ask Q5)     → END
+  Turn 7:  START → quiz (step 5: store Q5, done)       → inspire (asks question) → END
+  Turn 8:  START → inspire (captures answer, done)     → persona_compiler → END
+  Turn 9+: onboarding_complete=True → intent_classifier → layout mode
+
+===========================================================================
+LAYOUT MODE FLOW
+===========================================================================
+
   ┌─ ROUTING ────────────────────────────────────────────────────────────┐
-  │  intent_classifier [LLM]  replaces keyword preprocess                │
-  └──────────────────────────────────────────────────────────────────────┘
-  ┌─ PERSONA CHAIN ──────────────────────────────────────────────────────┐
-  │  persona_builder [LLM]  →  persona_validator [LLM]                   │
-  │    → advisor [LLM]  (when user is unsure)                            │
+  │  intent_classifier [LLM] — comfort / overview / inspire / chitchat   │
   └──────────────────────────────────────────────────────────────────────┘
   ┌─ ANALYSIS CHAIN ─────────────────────────────────────────────────────┐
-  │  route_intent → analyze [MCP] → score_interpreter [LLM]             │
+  │  load_layout → persona check → route_intent                          │
+  │  → analyze [MCP] → score_interpreter [LLM]                          │
   │  → detect [MCP] → conflict_reasoner [LLM]                           │
   │  → suggest [MCP] → suggestion_critic [LLM] → respond [LLM]          │
   └──────────────────────────────────────────────────────────────────────┘
@@ -39,83 +64,97 @@ Phase 2 graph (this file):
   └──────────────────────────────────────────────────────────────────────┘
   ┌─ FEEDBACK LOOP ──────────────────────────────────────────────────────┐
   │  fact_checker → what_next [LLM] → END                               │
-  │  (user's next message re-enters via intent_classifier)               │
   └──────────────────────────────────────────────────────────────────────┘
 
 ===========================================================================
 NODE SUMMARY
 ===========================================================================
-  greet              [LLM]     opening move — "who are you?"
-  user_profiler      [LLM]     classifies architect / client / learner
-  intent_classifier  [LLM]     replaces preprocess keyword matching
-  load_layout        [PYTHON]  file I/O, skips if same layout already loaded
-  overview_respond   [PYTHON]  room list, no analysis
-  persona_builder    [LLM]     fluid multi-turn persona building
-  persona_validator  [LLM]     completeness check, loop max 3
-  advisor            [LLM]     recommends starting path when user is unsure
-  route_intent       [LLM]     analyze/detect/full + what-if/compare/biophilic/topologic
+
+  ONBOARDING
+  greet              [LLM]     "Hi, I'm Sensi — who are you?"
+  quiz               [LLM]     structured 6-step profiler (replaces 4 old nodes)
+  inspire            [LLM]     mandatory aesthetic profiler; placeholder in layout mode
+  persona_compiler   [LLM]     compiles quiz + inspire → persona.json on disk
+
+  LAYOUT MODE — ROUTING
+  intent_classifier  [LLM]     comfort / overview / inspire / chitchat / tools
+  chitchat           [LLM]     off-topic or general questions in layout mode
+
+  LAYOUT MODE — LAYOUT
+  load_layout        [PYTHON]  reads layout JSON from disk
+  overview_respond   [PYTHON]  quick room list, no analysis
+
+  LAYOUT MODE — ANALYSIS CHAIN
+  route_intent       [LLM]     analyze / detect / full + what-if / compare / biophilic / topologic
   analyze            [MCP]     compute_comfort_scores
-  score_interpreter  [LLM]     what scores mean for this persona
+  score_interpreter  [LLM]     what the scores mean for this persona
   detect             [MCP]     detect_sensorial_conflicts
-  conflict_reasoner  [LLM]     why did it fail? root cause analysis
+  conflict_reasoner  [LLM]     root cause analysis
   suggest            [MCP]     generate_suggestions
-  suggestion_critic  [LLM]     feasibility, priority, cross-sense consequences
+  suggestion_critic  [LLM]     feasibility and cross-sense consequences
   respond            [LLM]     final natural-language response
-  evaluator          [LLM]     quality gate: coherent, complete, right tone?
-  fact_checker       [LLM]     data integrity: no invented scores or rooms
+
+  LAYOUT MODE — QUALITY LOOP
+  evaluator          [LLM]     coherence, completeness, tone check
+  fact_checker       [LLM]     no invented scores or rooms
   what_next          [LLM]     feedback loop offer
-  chitchat           [LLM]     conversational node, user-type aware
-  inspire            [PYTHON]  Phase 3 placeholder
-  change_material    [PH·MCP]  P1: modify material → re-score
-  topologic_analysis [PH·MCP]  P1: room adjacency via TopologicPy
-  compare_versions   [PH·MCP]  P2: before/after score delta
-  persona_comparison [PH·LLM]  P2: same layout, two personas
-  modify_glazing     [PH·MCP]  P3: glazing ratio/type → re-score
-  add_furniture      [PH·MCP]  P3: add furniture/plants → re-score
-  biophilic_audit    [PH·LLM]  P3: "Talk Green To Me" mode
-  output_writer      [PYTHON]  post-graph, writes resulting_layout/
+
+  LAYOUT MODE — TOOL PATHS (placeholders)
+  change_material    [PH·MCP]  modify material → re-score
+  modify_glazing     [PH·MCP]  glazing ratio/type → re-score
+  add_furniture      [PH·MCP]  add furniture/plants → re-score
+  compare_versions   [PH·MCP]  before/after score delta
+  topologic_analysis [PH·MCP]  room adjacency via TopologicPy
+  persona_comparison [PH·LLM]  same layout, two personas
+  biophilic_audit    [PH·LLM]  Talk Green To Me mode
+  output_writer      [PYTHON]  post-graph, writes resulting_layout/ (background)
 """
 
 from __future__ import annotations
+from pathlib import Path
 from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 
-# Existing nodes
-from nodes.persona.load_layout     import build_load_layout_node
-from nodes.analysis.analyze         import build_analyze_node
-from nodes.analysis.detect          import build_detect_node
-from nodes.analysis.suggest         import build_suggest_node
-from nodes.conversation.inspire     import inspire_node
-from nodes.conversation.overview    import overview_respond_node
-from nodes._shared.output_writer    import write_analysis_to_layout
+# ── Onboarding nodes ──────────────────────────────────────────────────────────
+from nodes.onboarding.greet            import build_greet_node
+from nodes.onboarding.quiz             import build_quiz_node
+from nodes.onboarding.inspire          import build_inspire_node
+from nodes.onboarding.persona_compiler import build_persona_compiler_node
 
-# New conversation nodes
-from nodes.session.greet            import build_greet_node
-from nodes.session.user_profiler    import build_user_profiler_node
-from nodes.session.intent_classifier import build_intent_classifier_node
-from nodes.conversation.chitchat    import build_chitchat_node
-from nodes.persona.persona_builder  import build_persona_builder_node
-from nodes.persona.persona_validator import build_persona_validator_node
-from nodes.persona.advisor          import build_advisor_node
-from nodes.analysis.route_intent    import build_route_intent_node
-from nodes.conversation.what_next   import build_what_next_node
+# ── Layout mode — routing ─────────────────────────────────────────────────────
+from nodes.routing.intent_classifier import build_intent_classifier_node
+from nodes.conversation.chitchat     import build_chitchat_node
 
-# New specialist nodes
-from nodes.analysis.score_interpreter  import build_score_interpreter_node
-from nodes.analysis.conflict_reasoner  import build_conflict_reasoner_node
-from nodes.analysis.suggestion_critic  import build_suggestion_critic_node
-from nodes.quality.evaluator          import build_evaluator_node
-from nodes.quality.fact_checker       import build_fact_checker_node
-from nodes.quality.respond            import build_respond_node
+# ── Layout mode — layout ──────────────────────────────────────────────────────
+from nodes.layout.load_layout  import build_load_layout_node
+from nodes.layout.overview     import overview_respond_node
 
-# Placeholder tool nodes
-from nodes.tools.change_material      import build_change_material_node
-from nodes.tools.topologic_analysis   import build_topologic_analysis_node
-from nodes.tools.compare_versions     import build_compare_versions_node
-from nodes.tools.persona_comparison   import build_persona_comparison_node
-from nodes.tools.modify_glazing       import build_modify_glazing_node
-from nodes.tools.add_furniture        import build_add_furniture_node
-from nodes.tools.biophilic_audit      import build_biophilic_audit_node
+# ── Layout mode — analysis chain ─────────────────────────────────────────────
+from nodes.routing.route_intent      import build_route_intent_node
+from nodes.analysis.analyze          import build_analyze_node
+from nodes.analysis.score_interpreter import build_score_interpreter_node
+from nodes.analysis.detect           import build_detect_node
+from nodes.analysis.conflict_reasoner import build_conflict_reasoner_node
+from nodes.analysis.suggest          import build_suggest_node
+from nodes.analysis.suggestion_critic import build_suggestion_critic_node
+from nodes.quality.respond           import build_respond_node
+
+# ── Layout mode — quality loop ────────────────────────────────────────────────
+from nodes.quality.evaluator         import build_evaluator_node
+from nodes.quality.fact_checker      import build_fact_checker_node
+from nodes.conversation.what_next    import build_what_next_node
+
+# ── Layout mode — tool paths (placeholders) ───────────────────────────────────
+from nodes.tools.change_material     import build_change_material_node
+from nodes.tools.modify_glazing      import build_modify_glazing_node
+from nodes.tools.add_furniture       import build_add_furniture_node
+from nodes.tools.compare_versions    import build_compare_versions_node
+from nodes.tools.topologic_analysis  import build_topologic_analysis_node
+from nodes.tools.persona_comparison  import build_persona_comparison_node
+from nodes.tools.biophilic_audit     import build_biophilic_audit_node
+
+# ── Post-graph ────────────────────────────────────────────────────────────────
+from nodes._shared.output_writer     import write_analysis_to_layout
 
 
 # ---------------------------------------------------------------------------
@@ -125,59 +164,64 @@ from nodes.tools.biophilic_audit      import build_biophilic_audit_node
 class AgentState(TypedDict, total=False):
 
     # ── Input (set at the start of each turn) ───────────────────────────────
-    raw_prompt:            str
-    has_image:             bool
+    raw_prompt:             str
+    has_image:              bool
 
-    # ── User identity (persisted across turns via session) ──────────────────
-    user_type:             str        # "architect" | "client" | "learner"
-    initial_context:       str        # layout/persona hints from first intro
-    greeted:               bool       # True once GREET has run
+    # ── Onboarding gate ──────────────────────────────────────────────────────
+    greeted:                bool       # True once GREET has run
+    quiz_step:              int        # 0-based; incremented each quiz turn
+    quiz_answers:           dict       # q0…q5 keyed answers
+    quiz_complete:          bool       # True after step 5 answered
+    inspire_prompted:        bool       # True after inspire asked its question
+    inspire_summary:         str        # synthesised from user's aesthetic answer
+    inspire_complete:        bool       # True after inspire captured the answer
+    inspire_image_analysis:  str        # VLM aesthetic analysis (set by Streamlit moodboard pipeline)
+    inspire_moodboard_urls:  list       # final image URLs approved in moodboard (Streamlit)
+    onboarding_complete:     bool       # True after persona_compiler runs
 
-    # ── Top-level routing ────────────────────────────────────────────────────
-    intent:                str        # "comfort"|"overview"|"inspire"|"chitchat"|"tools"
+    # ── User identity (set by persona_compiler, persisted across turns) ──────
+    user_type:              str        # "architect" | "client" | "student"
+    persona_profile:        dict       # full compiled persona object
+
+    # ── Layout mode — top-level routing ──────────────────────────────────────
+    intent:                 str        # "comfort"|"overview"|"inspire"|"chitchat"|"tools"
 
     # ── Layout ───────────────────────────────────────────────────────────────
-    layout_id:             str | None
-    layout_json_string:    str        # full JSON of the loaded layout
-    target_room_id:        str | None
-
-    # ── Persona (replaces persona_detected + needs_persona_ask) ─────────────
-    persona_profile:         dict     # rich object built by PERSONA_BUILDER
-    persona_validator_loops: int      # counter for loop guard (max 3)
-    persona_validator_decision: str   # "ready" | "incomplete" | "unsure"
-    advisor_recommendation:  str      # from ADVISOR
+    layout_id:              str | None
+    layout_json_string:     str
+    target_room_id:         str | None
 
     # ── Analysis routing ─────────────────────────────────────────────────────
-    route_intent_decision: str        # "analyze"|"detect"|"full"|"what-if"|etc.
-    comfort_depth:         str        # "analyze" | "detect" | "full"
-    pending_comparison:    bool       # True when a MOD tool just ran
+    route_intent_decision:  str        # "analyze"|"detect"|"full"|"what-if"|etc.
+    comfort_depth:          str        # "analyze" | "detect" | "full"
+    pending_comparison:     bool       # True when a MOD tool just ran
 
     # ── MCP tool results ─────────────────────────────────────────────────────
-    last_scores_json:      str
-    last_conflicts_json:   str
-    last_suggestions_json: str
-    original_scores_json:  str        # snapshot before modification
+    last_scores_json:       str
+    last_conflicts_json:    str
+    last_suggestions_json:  str
+    original_scores_json:   str
 
     # ── Intermediate specialist outputs ──────────────────────────────────────
-    score_interpretation:      str    # from SCORE_INTERPRETER
-    conflict_reasoning:        str    # from CONFLICT_REASONER
-    suggestion_critique:       str    # from SUGGESTION_CRITIC
-    adjacency_graph:           dict   # from TOPOLOGIC_ANALYSIS
-    compare_versions_summary:  str    # from COMPARE_VERSIONS
-    biophilic_summary:         str    # from BIOPHILIC_AUDIT
-    biophilic_plants_needed:   bool   # flag from BIOPHILIC_AUDIT
-    persona_comparison_summary: str   # from PERSONA_COMPARISON
+    score_interpretation:       str
+    conflict_reasoning:         str
+    suggestion_critique:        str
+    adjacency_graph:            dict
+    compare_versions_summary:   str
+    biophilic_summary:          str
+    biophilic_plants_needed:    bool
+    persona_comparison_summary: str
 
     # ── Quality loop ─────────────────────────────────────────────────────────
-    evaluator_decision:    str        # "APPROVED" | "REVISE"
-    evaluator_feedback:    str        # revision instructions
-    evaluator_loops:       int        # counter (max 3)
-    fact_check_decision:   str        # "VERIFIED" | "DISCREPANCY"
-    fact_check_feedback:   str        # discrepancy details
-    fact_check_loops:      int        # counter (max 3)
+    evaluator_decision:     str        # "APPROVED" | "REVISE"
+    evaluator_feedback:     str
+    evaluator_loops:        int        # max 3
+    fact_check_decision:    str        # "VERIFIED" | "DISCREPANCY"
+    fact_check_feedback:    str
+    fact_check_loops:       int        # max 3
 
     # ── Output ───────────────────────────────────────────────────────────────
-    final_response:        str | None
+    final_response:         str | None
 
 
 # ---------------------------------------------------------------------------
@@ -185,20 +229,23 @@ class AgentState(TypedDict, total=False):
 # ---------------------------------------------------------------------------
 
 def _route_start(state: AgentState) -> str:
-    """Entry routing: GREET → USER_PROFILER → INTENT_CLASSIFIER across turns."""
-    if state.get("user_type"):
+    """
+    Top-level entry routing.
+
+    Onboarding sequence (strict order):
+      not greeted              → greet
+      greeted, not quiz done   → quiz
+      quiz done, not inspire   → inspire
+      inspire done             → persona_compiler  ← handled by _route_after_inspire
+      onboarding done          → intent_classifier
+    """
+    if state.get("onboarding_complete"):
         return "intent_classifier"
-    elif state.get("greeted"):
-        return "user_profiler"
-    else:
-        return "greet"
-
-
-def _route_after_user_profiler(state: AgentState) -> str:
-    user_type = state.get("user_type", "learner")
-    if user_type == "learner":
-        return "chitchat"
-    return "intent_classifier"
+    if state.get("quiz_complete"):
+        return "inspire"
+    if state.get("greeted"):
+        return "quiz"
+    return "greet"
 
 
 def _route_after_intent_classifier(state: AgentState) -> str:
@@ -217,24 +264,29 @@ def _route_after_chitchat(state: AgentState) -> str:
     return "what_next"
 
 
+def _route_after_inspire(state: AgentState) -> str:
+    """
+    Dual-mode routing after inspire.
+
+    Onboarding:  inspire asked question → wait (END)
+                 inspire captured answer → persona_compiler
+    Layout mode: always → what_next
+    """
+    if state.get("onboarding_complete"):
+        # Layout mode: inspire was a placeholder → what_next
+        return "what_next"
+    if state.get("inspire_complete"):
+        # Onboarding: answer captured → compile persona
+        return "persona_compiler"
+    # Onboarding: question just asked → wait for user answer
+    return END
+
+
 def _route_after_load_layout(state: AgentState) -> str:
     intent = state.get("intent", "comfort")
     if intent == "overview":
         return "overview_respond"
-    return "persona_builder"
-
-
-def _route_after_persona_validator(state: AgentState) -> str:
-    decision = state.get("persona_validator_decision", "incomplete")
-    loops = state.get("persona_validator_loops", 0)
-    if decision == "ready":
-        return "route_intent"
-    if decision == "unsure":
-        return "advisor"
-    if loops >= 3:
-        return "route_intent"  # give up, proceed with partial profile
-    # PERSONA_BUILDER already wrote the question to final_response → end turn
-    return END
+    return "route_intent"
 
 
 def _route_after_route_intent(state: AgentState) -> str:
@@ -251,7 +303,7 @@ def _route_after_route_intent(state: AgentState) -> str:
         return "biophilic_audit"
     if decision == "topologic":
         return "topologic_analysis"
-    return "analyze"  # safe fallback
+    return "analyze"
 
 
 def _route_after_analyze(state: AgentState) -> str:
@@ -265,11 +317,6 @@ def _route_after_score_interpreter(state: AgentState) -> str:
     if depth in ("detect", "full"):
         return "detect"
     return "respond"
-
-
-def _route_after_detect(state: AgentState) -> str:
-    """Detect always goes to conflict_reasoner, which then routes."""
-    return "conflict_reasoner"
 
 
 def _route_after_conflict_reasoner(state: AgentState) -> str:
@@ -309,61 +356,69 @@ def build_graph(ctx: Any) -> Any:
     """
     Instantiate all nodes, wire up edges, and compile the StateGraph.
 
-    Nodes that need external resources (LLM, MCP) are built via factory
-    functions so the resource is captured in a closure — the graph itself
-    stays stateless.
+    persona.json is written to team_02/persona.json (one level above
+    layout_input_dir). main.py checks for this file at startup; if it
+    exists the session is pre-loaded and onboarding is skipped.
     """
 
-    # Build all nodes
-    greet              = build_greet_node(ctx.llm_simple)
-    user_profiler      = build_user_profiler_node(ctx.llm_simple)
-    intent_classifier  = build_intent_classifier_node(ctx.llm_simple)
-    chitchat           = build_chitchat_node(ctx.llm_simple)
-    load_layout        = build_load_layout_node(ctx.layout_input_dir)
-    persona_builder    = build_persona_builder_node(ctx.llm_simple)
-    persona_validator  = build_persona_validator_node(ctx.llm_simple)
-    advisor            = build_advisor_node(ctx.llm_simple)
-    route_intent       = build_route_intent_node(ctx.llm_simple)
-    analyze            = build_analyze_node(ctx.mcp_client)
-    score_interpreter  = build_score_interpreter_node(ctx.llm_simple)
-    detect             = build_detect_node(ctx.mcp_client)
-    conflict_reasoner  = build_conflict_reasoner_node(ctx.llm_simple)
-    suggest            = build_suggest_node(ctx.mcp_client)
-    suggestion_critic  = build_suggestion_critic_node(ctx.llm_simple)
-    respond            = build_respond_node(ctx.llm_simple)
-    evaluator          = build_evaluator_node(ctx.llm_simple)
-    fact_checker       = build_fact_checker_node(ctx.llm_simple)
-    what_next          = build_what_next_node(ctx.llm_simple)
+    persona_path = str(ctx.layout_input_dir.parent / "persona.json")
 
-    # Placeholder tool nodes (no LLM or MCP needed yet)
+    # ── Onboarding nodes ──────────────────────────────────────────────────
+    greet            = build_greet_node(ctx.llm_simple)
+    quiz             = build_quiz_node(ctx.llm_simple)
+    inspire          = build_inspire_node(ctx.llm_simple)
+    persona_compiler = build_persona_compiler_node(ctx.llm_simple, persona_path)
+
+    # ── Layout mode — routing ─────────────────────────────────────────────
+    intent_classifier = build_intent_classifier_node(ctx.llm_simple)
+    chitchat          = build_chitchat_node(ctx.llm_simple)
+
+    # ── Layout mode — layout ──────────────────────────────────────────────
+    load_layout = build_load_layout_node(ctx.layout_input_dir)
+
+    # ── Layout mode — analysis chain ──────────────────────────────────────
+    route_intent      = build_route_intent_node(ctx.llm_simple)
+    analyze           = build_analyze_node(ctx.mcp_client)
+    score_interpreter = build_score_interpreter_node(ctx.llm_simple)
+    detect            = build_detect_node(ctx.mcp_client)
+    conflict_reasoner = build_conflict_reasoner_node(ctx.llm_simple)
+    suggest           = build_suggest_node(ctx.mcp_client)
+    suggestion_critic = build_suggestion_critic_node(ctx.llm_simple)
+    respond           = build_respond_node(ctx.llm_simple)
+
+    # ── Layout mode — quality loop ─────────────────────────────────────────
+    evaluator   = build_evaluator_node(ctx.llm_simple)
+    fact_checker = build_fact_checker_node(ctx.llm_simple)
+    what_next   = build_what_next_node(ctx.llm_simple)
+
+    # ── Layout mode — tool paths (placeholders) ────────────────────────────
     change_material    = build_change_material_node()
-    topologic_analysis = build_topologic_analysis_node()
-    compare_versions   = build_compare_versions_node()
-    persona_comparison = build_persona_comparison_node()
     modify_glazing     = build_modify_glazing_node()
     add_furniture      = build_add_furniture_node()
+    compare_versions   = build_compare_versions_node()
+    topologic_analysis = build_topologic_analysis_node()
+    persona_comparison = build_persona_comparison_node()
     biophilic_audit    = build_biophilic_audit_node()
 
     g = StateGraph(AgentState)
 
-    # ── Register all nodes ─────────────────────────────────────────────────
-    # Entry
-    g.add_node("greet",             greet)
-    g.add_node("user_profiler",     user_profiler)
+    # ── Register nodes ─────────────────────────────────────────────────────
+
+    # Onboarding
+    g.add_node("greet",            greet)
+    g.add_node("quiz",             quiz)
+    g.add_node("inspire",          inspire)
+    g.add_node("persona_compiler", persona_compiler)
+
+    # Layout mode — routing
     g.add_node("intent_classifier", intent_classifier)
     g.add_node("chitchat",          chitchat)
 
-    # Layout
-    g.add_node("load_layout",       load_layout)
-    g.add_node("overview_respond",  overview_respond_node)
-    g.add_node("inspire",           inspire_node)
+    # Layout mode — layout
+    g.add_node("load_layout",      load_layout)
+    g.add_node("overview_respond", overview_respond_node)
 
-    # Persona chain
-    g.add_node("persona_builder",   persona_builder)
-    g.add_node("persona_validator", persona_validator)
-    g.add_node("advisor",           advisor)
-
-    # Analysis chain
+    # Layout mode — analysis chain
     g.add_node("route_intent",      route_intent)
     g.add_node("analyze",           analyze)
     g.add_node("score_interpreter", score_interpreter)
@@ -373,14 +428,12 @@ def build_graph(ctx: Any) -> Any:
     g.add_node("suggestion_critic", suggestion_critic)
     g.add_node("respond",           respond)
 
-    # Quality loop
-    g.add_node("evaluator",         evaluator)
-    g.add_node("fact_checker",      fact_checker)
+    # Layout mode — quality loop
+    g.add_node("evaluator",    evaluator)
+    g.add_node("fact_checker", fact_checker)
+    g.add_node("what_next",    what_next)
 
-    # Feedback
-    g.add_node("what_next",         what_next)
-
-    # Placeholder tools
+    # Layout mode — tool paths
     g.add_node("change_material",    change_material)
     g.add_node("modify_glazing",     modify_glazing)
     g.add_node("add_furniture",      add_furniture)
@@ -391,58 +444,61 @@ def build_graph(ctx: Any) -> Any:
 
     # ── Wire edges ─────────────────────────────────────────────────────────
 
-    # START: route based on session state
+    # START → onboarding or layout mode
     g.add_conditional_edges(
         START,
         _route_start,
-        {"greet": "greet", "user_profiler": "user_profiler", "intent_classifier": "intent_classifier"},
+        {
+            "greet":             "greet",
+            "quiz":              "quiz",
+            "inspire":           "inspire",
+            "intent_classifier": "intent_classifier",
+        },
     )
 
-    # GREET ends the first turn
-    g.add_edge("greet", END)
+    # ONBOARDING spine
+    g.add_edge("greet", END)                 # Turn 1: say hi, wait
+    g.add_edge("quiz",  END)                 # Each quiz turn: answer + ask, wait
 
-    # USER_PROFILER → chitchat (learner) or intent_classifier (architect/client)
+    # After inspire: wait / compile / what_next depending on mode
     g.add_conditional_edges(
-        "user_profiler",
-        _route_after_user_profiler,
-        {"chitchat": "chitchat", "intent_classifier": "intent_classifier"},
+        "inspire",
+        _route_after_inspire,
+        {
+            "persona_compiler": "persona_compiler",
+            "what_next":        "what_next",
+            END:                END,
+        },
     )
 
-    # INTENT_CLASSIFIER branches
+    g.add_edge("persona_compiler", END)      # Onboarding done, layout mode unlocked
+
+    # LAYOUT MODE — intent routing
     g.add_conditional_edges(
         "intent_classifier",
         _route_after_intent_classifier,
-        {"inspire": "inspire", "load_layout": "load_layout", "chitchat": "chitchat"},
+        {
+            "inspire":    "inspire",
+            "load_layout": "load_layout",
+            "chitchat":   "chitchat",
+        },
     )
 
-    # CHITCHAT: either done (→ what_next) or analysis intent detected (→ intent_classifier)
     g.add_conditional_edges(
         "chitchat",
         _route_after_chitchat,
         {"intent_classifier": "intent_classifier", "what_next": "what_next"},
     )
 
-    # INSPIRE and OVERVIEW both go to WHAT_NEXT (not END)
-    g.add_edge("inspire",          "what_next")
-    g.add_edge("overview_respond", "what_next")
-
-    # LOAD_LAYOUT → overview_respond or persona_builder
+    # LAYOUT MODE — layout
     g.add_conditional_edges(
         "load_layout",
         _route_after_load_layout,
-        {"overview_respond": "overview_respond", "persona_builder": "persona_builder"},
+        {"overview_respond": "overview_respond", "route_intent": "route_intent"},
     )
+    g.add_edge("overview_respond", "what_next")
 
-    # PERSONA chain loop
-    g.add_edge("persona_builder", "persona_validator")
-    g.add_conditional_edges(
-        "persona_validator",
-        _route_after_persona_validator,
-        {"route_intent": "route_intent", "advisor": "advisor", END: END},
-    )
-    g.add_edge("advisor", "route_intent")
-
-    # ROUTE_INTENT branches to all analysis/tool paths
+    # LAYOUT MODE — analysis chain
     g.add_conditional_edges(
         "route_intent",
         _route_after_route_intent,
@@ -450,18 +506,17 @@ def build_graph(ctx: Any) -> Any:
             "analyze":           "analyze",
             "change_material":   "change_material",
             "modify_glazing":    "modify_glazing",
-            "persona_comparison":"persona_comparison",
+            "persona_comparison": "persona_comparison",
             "biophilic_audit":   "biophilic_audit",
-            "topologic_analysis":"topologic_analysis",
+            "topologic_analysis": "topologic_analysis",
         },
     )
 
-    # MODIFICATION TOOLS → re-score via ANALYZE
-    g.add_edge("change_material",  "analyze")
-    g.add_edge("modify_glazing",   "analyze")
-    g.add_edge("add_furniture",    "analyze")
+    # Modification tools → re-score via analyze
+    g.add_edge("change_material", "analyze")
+    g.add_edge("modify_glazing",  "analyze")
+    g.add_edge("add_furniture",   "analyze")
 
-    # ANALYZE → compare_versions (after modification) or score_interpreter (direct)
     g.add_conditional_edges(
         "analyze",
         _route_after_analyze,
@@ -469,41 +524,33 @@ def build_graph(ctx: Any) -> Any:
     )
     g.add_edge("compare_versions", "score_interpreter")
 
-    # SCORE_INTERPRETER → detect (detect/full) or respond (analyze only)
     g.add_conditional_edges(
         "score_interpreter",
         _route_after_score_interpreter,
         {"detect": "detect", "respond": "respond"},
     )
 
-    # DETECT always goes to CONFLICT_REASONER
     g.add_edge("detect", "conflict_reasoner")
 
-    # CONFLICT_REASONER → suggest (full) or respond (detect)
     g.add_conditional_edges(
         "conflict_reasoner",
         _route_after_conflict_reasoner,
         {"suggest": "suggest", "respond": "respond"},
     )
 
-    # TOPOLOGIC_ANALYSIS feeds CONFLICT_REASONER
     g.add_edge("topologic_analysis", "conflict_reasoner")
-
-    # PERSONA_COMPARISON feeds SCORE_INTERPRETER
     g.add_edge("persona_comparison", "score_interpreter")
 
-    # BIOPHILIC_AUDIT → add_furniture (opt) or score_interpreter (direct)
     g.add_conditional_edges(
         "biophilic_audit",
         _route_after_biophilic_audit,
         {"add_furniture": "add_furniture", "score_interpreter": "score_interpreter"},
     )
 
-    # SUGGEST → SUGGESTION_CRITIC → RESPOND
     g.add_edge("suggest",           "suggestion_critic")
     g.add_edge("suggestion_critic", "respond")
 
-    # QUALITY LOOP: respond ↔ evaluator ↔ fact_checker
+    # QUALITY LOOP
     g.add_edge("respond", "evaluator")
     g.add_conditional_edges(
         "evaluator",
@@ -516,7 +563,6 @@ def build_graph(ctx: Any) -> Any:
         {"respond": "respond", "what_next": "what_next"},
     )
 
-    # WHAT_NEXT ends the turn
     g.add_edge("what_next", END)
 
     return g.compile()
@@ -528,12 +574,14 @@ def build_graph(ctx: Any) -> Any:
 
 def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, dict]:
     """
-    Run one turn of the Comfort Copilot agent.
+    Run one turn of the Sensi agent.
 
     Args:
         prompt  : raw user input for this turn
-        ctx     : Context object from bootstrap() — holds LLM, MCP client, paths
+        ctx     : Context object from bootstrap()
         session : persistent state carried across turns. Pass {} on first turn.
+                  Pass a pre-loaded session (with onboarding_complete=True and
+                  persona_profile set) to skip onboarding for returning users.
 
     Returns:
         (final_response, updated_session)
@@ -546,18 +594,27 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         "raw_prompt": prompt,
         "has_image":  False,
 
-        # Carry persistent identity fields from previous turn
-        "user_type":        session.get("user_type"),
-        "initial_context":  session.get("initial_context", ""),
-        "greeted":          session.get("greeted", False),
+        # ── Onboarding state (persisted) ──────────────────────────────────
+        "greeted":             session.get("greeted", False),
+        "quiz_step":           session.get("quiz_step", 0),
+        "quiz_answers":        session.get("quiz_answers", {}),
+        "quiz_complete":       session.get("quiz_complete", False),
+        "inspire_prompted":       session.get("inspire_prompted", False),
+        "inspire_summary":        session.get("inspire_summary", ""),
+        "inspire_complete":       session.get("inspire_complete", False),
+        "inspire_image_analysis": session.get("inspire_image_analysis", ""),
+        "inspire_moodboard_urls": session.get("inspire_moodboard_urls", []),
+        "onboarding_complete":    session.get("onboarding_complete", False),
 
-        # Carry persistent layout + persona fields
-        "layout_json_string":    session.get("layout_json_string", ""),
-        "layout_id":             session.get("layout_id"),
-        "persona_profile":       session.get("persona_profile"),
-        "persona_validator_loops": session.get("persona_validator_loops", 0),
+        # ── User identity (persisted) ──────────────────────────────────────
+        "user_type":       session.get("user_type", ""),
+        "persona_profile": session.get("persona_profile"),
 
-        # Reset per-turn fields
+        # ── Layout (persisted) ────────────────────────────────────────────
+        "layout_json_string": session.get("layout_json_string", ""),
+        "layout_id":          session.get("layout_id"),
+
+        # ── Per-turn fields (reset each turn) ────────────────────────────
         "intent":                "",
         "route_intent_decision": "",
         "comfort_depth":         "analyze",
@@ -581,44 +638,48 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         "fact_check_decision":   "",
         "fact_check_feedback":   "",
         "fact_check_loops":      0,
-        "persona_validator_decision": "",
-        "advisor_recommendation": "",
         "final_response":        None,
     }
 
     app = build_graph(ctx)
-
-    # Run the graph
     final_state = app.invoke(initial_state)
 
-    response = final_state.get("final_response") or ""
-    intent   = final_state.get("intent", "")
-    depth    = final_state.get("comfort_depth", "")
+    response    = final_state.get("final_response") or ""
+    intent      = final_state.get("intent", "")
+    depth       = final_state.get("comfort_depth", "")
     scores_ready = bool(final_state.get("last_scores_json"))
 
-    print("[run_agent] intent={} | depth={} | scores_ready={}".format(
-        intent, depth, scores_ready
+    print("[run_agent] intent={} | depth={} | scores_ready={} | onboarding={}".format(
+        intent, depth, scores_ready,
+        final_state.get("onboarding_complete", False),
     ))
 
-    # [POST-GRAPH] Write analysis to resulting_layout/
+    # Post-graph: write analysis output JSON
     if intent in ("comfort", "tools") and scores_ready:
         try:
             write_analysis_to_layout(final_state, ctx.layout_output_dir)
         except Exception as exc:
             print("[run_agent] ERROR in output_writer: {}".format(exc))
 
-    # Update session with all persistent fields
+    # Persist all session fields
     updated_session = {
+        # Onboarding
+        "greeted":             final_state.get("greeted",             session.get("greeted", False)),
+        "quiz_step":           final_state.get("quiz_step",           session.get("quiz_step", 0)),
+        "quiz_answers":        final_state.get("quiz_answers",        session.get("quiz_answers", {})),
+        "quiz_complete":       final_state.get("quiz_complete",       session.get("quiz_complete", False)),
+        "inspire_prompted":       final_state.get("inspire_prompted",       session.get("inspire_prompted", False)),
+        "inspire_summary":        final_state.get("inspire_summary",        session.get("inspire_summary", "")),
+        "inspire_complete":       final_state.get("inspire_complete",       session.get("inspire_complete", False)),
+        "inspire_image_analysis": final_state.get("inspire_image_analysis") or session.get("inspire_image_analysis", ""),
+        "inspire_moodboard_urls": final_state.get("inspire_moodboard_urls") or session.get("inspire_moodboard_urls", []),
+        "onboarding_complete":    final_state.get("onboarding_complete",    session.get("onboarding_complete", False)),
         # Identity
-        "user_type":         final_state.get("user_type") or session.get("user_type"),
-        "initial_context":   final_state.get("initial_context") or session.get("initial_context", ""),
-        "greeted":           final_state.get("greeted", session.get("greeted", False)),
+        "user_type":           final_state.get("user_type")       or session.get("user_type", ""),
+        "persona_profile":     final_state.get("persona_profile") or session.get("persona_profile"),
         # Layout
-        "layout_json_string": final_state.get("layout_json_string") or session.get("layout_json_string", ""),
-        "layout_id":          final_state.get("layout_id") or session.get("layout_id"),
-        # Persona
-        "persona_profile":           final_state.get("persona_profile") or session.get("persona_profile"),
-        "persona_validator_loops":   final_state.get("persona_validator_loops", session.get("persona_validator_loops", 0)),
+        "layout_json_string":  final_state.get("layout_json_string") or session.get("layout_json_string", ""),
+        "layout_id":           final_state.get("layout_id")          or session.get("layout_id"),
     }
 
     return response, updated_session

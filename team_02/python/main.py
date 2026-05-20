@@ -4,13 +4,21 @@ main.py - Sensi entry point.
 The while loop here IS the idle state. The agent stays alive between turns,
 carrying layout and persona across the conversation.
 
+RETURNING USERS:
+  If team_02/persona.json exists, it is loaded at startup and the onboarding
+  flow (greet → quiz → inspire → persona_compiler) is skipped entirely.
+  The user lands directly in layout mode.
+
 Commands:
   exit / quit / bye / goodbye  -> close and end the session
-  reset                        -> clear the loaded layout and persona
+  reset                        -> clear session (keeps persona.json on disk)
+  reset persona                -> delete persona.json and restart full onboarding
   <anything>                   -> run one turn of the agent graph
 """
 
+import json
 import re
+from pathlib import Path
 from _runtime.bootstrap import bootstrap
 from graph import run_agent
 
@@ -41,10 +49,26 @@ _WELCOME = """
 |  layouts -- thermal, visual, acoustic, spatial,      |
 |  olfactory, and tactile comfort, all in one place.   |
 +------------------------------------------------------+
-|  Type  reset  to start over.                         |
-|  Type  exit   to quit.                               |
+|  Type  reset          to restart (keeps your profile)|
+|  Type  reset persona  to delete profile and re-onboard|
+|  Type  exit           to quit.                       |
 +------------------------------------------------------+
 """
+
+# Path to the saved persona file (one level above python/)
+_PERSONA_PATH = Path(__file__).resolve().parent.parent / "persona.json"
+
+
+def _load_existing_persona() -> dict | None:
+    """Return the saved persona dict if persona.json exists, else None."""
+    if _PERSONA_PATH.exists():
+        try:
+            data = json.loads(_PERSONA_PATH.read_text(encoding="utf-8"))
+            print(f"[session] Loaded existing persona: {data.get('name', 'User')} ({data.get('role', '?')})")
+            return data
+        except Exception as exc:
+            print(f"[session] Could not read persona.json: {exc}")
+    return None
 
 
 def _print_session_status(session: dict) -> None:
@@ -63,21 +87,36 @@ def _print_session_status(session: dict) -> None:
 def main() -> None:
     print(_WELCOME)
 
-    # Bootstrap once - MCP connection stays open for the whole session
+    # Bootstrap once — MCP connection stays open for the whole session
     ctx = bootstrap()
 
-    # Session carries layout and persona across turns
-    session: dict = {}
+    # ── Session initialisation ────────────────────────────────────────────────
+    # Check for an existing persona.json; if found, skip onboarding entirely.
+    existing_persona = _load_existing_persona()
+    if existing_persona:
+        session: dict = {
+            "onboarding_complete": True,
+            "greeted":             True,
+            "quiz_complete":       True,
+            "inspire_complete":    True,
+            "persona_profile":     existing_persona,
+            "user_type":           existing_persona.get("role", "client"),
+        }
+        name = existing_persona.get("name", "")
+        welcome_back = f"Welcome back{', ' + name if name else ''}! Your comfort profile is loaded. Tell me which layout you'd like to explore (201, 202, or 203)."
+        print(f"\nSensi:\n\n{welcome_back}\n")
+    else:
+        session = {}
+        # Auto-greet on first launch — run one silent turn so GREET fires
+        try:
+            response, session = run_agent("", ctx, session)
+            print("\nSensi:\n")
+            print(_clean_response(response))
+            print()
+        except Exception as exc:
+            print("\n[error] Could not start greeting: {}".format(exc))
 
-    # Auto-greet on first launch - run one silent turn so GREET fires first
-    try:
-        response, session = run_agent("", ctx, session)
-        print("\nSensi:\n")
-        print(_clean_response(response))
-        print()
-    except Exception as exc:
-        print("\n[error] Could not start greeting: {}".format(exc))
-
+    # ── Main loop ─────────────────────────────────────────────────────────────
     while True:
 
         _print_session_status(session)
@@ -96,9 +135,29 @@ def main() -> None:
             print("Bye! Come back when you have a layout to explore :)")
             break
 
-        if user_input.lower() == "reset":
+        if user_input.lower() == "reset persona":
+            if _PERSONA_PATH.exists():
+                _PERSONA_PATH.unlink()
+                print("[session] persona.json deleted — onboarding will restart.")
             session = {}
-            print("[session] Cleared -- layout and persona reset.")
+            try:
+                response, session = run_agent("", ctx, session)
+                print("\nSensi:\n")
+                print(_clean_response(response))
+                print()
+            except Exception as exc:
+                print("\n[error] Could not restart greeting: {}".format(exc))
+            continue
+
+        if user_input.lower() == "reset":
+            # Clear layout/analysis state but keep onboarding flags and persona
+            session = {
+                k: v for k, v in session.items()
+                if k in ("onboarding_complete", "greeted", "quiz_step", "quiz_answers",
+                         "quiz_complete", "inspire_prompted", "inspire_summary",
+                         "inspire_complete", "persona_profile", "user_type")
+            }
+            print("[session] Layout cleared — persona and onboarding state kept.")
             continue
 
         # Run one turn of the agent graph

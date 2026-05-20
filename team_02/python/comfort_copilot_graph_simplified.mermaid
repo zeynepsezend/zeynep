@@ -6,14 +6,8 @@ config:
 flowchart TB
 
     %% ── NODE TYPE STYLES ────────────────────────────────────────────────
-    %% Shape key:
-    %%   Conversation  → pill / stadium   (["text"])
-    %%   Decision      → hexagon          {{"text"}}
-    %%   Processing    → rectangle        ["text"]
-    %%   Tool modules  → dashed rectangle ["text"] + stroke-dasharray
-    %%   Background    → cylinder         [("text")] + dashed
-
     classDef terminal  fill:#2C3E50,stroke:#2C3E50,color:#fff
+    classDef onboard   fill:#EAD5F5,stroke:#9B59B6,stroke-width:2.5px,color:#1a1a1a
     classDef convo     fill:#D6EEF5,stroke:#4A8FA8,stroke-width:2px,color:#1a1a1a
     classDef decision  fill:#FDDCBC,stroke:#C4622D,stroke-width:2px,color:#1a1a1a
     classDef process   fill:#EDE0D8,stroke:#2B1408,stroke-width:2px,color:#1a1a1a
@@ -22,19 +16,20 @@ flowchart TB
 
     START([START]):::terminal
 
-    %% ── MAIN SPINE ──────────────────────────────────────────────────────
-    G1(["① ENTRY\nGreeting · User Profiling"]):::convo
+    %% ── ONBOARDING SPINE ────────────────────────────────────────────────
+    G0(["① ONBOARDING\nGreet · Quiz  (6 turns)  · Inspire  (2 graph turns · 7 GUI stages)  · Persona Compiler\nInspire pipeline: image upload → VLM analysis → Unsplash → 3 selection rounds → moodboard approval → LLM synthesis\nRuns once — skipped for returning users"]):::onboard
+
+    %% ── LAYOUT MODE SPINE ───────────────────────────────────────────────
     G2{{"② ROUTING\nIntent Classification"}}:::decision
-    G3(["③ PERSONA CHAIN\nLoad Layout · Build · Validate Persona"]):::convo
+    G3(["③ LAYOUT\nLoad Layout"]):::convo
     G4{{"④ ROUTE INTENT\nAnalyze · Detect · Full · What-if · Compare"}}:::decision
-    G5["⑤ MAIN ANALYSIS CHAIN\nAnalyze → Detect → Suggest"]:::process
+    G5["⑤ MAIN ANALYSIS CHAIN\nAnalyze → Score → Detect → Suggest"]:::process
     G6["⑥ QUALITY LOOP\nRespond · Evaluate · Fact-Check"]:::process
     G7(["⑦ FEEDBACK LOOP\nWhat next?"]):::convo
     END_F([END]):::terminal
 
     %% ── SIDE NODES ──────────────────────────────────────────────────────
-    CHITCHAT(["CHITCHAT\nPeer mode · Learner path"]):::convo
-    INSPIRE["INSPIRE\nImage · Inspiration · P3"]:::tool
+    CHITCHAT(["CHITCHAT\nGeneral questions · Layout mode only"]):::convo
     OVERVIEW(["OVERVIEW_RESPOND\nQuick room list · No analysis"]):::convo
     OUTPUT[("OUTPUT_WRITER\nWrites layout JSON · background")]:::bg
 
@@ -44,32 +39,29 @@ flowchart TB
     G5c["⑤c PERSONA COMPARISON\nTwo Personas · Same Layout"]:::tool
     G5d["⑤d BIOPHILIC TOOL\nTalk Green To Me"]:::tool
 
-    %% ── MAIN SPINE FLOW ─────────────────────────────────────────────────
-    START --> G1
-    G1 -->|architect · client| G2
-    G1 -->|learner| CHITCHAT
-    G2 -->|analysis · overview| G3
-    G2 -->|inspire| INSPIRE
-    G2 -->|chitchat| CHITCHAT
-    G3 -->|overview| OVERVIEW
-    G3 -->|analysis| G4
+    %% ── MAIN FLOW ───────────────────────────────────────────────────────
+    START --> G0
+    G0 -->|"onboarding_complete"| G2
+    G2 -->|"analysis · overview"| G3
+    G2 -->|"inspire"| G5
+    G2 -->|"chitchat"| CHITCHAT
+    G3 -->|"overview"| OVERVIEW --> G7
+    G3 -->|"analysis"| G4
     G4 --> G5
     G5 --> G6
     G6 --> G7
-    G7 -->|deeper · what-if| G4
+    G7 -->|"deeper · what-if"| G4
     G7 --> END_F
 
     %% ── SIDE FLOWS ──────────────────────────────────────────────────────
-    CHITCHAT -->|analysis intent| G2
+    CHITCHAT -->|"analysis intent"| G2
     CHITCHAT --> G7
-    INSPIRE --> G7
-    OVERVIEW --> G7
-    G6 -.->|post-graph| OUTPUT
+    G6 -.->|"post-graph"| OUTPUT
 
     %% ── TOOL BRANCHES ───────────────────────────────────────────────────
     G4 --> G5a & G5b & G5c & G5d
-    G5a -->|re-score| G5
-    G5b -->|adjacency| G5
-    G5c -->|score delta| G5
-    G5d -->|add plants| G5a
-    G5d -->|direct| G5
+    G5a -->|"re-score"| G5
+    G5b -->|"adjacency"| G5
+    G5c -->|"score delta"| G5
+    G5d -->|"add plants"| G5a
+    G5d -->|"direct"| G5

@@ -1,0 +1,19 @@
+# Sensi — Python dependencies
+# Install with: pip install -r requirements.txt
+
+# ── LangGraph agent stack ─────────────────────────────────────────────────────
+langgraph
+langchain-core
+langchain-openai
+langchain-anthropic
+httpx
+python-dotenv
+
+# ── GUI ───────────────────────────────────────────────────────────────────────
+streamlit>=1.29          # st.container(height=...) requires 1.29+
+plotly
+
+# ── Embeddings / ML (optional — comment out if not needed) ───────────────────
+grandalf
+sentence-transformers
+torch
