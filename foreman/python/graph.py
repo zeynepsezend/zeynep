@@ -56,8 +56,8 @@ def build_graph(ctx: Any) -> Any:
 
     # Add the edges
     graph.add_edge(START, "reason")
-    graph.add_conditional_edges("reason", _route, {"run_tool": "tool", "finish": END})
-    graph.add_edge("tool", "reason")
+    
+    
 
     return graph.compile()
 

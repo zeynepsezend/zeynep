@@ -204,16 +204,10 @@ def call_llm(
     llm: Any,
     system_prompt: str,
     messages: list[dict[str, str]],
-    tool_catalog: str,
 ) -> dict[str, Any]:
-    """Invoke the LLM and return a parsed decision dict.
-
-    Returns one of:
-      {"action": "final", "final_response": "<text>"}
-      {"action": "tool",  "tool_calls": [{"name": "<tool>", "arguments": {...}}]}
-    """
-    formatted_prompt = system_prompt.format(tool_catalog=tool_catalog)
-    llm_messages = [{"role": "system", "content": formatted_prompt}] + messages
+    """Invoke the LLM and return a parsed decision dict."""
+    
+    llm_messages = [{"role": "system", "content": system_prompt}] + messages
 
     result = llm.invoke(llm_messages)
     content = result.content

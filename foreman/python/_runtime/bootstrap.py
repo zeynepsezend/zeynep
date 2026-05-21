@@ -31,11 +31,11 @@ def bootstrap() -> Context:
     layout_path = repo_root / "layout_input" / "layout_schema.json"
     layout_data: dict[str, Any] = json.loads(layout_path.read_text(encoding="utf-8"))
 
-    # Connect to the Grasshopper MCP server and list available tools
-    mcp_client = McpClient(settings.mcp_endpoint, settings.request_timeout_seconds)
-    mcp_client.initialize()
-    tools = mcp_client.list_tools()
-    print(f"Discovered MCP tools: {[t.get('name') for t in tools]}")
+    # # Connect to the Grasshopper MCP server and list available tools
+    # mcp_client = McpClient(settings.mcp_endpoint, settings.request_timeout_seconds)
+    # mcp_client.initialize()
+    # tools = mcp_client.list_tools()
+    # print(f"Discovered MCP tools: {[t.get('name') for t in tools]}")
 
     # Build the LLM with a structured-output schema tailored to the available tools
     llm = create_chat_llm(
@@ -43,7 +43,7 @@ def bootstrap() -> Context:
         base_url=settings.base_url,
         llm_model=settings.llm_model,
         timeout_seconds=settings.request_timeout_seconds,
-        model_kwargs=get_llm_response_format(tools),
+        # model_kwargs=get_llm_response_format(tools),
     )
 
     team_dir = Path(__file__).resolve().parents[2]
@@ -52,8 +52,8 @@ def bootstrap() -> Context:
 
     return Context(
         llm=llm,
-        mcp_client=mcp_client,
-        tools=tools,
+        mcp_client=None,
+        tools=[],
         layout_data=layout_data,
         max_iterations=settings.max_iterations,
         edited_layout_path=edited_layout_path,
