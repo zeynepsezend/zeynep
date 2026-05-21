@@ -47,17 +47,20 @@ def add_agent_descriptions_to_state(state):
     # Read the foreman description
     with open("foreman/agent.md", "r") as f:
         foreman_description = f.read()
-        print(f"Foreman description:\n{foreman_description}\n")
+        # print(f"Foreman description:\n{foreman_description}\n")
         state["agent_description"] = foreman_description
 
     # Read the agent descriptions
     agent_descriptions = []
     num_agents = 6
     for i in range(1, num_agents + 1):
-        with open(f"team_{i:02d}/agent.md", "r") as f:
-            agent_description = f.read()
-            print(f"Agent {i} description:\n{agent_description}\n")
-            agent_descriptions.append(agent_description)
+        try:
+            with open(f"team_{i:02d}/agent.md", "r") as f:
+                agent_description = f.read()
+                # print(f"Agent {i} description:\n{agent_description}\n")
+                agent_descriptions.append(agent_description)
+        except FileNotFoundError:
+            print(f"Warning: agent.md not found for team_{i:02d}, skipping.")
 
     state["agent_catalog"] = "\n".join(agent_descriptions)
 
@@ -66,24 +69,30 @@ def build_reason_node(llm):
 
     def reason_node(state):
         print("\nReasoning with LLM...")
+        state["iteration"] = int(state.get("iteration", 0)) + 1
 
         # Format the system prompt
-        add_agent_descriptions_to_state()
+        add_agent_descriptions_to_state(state)
 
         result = call_llm(llm, SYSTEM_PROMPT, state["messages"])
 
         # If the LLM decided no more actions are needed (action is final), set the final response in the state and clear pending tool calls
         if result["action"] == "final":
-            state["response"] = result["response"]
-            state["agent_calls"] = []
+            state["final_response"] = result["response"]
+            state["pending_tool_calls"] = None
 
         # If the LLM decided the action is to use a tool, set the pending tool calls
         elif result["action"] == "agent":
-            state["agent_calls"] = result["agent_calls"]
+            state["pending_tool_calls"] = result["agent_calls"]
 
         else:  # further thought
-            state["response"] = result["response"]
-            state["agent_calls"] = []
+            # Feed the thought back into the conversation so the next step can build on it.
+            thought = result["response"]
+            state["messages"].append({"role": "assistant", "content": thought})
+            state["pending_tool_calls"] = None
+
+        if state["iteration"] >= state["max_iterations"] and state.get("final_response") is None:
+            state["final_response"] = "I could not produce a final response within the iteration limit."
 
         return state
 

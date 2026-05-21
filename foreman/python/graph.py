@@ -36,7 +36,7 @@ class AgentState():
 def _route(state: AgentState) -> str:
     if state["final_response"] is not None:
         return "finish"
-    return "run_tool"
+    return "continue_reason"
 
 
 # ---------------------------------------------------------------------------
@@ -56,8 +56,14 @@ def build_graph(ctx: Any) -> Any:
 
     # Add the edges
     graph.add_edge(START, "reason")
-    
-    
+    graph.add_conditional_edges(
+        "reason",
+        _route,
+        {
+            "finish": END,
+            "continue_reason": "reason",
+        },
+    )
 
     return graph.compile()
 

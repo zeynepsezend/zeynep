@@ -148,52 +148,22 @@ def _parse_llm_json(content: str) -> dict[str, Any]:
     if not lines:
         raise RuntimeError("LLM response was empty")
 
-    tool_calls: list[dict[str, Any]] = []
-    for line in lines:
-        parsed_line = json.loads(line)
-        if not isinstance(parsed_line, dict):
-            raise RuntimeError("Each JSON line must be an object")
-        tool_call = parsed_line.get("tool_call")
-        if not isinstance(tool_call, dict):
-            raise RuntimeError("Each JSON line must contain 'tool_call'")
-        tool_calls.append(tool_call)
-
-    return {"tool_calls": tool_calls}
+    raise RuntimeError(
+        "LLM response must be a single JSON object matching the decision schema"
+    )
 
 
 def _normalize_llm_decision(parsed: dict[str, Any]) -> dict[str, Any]:
     action = parsed.get("action")
 
     if action == "final":
-        return {"action": "final", "final_response": parsed["final_response"]}
+        return {"action": "final", "agent_calls": [], "response": parsed.get("response", "")}
+    elif action == "agent":
+        return {"action": "agent", "agent_calls": parsed.get("agent_calls", []), "response": ""}
+    elif action == "further_thought":
+        return {"action": "further_thought", "agent_calls": [], "response": parsed.get("response", "")}
 
-    if action == "tool":
-        tool_calls = parsed.get("tool_calls")
-        if not isinstance(tool_calls, list) or not tool_calls:
-            raise RuntimeError("LLM tool decision must include a non-empty 'tool_calls' array")
-        return {
-            "action": "tool",
-            "tool_calls": [{"name": t["name"], "arguments": t["arguments"]} for t in tool_calls],
-        }
-
-    if "final_response" in parsed:
-        return {"action": "final", "final_response": parsed["final_response"]}
-
-    tool_call = parsed.get("tool_call")
-    if isinstance(tool_call, dict):
-        return {
-            "action": "tool",
-            "tool_calls": [{"name": tool_call["name"], "arguments": tool_call["arguments"]}],
-        }
-
-    tool_calls = parsed.get("tool_calls")
-    if isinstance(tool_calls, list) and tool_calls:
-        return {
-            "action": "tool",
-            "tool_calls": [{"name": t["name"], "arguments": t["arguments"]} for t in tool_calls],
-        }
-
-    raise RuntimeError("LLM response must include either 'final_response' or 'tool_call'")
+    raise RuntimeError("LLM response must include either 'final', 'agent', or 'further_thought'")
 
 
 # ---------------------------------------------------------------------------
