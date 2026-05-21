@@ -58,9 +58,36 @@ def _format_scores(scores_json: str) -> str:
 
 
 def _format_persona(persona_profile: dict) -> str:
+    """
+    Handles both the current flat schema (from persona_compiler v2) and the
+    legacy nested schema (primary_user/secondary_user) for backward compat.
+    """
     if not persona_profile:
         return "neutral adult, no specific sensory sensitivities"
     try:
+        # -- Current flat schema (persona_compiler v2) ----------------------
+        if "name" in persona_profile or "role" in persona_profile:
+            parts = []
+            name = persona_profile.get("name", "")
+            role = persona_profile.get("role", "")
+            desc = persona_profile.get("description", "")
+            if desc:
+                parts.append(desc)
+            elif name and role:
+                parts.append(f"{name}, {role}")
+            if persona_profile.get("age_group"):
+                parts.append(f"age group: {persona_profile['age_group']}")
+            if persona_profile.get("household_type"):
+                parts.append(f"household: {persona_profile['household_type']}")
+            if persona_profile.get("sensory_priorities"):
+                parts.append(f"sensory priorities: {', '.join(persona_profile['sensory_priorities'])}")
+            if persona_profile.get("sensory_sensitivities"):
+                parts.append(f"sensitivities: {', '.join(persona_profile['sensory_sensitivities'])}")
+            if persona_profile.get("key_requirements"):
+                parts.append(f"non-negotiables: {'; '.join(persona_profile['key_requirements'])}")
+            return "; ".join(parts) if parts else "no profile"
+
+        # -- Legacy nested schema (backward compat) -------------------------
         primary = persona_profile.get("primary_user", {})
         parts = []
         if primary.get("description"):
@@ -88,12 +115,12 @@ def build_score_interpreter_node(llm):
     """Return the score_interpreter node function, capturing the LLM instance."""
 
     def score_interpreter_node(state: dict) -> dict:
-        scores_json: str = state.get("last_scores_json", "")
+        scores_json: str      = state.get("last_scores_json", "")
         persona_profile: dict = state.get("persona_profile") or {}
 
         print("[score_interpreter] Interpreting scores for persona...")
 
-        scores_summary = _format_scores(scores_json)
+        scores_summary  = _format_scores(scores_json)
         persona_summary = _format_persona(persona_profile)
 
         system = _SYSTEM_PROMPT.format(

@@ -45,22 +45,27 @@ _SYNTHESIS_SYSTEM_PROMPT = """\
 You are Sensi, synthesising a user's aesthetic and sensory world into an
 inspire_summary that will feed directly into the comfort persona compiler.
 
-You will receive one of two input formats:
-  A) A combined block containing a visual analysis (from reference images the
-     user uploaded) PLUS their written description. Synthesise both sources.
-  B) A plain free-form description only.
+You will receive one or more of the following input sources:
+  A) A visual analysis from reference images the user uploaded (VLM output).
+  B) A written description from the user about spaces and atmospheres they love.
+  C) A moodboard selection context -- which aesthetic images the user activated
+     across multiple rounds of neural image picking.
+
+Synthesise ALL sources that are present. Weight visual choices and written
+description equally -- both reveal genuine sensory preference.
 
 Capture:
-  - Key colors, materials, or finishes mentioned or implied
+  - Key colors, materials, textures, or finishes mentioned or visually selected
   - Quality of light  (bright, diffuse, warm, cool, dramatic, soft, natural...)
   - Mood and atmosphere words
-  - Spatial qualities  (open, intimate, layered, high-ceiling, cosy, grand...)
+  - Spatial qualities  (open, intimate, layered, high-ceiling, cosy, minimal...)
+  - Sensory intolerances or things they explicitly said they dislike
   - The emotional or sensory feeling they are seeking
 
-Format: a short paragraph of 4–6 sentences, written in second person.
+Format: a short paragraph of 4-6 sentences, written in second person.
 Start with: "You gravitate toward..."
 
-Make it specific and grounded — avoid vague compliments or filler.
+Be specific and grounded -- avoid vague compliments or filler phrases.
 Return ONLY the paragraph. No headers. No markdown.
 """
 
@@ -128,7 +133,7 @@ def build_inspire_node(llm):
             inspire_summary = call_llm_simple(llm, _SYNTHESIS_SYSTEM_PROMPT, synthesis_input)
             print(f"[inspire] Summary: {inspire_summary[:80]}...")
         except Exception as exc:
-            print(f"[inspire] LLM synthesis failed ({exc}) — storing raw answer")
+            print(f"[inspire] LLM synthesis failed ({exc}) -- storing raw answer")
 
         return {
             **state,

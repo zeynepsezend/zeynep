@@ -179,8 +179,10 @@ class AgentState(TypedDict, total=False):
     inspire_moodboard_urls:  list       # final image URLs approved in moodboard (Streamlit)
     onboarding_complete:     bool       # True after persona_compiler runs
 
-    # ── User identity (set by persona_compiler, persisted across turns) ──────
-    user_type:              str        # "architect" | "client" | "student"
+    # ── User identity (set by quiz + persona_compiler, persisted across turns) ─
+    user_name:              str        # first name extracted from q0 by quiz node
+    preliminary_role:       str        # "architect"|"client"|"student" detected at q1
+    user_type:              str        # "architect" | "client" | "student" (confirmed by persona_compiler)
     persona_profile:        dict       # full compiled persona object
 
     # ── Layout mode — top-level routing ──────────────────────────────────────
@@ -607,8 +609,10 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         "onboarding_complete":    session.get("onboarding_complete", False),
 
         # ── User identity (persisted) ──────────────────────────────────────
-        "user_type":       session.get("user_type", ""),
-        "persona_profile": session.get("persona_profile"),
+        "user_name":        session.get("user_name", ""),
+        "preliminary_role": session.get("preliminary_role", "client"),
+        "user_type":        session.get("user_type", ""),
+        "persona_profile":  session.get("persona_profile"),
 
         # ── Layout (persisted) ────────────────────────────────────────────
         "layout_json_string": session.get("layout_json_string", ""),
@@ -675,8 +679,10 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         "inspire_moodboard_urls": final_state.get("inspire_moodboard_urls") or session.get("inspire_moodboard_urls", []),
         "onboarding_complete":    final_state.get("onboarding_complete",    session.get("onboarding_complete", False)),
         # Identity
-        "user_type":           final_state.get("user_type")       or session.get("user_type", ""),
-        "persona_profile":     final_state.get("persona_profile") or session.get("persona_profile"),
+        "user_name":           final_state.get("user_name")           or session.get("user_name", ""),
+        "preliminary_role":    final_state.get("preliminary_role")    or session.get("preliminary_role", "client"),
+        "user_type":           final_state.get("user_type")           or session.get("user_type", ""),
+        "persona_profile":     final_state.get("persona_profile")     or session.get("persona_profile"),
         # Layout
         "layout_json_string":  final_state.get("layout_json_string") or session.get("layout_json_string", ""),
         "layout_id":           final_state.get("layout_id")          or session.get("layout_id"),

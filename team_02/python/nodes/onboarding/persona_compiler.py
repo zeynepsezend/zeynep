@@ -60,13 +60,41 @@ OUTPUT — return ONLY this JSON schema, no explanation, no markdown fences:
 
 comfort_weights rules:
   - Derive from sensory priorities and explicit sensitivities.
-  - High sensitivity to a sense → weight closer to 1.0 (flags issues more aggressively).
-  - Sense explicitly stated as non-priority → weight 0.3.
-  - Sense not mentioned → default 0.5.
+  - High sensitivity to a sense -> weight closer to 1.0 (flags issues more aggressively).
+  - Sense explicitly stated as non-priority -> weight 0.3.
+  - Sense not mentioned -> default 0.5.
   - All six senses must appear.
+
+STATED PREFERENCES vs RESEARCH BASELINES:
+After deriving comfort_weights from the user's stated preferences, compare each
+weight against these evidence-based research baselines. Where the user's stated
+weight deviates by more than 0.25, note it in preference_vs_baseline.
+
+Research baselines (evidence-based minimum comfort thresholds):
+  thermal:   0.70  -- thermal discomfort is the #1 cause of occupant complaints
+  visual:    0.60  -- adequate daylighting is linked to productivity and sleep
+  acoustic:  0.65  -- chronic noise exposure causes measurable stress responses
+  spatial:   0.50  -- spatial adequacy affects psychological restoration
+  olfactory: 0.40  -- air quality threshold; lower risk unless sensitivity stated
+  tactile:   0.35  -- lowest baseline; only flagged for explicit sensitivities
+
+Add this field to the JSON output:
+  "preference_vs_baseline": {
+    "<sense>": "<brief note if user's weight differs from baseline by >0.25>"
+    // omit senses where user and baseline are aligned
+  }
 
 Return ONLY the JSON object. Nothing else.
 """
+
+_COMFORT_BASELINES: dict = {
+    "thermal":   0.70,
+    "visual":    0.60,
+    "acoustic":  0.65,
+    "spatial":   0.50,
+    "olfactory": 0.40,
+    "tactile":   0.35,
+}
 
 _MINIMAL_PROFILE: dict = {
     "name": "User",
@@ -80,6 +108,7 @@ _MINIMAL_PROFILE: dict = {
     "aesthetic_preferences": "",
     "lifestyle": "",
     "key_requirements": [],
+    "preference_vs_baseline": {},
     "notes": "",
 }
 
@@ -138,16 +167,39 @@ def build_persona_compiler_node(llm, persona_output_path: str):
                 weights[sense] = 0.5
         persona_profile["comfort_weights"] = weights
 
-        # ── Save to disk ──────────────────────────────────────────────────
+        # Compute preference_vs_baseline if LLM omitted it or left it empty
+        pvb = persona_profile.get("preference_vs_baseline") or {}
+        if not pvb:
+            for sense, baseline in _COMFORT_BASELINES.items():
+                user_w = weights.get(sense, 0.5)
+                delta  = user_w - baseline
+                if abs(delta) > 0.25:
+                    direction = "above" if delta > 0 else "below"
+                if abs(delta) > 0.25:
+                    direction = "above" if delta > 0 else "below"
+                    note = (
+                        "User rates this highly -- aligns well with research."
+                        if delta > 0 else
+                        "User rates this low -- research flags it as a consistent comfort risk."
+                    )
+                    pvb[sense] = (
+                        f"Stated weight {user_w:.2f} is {direction} research "
+                        f"baseline {baseline:.2f} (delta {delta:+.2f}). {note}"
+                    )
+        persona_profile["preference_vs_baseline"] = pvb
+        if pvb:
+            print(f"[persona_compiler] Preference vs baseline deviations: {list(pvb.keys())}")
+
+        # -- Save to disk -----------------------------------------------------
         try:
             os.makedirs(os.path.dirname(persona_output_path), exist_ok=True)
             with open(persona_output_path, "w", encoding="utf-8") as f:
                 json.dump(persona_profile, f, indent=2, ensure_ascii=False)
-            print(f"[persona_compiler] Persona saved → {persona_output_path}")
+            print(f"[persona_compiler] Persona saved -> {persona_output_path}")
         except Exception as exc:
             print(f"[persona_compiler] WARNING: could not save persona file: {exc}")
 
-        # ── Build final response ──────────────────────────────────────────
+        # -- Build final response ---------------------------------------------
         name = persona_profile.get("name", "you")
         role = persona_profile.get("role", "client")
         priorities = persona_profile.get("sensory_priorities", [])
@@ -164,10 +216,10 @@ def build_persona_compiler_node(llm, persona_output_path: str):
 
         return {
             **state,
-            "persona_profile": persona_profile,
-            "user_type": role,                # keep user_type in sync for respond node
+            "persona_profile":    persona_profile,
+            "user_type":          role,
             "onboarding_complete": True,
-            "final_response": response,
+            "final_response":     response,
         }
 
     return persona_compiler_node

@@ -14,8 +14,8 @@ _SYSTEM_PROMPT = (
     "multi-sensory wellbeing: thermal, visual, acoustic, spatial, olfactory, tactile.\n\n"
     "Write a plain-language response shaped around what the user asked for.\n"
     "Use ONLY the data provided. Never invent scores, conflicts, or suggestions.\n\n"
-    "ALWAYS start with exactly one line:\n"
-    "  For a <persona>, Layout <id>:\n\n"
+    "ALWAYS start with exactly one line using the name and role from Persona:\n"
+    "  For <name> (<role>), Layout <id>:\n\n"
     "Then follow the FORMAT INSTRUCTIONS in the user message exactly.\n\n"
     "Hard rules for ALL formats:\n"
     "- Use ONLY scores from PRE-PROCESSED ROOM DATA. Copy numbers exactly.\n"
@@ -26,7 +26,13 @@ _SYSTEM_PROMPT = (
     "- Be concise. One room = one short block. No padding.\n"
     "- If SCORE INTERPRETATION context is provided, use it to enrich your language.\n"
     "- If REVISION INSTRUCTION is provided, apply it exactly before generating.\n"
-    "- If FACT CHECK DISCREPANCY is provided, fix it exactly before generating.\n"
+    "- If FACT CHECK DISCREPANCY is provided, fix it exactly before generating.\n\n"
+    "STATED PREFERENCES vs COMFORT RESEARCH:\n"
+    "The persona carries comfort_weights derived from their stated preferences.\n"
+    "When a finding or suggestion contradicts what the user rated as low priority\n"
+    "but is supported by comfort research, add one brief note inline:\n"
+    "  'Note: research flags this even though you rated <sense> as lower priority.'\n"
+    "Only flag genuine contradictions. Do not add this note for aligned findings.\n"
 )
 
 _FORMAT_ANALYZE = (
@@ -148,18 +154,43 @@ def build_respond_node(llm):
     """Return the respond node function, capturing the LLM instance."""
 
     def respond_node(state):
-        # Persona: support both new persona_profile (dict) and old persona_detected (str)
-        persona_profile = state.get("persona_profile") or {}
+        # Persona: flat schema (persona_compiler v2) with legacy fallback
+        persona_profile  = state.get("persona_profile") or {}
         persona_detected = state.get("persona_detected", "")
+        user_name_state  = state.get("user_name", "")
+
         if persona_profile:
-            primary = persona_profile.get("primary_user", {})
-            persona = primary.get("description", "Neutral")
-            secondary = persona_profile.get("secondary_user")
-            if secondary:
-                sec_desc = secondary.get("description", "secondary user")
-                persona = persona + " + " + sec_desc
+            # -- Current flat schema ------------------------------------------
+            if "name" in persona_profile or "role" in persona_profile:
+                p_name = persona_profile.get("name") or user_name_state or "User"
+                p_role = persona_profile.get("role", "client")
+                p_desc = persona_profile.get("description", "")
+                p_prio = persona_profile.get("sensory_priorities", [])
+                p_sens = persona_profile.get("sensory_sensitivities", [])
+                p_wts  = persona_profile.get("comfort_weights", {})
+                parts  = [f"{p_name} ({p_role})"]
+                if p_desc:
+                    parts.append(p_desc)
+                if p_prio:
+                    parts.append(f"sensory priorities: {', '.join(p_prio)}")
+                if p_sens:
+                    parts.append(f"sensitivities: {', '.join(p_sens)}")
+                if p_wts:
+                    wt_str = " | ".join(f"{k}={v:.2f}" for k, v in p_wts.items())
+                    parts.append(f"comfort weights: {wt_str}")
+                persona = "; ".join(parts)
+            # -- Legacy nested schema -----------------------------------------
+            else:
+                primary = persona_profile.get("primary_user", {})
+                persona = primary.get("description", "Neutral")
+                secondary = persona_profile.get("secondary_user")
+                if secondary:
+                    sec_desc = secondary.get("description", "secondary user")
+                    persona = persona + " + " + sec_desc
         else:
-            persona = persona_detected or "Neutral"
+            persona  = persona_detected or "Neutral"
+            p_name   = user_name_state or "User"
+            p_role   = state.get("user_type", "client")
 
         layout_id   = state.get("layout_id", "?")
         depth       = state.get("comfort_depth", "analyze")
@@ -195,7 +226,7 @@ def build_respond_node(llm):
             "client":    "Use warm, plain language. No jargon. Focus on daily life impact.",
             "learner":   "Use clear, educational language. Briefly explain what each term means.",
         }
-        register_note = register_map.get(user_type, register_map["architect"])
+        register_note = register_map.get(user_type, register_map["client"])
 
         sections = [
             "User request: " + raw_prompt,

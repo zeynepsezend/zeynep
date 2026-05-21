@@ -38,17 +38,22 @@ _REGISTER = {
     "architect": (
         "professional architect",
         "Use confident, peer-level language. Technical terms are fine. "
-        "Be efficient — architects are busy."
+        "Be efficient -- architects are busy."
     ),
     "client": (
         "homeowner or client (non-technical)",
         "Use warm, plain language. No jargon. Connect everything to daily life "
         "and lived experience. Be encouraging."
     ),
+    "student": (
+        "architecture student",
+        "Use an educational, curious tone. Explain concepts with brief examples. "
+        "Be friendly and enthusiastic -- make the learning feel insightful."
+    ),
     "learner": (
         "student or curious learner",
         "Use an educational, curious tone. Explain concepts with brief examples. "
-        "Be friendly and enthusiastic — learning should be fun."
+        "Be friendly and enthusiastic -- learning should be fun."
     ),
 }
 
@@ -65,10 +70,10 @@ def build_chitchat_node(llm):
 
     def chitchat_node(state: dict) -> dict:
         raw_prompt: str = state.get("raw_prompt", "")
-        user_type: str = state.get("user_type", "learner")
+        user_type: str = state.get("user_type", "client")
 
         user_type_label, register_instructions = _REGISTER.get(
-            user_type, _REGISTER["learner"]
+            user_type, _REGISTER["client"]
         )
         system = _SYSTEM_PROMPT_TEMPLATE.format(
             user_type_label=user_type_label,
@@ -88,7 +93,7 @@ def build_chitchat_node(llm):
             )
             if intent_check.strip().upper().startswith("YES"):
                 detected_intent = "comfort"
-                print("[chitchat] Analysis intent detected — routing to intent_classifier")
+                print("[chitchat] Analysis intent detected -- routing to intent_classifier")
         except Exception:
             pass
 
