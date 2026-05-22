@@ -5,33 +5,18 @@ from typing import Any
 from _runtime.session import save_session
 
 
-# ---------------------------------------------------------------------------
-# objects_list parser — converts the LLM's compact string format to the
-# JSON array the GH place_objects script expects.
-#
-# LLM produces:  "cnc_machine:2.0x1.5x1.2:x=5.0,y=3.0"
-# GH expects:    [{"name": "cnc_machine", "position": [5.0, 3.0],
-#                  "size": [2.0, 1.5, 1.2]}]
-#
-# Multiple objects can be comma-separated or newline-separated in the string.
-# Items with no x=/y= coordinates are skipped — a position is required.
-# ---------------------------------------------------------------------------
-
 _OBJECT_PATTERN = re.compile(
-    r'([a-zA-Z_][a-zA-Z0-9_ ]*)'        # name (allows spaces)
-    r':(\d+\.?\d*)[x*](\d+\.?\d*)[x*](\d+\.?\d*)'  # WxDxH
-    r'(?::x=([\d.]+),y=([\d.]+))?'      # optional :x=X,y=Y
+    r'([a-zA-Z_][a-zA-Z0-9_ ]*)'
+    r':(\d+\.?\d*)[x*](\d+\.?\d*)[x*](\d+\.?\d*)'
+    r'(?::x=([\d.]+),y=([\d.]+))?'
 )
 
 
 def _parse_objects_list(objects_str: str) -> list[dict]:
-    # Walk every regex match in the string — handles comma-separated,
-    # newline-separated, or single-item input from the LLM.
     results = []
     for m in _OBJECT_PATTERN.finditer(objects_str):
         name, w, d, h, x, y = m.groups()
         if x is None or y is None:
-            # Position is required; skip items the LLM forgot to coordinate.
             continue
         results.append({
             "name":     name.strip(),
@@ -41,59 +26,29 @@ def _parse_objects_list(objects_str: str) -> list[dict]:
     return results
 
 
-# ---------------------------------------------------------------------------
-# Object placement node — places ONE object at a time via the MCP tool.
-# Collision detection is NOT done here — it runs as a separate graph step
-# after this node returns. This node only places and saves.
-# ---------------------------------------------------------------------------
-
 def build_add_objects_node(mcp_client, workspace_path):
-    """Return a node closure that places one object via the place_objects MCP tool.
-
-    Capture mcp_client and workspace_path at build time (same closure pattern
-    as build_tool_node and build_visibility_node) so add_objects_node(state)
-    only needs the live graph state as its argument.
-    """
 
     def add_objects_node(state):
-        # Returns an update dict instead of mutating state.
         iteration = state["iteration"] + 1
         if iteration > state["max_iterations"]:
             raise RuntimeError("Max iterations exceeded")
 
-        # ---------------------------------------------------------------------------
-        # Guard: nothing queued -> skip.
-        # The reason node sets object_to_place before routing here.
-        # If it's missing or empty the graph wired incorrectly — warn and bail out
-        # rather than crashing, so the graph can continue to the next step.
-        # ---------------------------------------------------------------------------
+        updated_placement_history = state.get("placement_history") or []
+
         object_to_place = state.get("object_to_place")
         if not object_to_place:
             print("[add_objects] Warning: object_to_place is empty — skipping placement.")
             return {"iteration": iteration, "object_to_place": {}}
 
-        # ---------------------------------------------------------------------------
-        # Parse objects_list from LLM string format to JSON array.
-        # The LLM emits "name:WxDxH:x=X,y=Y" but the GH script expects a JSON
-        # array of dicts. Convert here so GH never has to handle raw strings.
-        # If the LLM already sent a list (e.g. from a retry), use it directly.
-        # ---------------------------------------------------------------------------
         raw_objects = object_to_place.get("objects_list", "")
         if isinstance(raw_objects, str):
             parsed_objects = _parse_objects_list(raw_objects)
             objects_list_json = json.dumps(parsed_objects)
         else:
-            # Already a list — re-serialize to ensure valid JSON string.
             objects_list_json = json.dumps(raw_objects)
 
-        # ---------------------------------------------------------------------------
-        # Call the MCP place_objects tool with the coordinates the LLM decided.
-        # layout_json is always injected here — never trusted from the LLM output
-        # to guarantee the tool receives the latest saved state.
-        # ---------------------------------------------------------------------------
         layout_json_string = state["layout_json_string"]
 
-        # Diagnostic: verify doors exist before MCP call
         _pre_layout = json.loads(layout_json_string)
         _pre_doors = len(_pre_layout.get("doors", []))
         print(f"[add_objects] Layout integrity before MCP: {_pre_doors} doors, "
@@ -101,11 +56,11 @@ def build_add_objects_node(mcp_client, workspace_path):
               f"{len(_pre_layout.get('furniture', []))} furniture")
 
         tool_args = {
-            "layout_json": layout_json_string,
-            "room_name": object_to_place["room_name"],
+            "layout_json":  layout_json_string,
+            "room_name":    object_to_place["room_name"],
             "objects_list": objects_list_json,
             "user_profile": object_to_place.get("user_profile", "standard"),
-            "clear_room": object_to_place.get("clear_room", False),
+            "clear_room":   object_to_place.get("clear_room", False),
         }
         try:
             tool_output = mcp_client.call_tool("place_objects", tool_args)
@@ -113,16 +68,9 @@ def build_add_objects_node(mcp_client, workspace_path):
             print(f"[add_objects] MCP call failed: {exc}")
             tool_output = f"MCP error: {exc}"
 
-        # ---------------------------------------------------------------------------
-        # Parse tool output — place_objects can return two different shapes:
-        #   a) Full updated layout (has "rooms") -> replace session entirely.
-        #   b) Result summary only (has "placed"/"failed") -> store for the next node.
-        # Either way, save_session keeps workspace/session_active.json in sync
-        # so a crash between placements doesn't lose work.
-        # ---------------------------------------------------------------------------
         updates: dict = {
-            "iteration": iteration,
-            "object_to_place": {},
+            "iteration":            iteration,
+            "object_to_place":      {},
             "last_placement_result": None,
         }
 
@@ -133,10 +81,6 @@ def build_add_objects_node(mcp_client, workspace_path):
                 _has_doors = len(parsed.get("doors", [])) if isinstance(parsed.get("doors"), list) else 0
                 print(f"[add_objects] MCP response: has_rooms={_has_rooms}, doors={_has_doors}, keys={list(parsed.keys())[:8]}")
                 if "rooms" in parsed:
-                    # Full layout returned — merge with current state to preserve
-                    # layers the MCP tool might not return (doors, windows, mep,
-                    # structure, outline). Only update layers that the response
-                    # explicitly provides; keep everything else from the current state.
                     current_layout = json.loads(layout_json_string)
                     for key in ("doors", "windows", "mep", "structure", "outline"):
                         if key not in parsed or not parsed[key]:
@@ -147,51 +91,40 @@ def build_add_objects_node(mcp_client, workspace_path):
                     save_session(parsed, workspace_path)
                     updates["last_placement_result"] = parsed
                 else:
-                    # Summary only — store so collision or reason nodes can inspect it
                     updates["last_placement_result"] = parsed
         except (json.JSONDecodeError, AttributeError):
             pass
 
-        # -----------------------------------------------------------------------
-        # If the MCP tool returned a summary (not a full layout), the furniture
-        # positions in layout_json_string are stale. Mirror the placement into
-        # the state's layout so downstream analysis nodes see the new positions.
-        # -----------------------------------------------------------------------
         if "layout_json_string" not in updates:
             try:
                 current_layout = json.loads(layout_json_string)
                 room_name = object_to_place.get("room_name", "")
-                # Parse the objects we sent to place_objects
                 if isinstance(raw_objects, str):
                     placed_objects = _parse_objects_list(raw_objects)
                 else:
                     placed_objects = raw_objects if isinstance(raw_objects, list) else []
 
                 if placed_objects:
-                    # Find the room ID for this room name
                     room_id = None
                     for room in current_layout.get("rooms", []):
                         if room.get("name", "").lower() == room_name.lower():
                             room_id = room.get("id")
                             break
 
-                    # Track what changed for the placement history
                     changes = []
 
                     for obj in placed_objects:
-                        pos = obj.get("position", [0, 0])
+                        pos  = obj.get("position", [0, 0])
                         size = obj.get("size", [1, 1, 1])
                         name = obj.get("name", "")
                         x, y = pos[0], pos[1]
                         w, d = size[0], size[1]
 
-                        # Build furniture polygon from position + size
                         new_geom = [
                             [x, y], [x + w, y], [x + w, y + d],
                             [x, y + d], [x, y],
                         ]
 
-                        # Try to find and update existing furniture by name
                         found = False
                         for furn in current_layout.get("furniture", []):
                             if furn.get("name", "").lower() == name.lower():
@@ -199,44 +132,94 @@ def build_add_objects_node(mcp_client, workspace_path):
                                 old_x = old_geom[0][0] if old_geom else 0
                                 old_y = old_geom[0][1] if old_geom else 0
                                 furn["geometry"] = new_geom
-                                # Only record as a move if position actually changed
                                 if abs(old_x - x) > 0.01 or abs(old_y - y) > 0.01:
                                     changes.append({
-                                        "name": name,
+                                        "name":   name,
                                         "action": "moved",
-                                        "from": [round(old_x, 2), round(old_y, 2)],
-                                        "to": [round(x, 2), round(y, 2)],
-                                        "size": [w, d],
-                                        "room": room_name,
+                                        "from":   [round(old_x, 2), round(old_y, 2)],
+                                        "to":     [round(x, 2), round(y, 2)],
+                                        "size":   [w, d],
+                                        "room":   room_name,
                                     })
                                 found = True
                                 break
 
-                        # If not found, add as new furniture
                         if not found:
                             furn_id = f"furn-{len(current_layout.get('furniture', [])) + 1}"
                             new_furn = {
-                                "id": furn_id,
-                                "name": name,
+                                "id":       furn_id,
+                                "name":     name,
                                 "geometry": new_geom,
-                                "attributes": {"roomId": room_id or ""},
+                                "attributes": {
+                                    "roomId": room_id or "",
+                                    "height": size[2] if len(size) > 2 else 1.0,
+                                },
                             }
+
+                            # Door blocking check — warn if object placed within
+                            # 1.0m of any door midpoint (OSHA door clearance zone)
+                            door_warnings = []
+                            # Use closest corner distance not centroid —
+                            # large objects like conveyors have wide footprints
+                            furn_corners = [[x, y], [x+w, y], [x+w, y+d], [x, y+d]]
+                            for door in current_layout.get("doors", []):
+                                dg = door.get("geometry", [])
+                                if len(dg) == 2:
+                                    dmx = (dg[0][0] + dg[1][0]) / 2.0
+                                    dmy = (dg[0][1] + dg[1][1]) / 2.0
+                                    min_dist = min(
+                                        ((cx - dmx) ** 2 + (cy - dmy) ** 2) ** 0.5
+                                        for cx, cy in furn_corners
+                                    )
+                                    if min_dist < 1.0:
+                                        door_warnings.append(
+                                            f"WARNING: '{name}' is {min_dist:.2f}m from door "
+                                            f"'{door.get('name', door.get('id', '?'))}' "
+                                            f"— minimum clearance is 1.0m"
+                                        )
+                            if door_warnings:
+                                for w_msg in door_warnings:
+                                    print(f"[add_objects] {w_msg}")
+
+                            # Window blocking check — warn if object placed within
+                            # 0.5m of any window midpoint (NFPA 101 egress + ventilation)
+                            window_warnings = []
+                            for window in current_layout.get("windows", []):
+                                wg = window.get("geometry", [])
+                                if len(wg) == 2:
+                                    wmx = (wg[0][0] + wg[1][0]) / 2.0
+                                    wmy = (wg[0][1] + wg[1][1]) / 2.0
+                                    min_dist = min(
+                                        ((cx - wmx) ** 2 + (cy - wmy) ** 2) ** 0.5
+                                        for cx, cy in furn_corners
+                                    )
+                                    if min_dist < 0.5:
+                                        window_warnings.append(
+                                            f"WARNING: '{name}' is {min_dist:.2f}m from window "
+                                            f"'{window.get('name', window.get('id', '?'))}' "
+                                            f"— minimum clearance is 0.5m (NFPA 101)"
+                                        )
+                            if window_warnings:
+                                for w_msg in window_warnings:
+                                    print(f"[add_objects] {w_msg}")
+
                             current_layout.setdefault("furniture", []).append(new_furn)
                             changes.append({
-                                "name": name,
-                                "action": "added",
-                                "to": [round(x, 2), round(y, 2)],
-                                "size": [w, d],
-                                "room": room_name,
+                                "name":     name,
+                                "action":   "added",
+                                "to":       [round(x, 2), round(y, 2)],
+                                "size":     [w, d],
+                                "room":     room_name,
+                                "door_warnings": door_warnings,
+                                "window_warnings": window_warnings,
                             })
 
                     layout_json_string = json.dumps(current_layout)
                     updates["layout_json_string"] = layout_json_string
                     save_session(current_layout, workspace_path)
 
-                    # Merge with existing placement history
-                    prev_history = state.get("placement_history") or []
-                    updates["placement_history"] = prev_history + changes
+                    updated_placement_history = updated_placement_history + changes
+                    updates["placement_history"] = updated_placement_history
 
                     print(f"[add_objects] Updated {len(placed_objects)} furniture positions in layout state")
                     for c in changes:
@@ -248,13 +231,21 @@ def build_add_objects_node(mcp_client, workspace_path):
             except Exception as exc:
                 print(f"[add_objects] Warning: could not mirror placement to state: {exc}")
 
-        # Append tool call to conversation history.
-        # Exclude layout_json from logged arguments — it's large and already in state.
+        queue = state.get("object_queue") or []
+        if queue:
+            next_obj  = queue[0]
+            remaining = queue[1:]
+            updates["object_to_place"] = next_obj
+            updates["object_queue"]    = remaining
+            print(f"[add_objects] Next in queue: {next_obj.get('objects_list', '')} ({len(remaining)} remaining)")
+        else:
+            updates["object_queue"] = []
+
         updates["messages"] = [
             {
                 "role": "assistant",
                 "content": json.dumps({
-                    "action": "tool",
+                    "action":         "tool",
                     "final_response": "",
                     "tool_calls": [{"name": "place_objects", "arguments": {
                         k: v for k, v in tool_args.items() if k != "layout_json"
@@ -262,7 +253,7 @@ def build_add_objects_node(mcp_client, workspace_path):
                 }),
             },
             {
-                "role": "user",
+                "role":    "user",
                 "content": f"Tool result: {tool_output[:500]}",
             },
         ]

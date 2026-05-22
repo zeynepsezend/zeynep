@@ -851,6 +851,36 @@
       "attributes": {
         "roomId": "room-2"
       }
+    },
+    {
+      "id": "furn-15",
+      "name": "QC_Station",
+      "geometry": [
+        [
+          20.5,
+          8.5
+        ],
+        [
+          22.5,
+          8.5
+        ],
+        [
+          22.5,
+          9.5
+        ],
+        [
+          20.5,
+          9.5
+        ],
+        [
+          20.5,
+          8.5
+        ]
+      ],
+      "attributes": {
+        "roomId": "room-2",
+        "height": 0.9
+      }
     }
   ],
   "mep": [
