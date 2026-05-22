@@ -116,7 +116,7 @@ class InspireWorker(QThread):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Inspire helpers  (copied from app.py — no Streamlit dependencies)
+# Inspire helpers — VLM + Unsplash pipeline
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _vlm_analyze(llm, images_b64: list, text_desc: str) -> str:
@@ -157,15 +157,17 @@ def _gen_queries(llm, analysis: str, prev_desc: str = "", n: int = 4) -> list:
     extra  = f"\n\nThe user particularly liked: {prev_desc}" if prev_desc else ""
     prompt = (
         f"Aesthetic analysis:\n{analysis}{extra}\n\n"
-        f"Generate {n} specific Unsplash search queries to find interior spaces "
-        f"matching this aesthetic. Include materials, light quality, mood words. "
+        f"Generate {n} specific Unsplash search queries to find interior architectural spaces "
+        f"matching this aesthetic. Include materials, light quality, and mood words.\n"
+        f"RULES: Every query MUST describe an interior room, residential space, or architectural scene. "
+        f"No people, no landscapes, no food, no fashion, no abstract imagery.\n"
         f"Each query = 3–5 words.\nReturn ONLY a JSON array: [\"q1\", \"q2\", ...]"
     )
     defaults = [
         "minimal interior warm natural light",
-        "calm architectural space texture",
-        "serene material palette daylight",
-        "intimate atmospheric room",
+        "calm architectural space texture material",
+        "serene residential room daylight",
+        "intimate atmospheric interior comfort",
     ]
     try:
         resp = llm.invoke([HumanMessage(content=prompt)])
@@ -448,6 +450,7 @@ class SensiBridge(QObject):
         # Mirror what app.py does before calling run_agent
         self._session["inspire_image_analysis"] = self._inspire["analysis"]
         self._session["inspire_moodboard_urls"]  = all_picks
+        self._session["inspire_prompted"]        = True  # UI handled the aesthetic question; skip inspire sub-step A
 
         context = (
             f"{self._inspire['text']}\n\n"

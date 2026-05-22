@@ -27,7 +27,7 @@ body {
   width: 100%; height: 100%;
   background: var(--bg);
   color: var(--fg);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
   overflow: hidden;
   animation: breathe 4s ease-in-out infinite;
 }
@@ -96,15 +96,15 @@ body {
 .top-bar {
   flex-shrink: 0;
   width: 100%;
-  padding: 16px 24px;
-  display: flex; align-items: center; gap: 8px;
-  border-bottom: 1px solid rgba(240,237,232,.04);
+  padding: 20px 28px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid rgba(240,237,232,.06);
 }
 .top-bar-label {
   font-family: 'DM Mono', monospace;
-  font-size: 8px; letter-spacing: .38em;
+  font-size: 11px; letter-spacing: .18em;
   text-transform: uppercase;
-  color: rgba(240,237,232,.14);
+  color: rgba(240,237,232,.45);
 }
 
 /* ── CONVERSATION THREAD (quiz + chat share this) ── */
@@ -112,14 +112,14 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px 0 8px;
-  display: flex; flex-direction: column; gap: 18px;
+  padding: 28px 0 12px;
+  display: flex; flex-direction: column; gap: 0;
 }
 .thread-inner {
   width: 100%; max-width: 560px;
   margin: 0 auto;
   padding: 0 24px;
-  display: flex; flex-direction: column; gap: 18px;
+  display: flex; flex-direction: column; gap: 0;
 }
 
 /* sensi bubble */
@@ -132,20 +132,27 @@ body {
   color: rgba(240,237,232,.82);
   max-width: 88%;
   animation: fadeUp .35s ease-out both;
+  background: rgba(240,237,232,.04);
+  border: 1px solid rgba(240,237,232,.07);
+  border-radius: 0 14px 14px 14px;
+  padding: 11px 15px;
 }
 /* user bubble */
 .bubble-u {
   align-self: flex-end;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px; letter-spacing: .12em;
-  color: rgba(240,237,232,.28);
-  background: rgba(240,237,232,.03);
-  border: 1px solid rgba(240,237,232,.08);
-  padding: 7px 14px;
-  border-radius: 99px;
+  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+  font-size: clamp(14px, 2vw, 16px);
+  font-weight: 300;
+  line-height: 1.5;
+  color: rgba(232,131,106,.92);
+  background: rgba(232,131,106,.10);
+  border: 1px solid rgba(232,131,106,.22);
+  padding: 10px 15px;
+  border-radius: 14px 0 14px 14px;
   max-width: 72%;
   text-align: right;
   animation: fadeIn .2s ease-out both;
+  margin-bottom: 28px;
 }
 
 /* ── ACTIVE INPUT AREA ── */
@@ -153,8 +160,8 @@ body {
   flex-shrink: 0;
   width: 100%; max-width: 560px;
   margin: 0 auto;
-  padding: 10px 24px 24px;
-  border-top: 1px solid rgba(240,237,232,.04);
+  padding: 16px 28px 28px;
+  border-top: 1px solid rgba(240,237,232,.06);
 }
 
 /* text + textarea inputs */
@@ -164,9 +171,9 @@ body {
   border: none;
   border-bottom: 1px solid rgba(240,237,232,.16);
   color: var(--fg);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 15px;
-  padding: 8px 0;
+  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  padding: 10px 0;
   outline: none;
   caret-color: var(--fg);
   transition: border-color .2s;
@@ -185,10 +192,10 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   border: 1px solid rgba(240,237,232,.15);
   color: rgba(240,237,232,.40);
   font-family: 'DM Mono', monospace;
-  font-size: 10px; letter-spacing: .2em;
-  padding: 7px 14px;
+  font-size: 12px; letter-spacing: .16em;
+  padding: 10px 18px;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: 6px;
   transition: all .2s;
   white-space: nowrap;
   margin-bottom: 1px;
@@ -201,12 +208,12 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   border: 1px solid rgba(240,237,232,.15);
   color: rgba(240,237,232,.40);
   font-family: 'DM Mono', monospace;
-  font-size: 9px; letter-spacing: .22em; text-transform: uppercase;
-  padding: 9px 24px;
+  font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  padding: 12px 28px;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: 6px;
   transition: all .2s;
-  margin-top: 14px;
+  margin-top: 16px;
   display: block;
   width: 100%;
   text-align: center;
@@ -220,10 +227,10 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   border: 1px solid rgba(240,237,232,.07);
   color: rgba(240,237,232,.22);
   font-family: 'DM Mono', monospace;
-  font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
-  padding: 8px 20px;
+  font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  padding: 12px 24px;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: 6px;
   transition: all .2s;
 }
 .btn-ghost:hover { border-color: rgba(240,237,232,.35); color: rgba(240,237,232,.60); }
@@ -236,13 +243,13 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 .pill {
   flex: 1; min-width: 70px;
   border: 1px solid rgba(240,237,232,.10);
-  padding: 12px 8px;
+  padding: 14px 10px;
   text-align: center;
   cursor: pointer;
   border-radius: 99px;
   transition: all .16s ease;
   font-family: 'DM Mono', monospace;
-  font-size: 9px; letter-spacing: .16em; text-transform: uppercase;
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
   color: rgba(240,237,232,.32);
   user-select: none;
 }
@@ -253,16 +260,23 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 .sense-grid { display: flex; gap: 5px; width: 100%; margin-top: 10px; }
 .sense-pill {
   flex: 1;
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 11px 4px;
-  border: 1px solid rgba(240,237,232,.07);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 6px;
+  border: 1px solid rgba(240,237,232,.12);
   border-radius: 99px;
   cursor: pointer;
   transition: all .16s ease;
   user-select: none;
 }
-.sense-pill .si { font-size: 13px; color: rgba(240,237,232,.28); transition: color .16s; line-height: 1; }
-.sense-pill .sn { font-family:'DM Mono',monospace; font-size:6px; letter-spacing:.12em; text-transform:uppercase; color:rgba(240,237,232,.22); transition:color .16s; }
+.sense-pill .si { font-size: 16px; color: rgba(240,237,232,.38); transition: color .16s; line-height: 1; }
+.sense-pill .sn { font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.12em; text-transform:uppercase; color:rgba(240,237,232,.30); transition:color .16s; }
+/* subtle tint at rest so pills read as interactive */
+.sense-pill[data-sense="thermal"]   { background: rgba(232,131,106,.04); }
+.sense-pill[data-sense="visual"]    { background: rgba(212,185,106,.04); }
+.sense-pill[data-sense="acoustic"]  { background: rgba(155,143,212,.04); }
+.sense-pill[data-sense="spatial"]   { background: rgba(106,184,200,.04); }
+.sense-pill[data-sense="olfactory"] { background: rgba(139,184,138,.04); }
+.sense-pill[data-sense="tactile"]   { background: rgba(196,168,130,.04); }
 
 .sense-pill[data-sense="thermal"]:hover   { border-color:var(--thermal);   background:rgba(232,131,106,.06); }
 .sense-pill[data-sense="visual"]:hover    { border-color:var(--visual);    background:rgba(212,185,106,.06); }
@@ -338,7 +352,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   font-family: 'DM Mono', monospace;
   font-size: 8px; letter-spacing: .18em; text-transform: uppercase;
   padding: 7px 14px;
-  cursor: pointer; border-radius: 0;
+  cursor: pointer; border-radius: 6px;
   transition: all .2s;
 }
 .btn-upload:hover { border-color: rgba(240,237,232,.35); color: rgba(240,237,232,.55); }
@@ -361,6 +375,88 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   color: rgba(240,237,232,.18);
   text-align: center;
 }
+
+/* ── avatar + bubble row ── */
+.bubble-wrap { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 28px; }
+/* avatar aligns with bubble top — flat top-left corner of bubble "connects" to avatar */
+.sensi-avatar { flex-shrink: 0; margin-top: 0; opacity: .88; }
+/* previous messages: demoted to a small static dot, no animation */
+.sensi-avatar-static {
+  flex-shrink: 0;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(240,237,232,.22);
+  margin-top: 8px;
+}
+
+/* ── persona profile sections ── */
+.persona-identity { padding-bottom: 4px; }
+.persona-name { font-family: 'DM Sans','Inter',system-ui,sans-serif; font-size: 20px; font-weight: 300; color: rgba(240,237,232,.90); }
+.persona-role { font-family: 'DM Mono',monospace; font-size: 8px; letter-spacing: .22em; text-transform: uppercase; color: rgba(240,237,232,.30); margin-top: 5px; }
+.persona-desc { font-family: 'Roboto',sans-serif; font-weight: 300; font-size: 12px; line-height: 1.65; color: rgba(240,237,232,.45); margin-top: 10px; }
+
+.persona-section-label {
+  font-family: 'DM Mono',monospace; font-size: 7px; letter-spacing: .24em; text-transform: uppercase;
+  color: rgba(240,237,232,.28); margin: 24px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.persona-section-label::before { content: ''; flex: 0 0 12px; height: 1px; background: rgba(240,237,232,.10); }
+.persona-section-label::after  { content: ''; flex: 1; height: 1px; background: rgba(240,237,232,.10); }
+
+/* top 3 cards */
+.top3-grid { display: flex; gap: 7px; width: 100%; }
+.top3-card  { flex: 1; padding: 12px 10px; border: 1px solid rgba(240,237,232,.08); border-radius: 6px; display: flex; flex-direction: column; gap: 5px; }
+.top3-icon  { font-size: 14px; line-height: 1; }
+.top3-sense { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; }
+.top3-note  { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 10px; line-height: 1.5; color: rgba(240,237,232,.48); }
+
+/* bar legend */
+.bar-legend { display: flex; gap: 16px; margin-bottom: 8px; }
+.bar-legend span { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .12em; color: rgba(240,237,232,.28); display: flex; align-items: center; gap: 5px; }
+
+/* gap items */
+.gap-item { padding: 10px 12px; border-left: 2px solid; margin-bottom: 8px; border-radius: 0 5px 5px 0; background: rgba(240,237,232,.02); }
+.gap-item-sense { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 4px; }
+.gap-item-note  { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; line-height: 1.6; color: rgba(240,237,232,.55); }
+
+/* aesthetic note */
+.aesthetic-note { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; line-height: 1.65; color: rgba(240,237,232,.38); margin-top: 8px; font-style: italic; }
+
+/* formula collapsible */
+.formula-toggle { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .22em; text-transform: uppercase; color: rgba(240,237,232,.22); cursor: pointer; margin-top: 22px; margin-bottom: 4px; transition: color .2s; }
+.formula-toggle:hover { color: rgba(240,237,232,.50); }
+.formula-content { border-left: 1px solid rgba(240,237,232,.08); padding-left: 14px; margin-top: 8px; margin-bottom: 24px; }
+
+/* formula equation block */
+.formula-eq-block { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid rgba(240,237,232,.06); }
+.formula-eq-row { display: -webkit-box; display: flex; -webkit-box-align: baseline; align-items: baseline; margin-bottom: 10px; }
+.formula-eq-lhs { font-family:'DM Mono',monospace; font-size: 11px; color: rgba(240,237,232,.70); width: 130px; -webkit-flex-shrink: 0; flex-shrink: 0; }
+.formula-eq-rhs { font-family:'DM Mono',monospace; font-size: 11px; color: rgba(240,237,232,.42); -webkit-flex: 1; flex: 1; }
+.formula-eq-note { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 10px; color: rgba(240,237,232,.22); margin-left: 10px; font-style: italic; -webkit-flex-shrink: 0; flex-shrink: 0; }
+.formula-prose { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; line-height: 1.75; color: rgba(240,237,232,.35); }
+
+/* ── profile side panel ── */
+.profile-panel {
+  position: fixed; top: 0; right: 0;
+  width: 320px; height: 100%;
+  background: rgba(13,13,13,.98);
+  border-left: 1px solid rgba(240,237,232,.07);
+  z-index: 8000;
+  transform: translateX(100%);
+  transition: transform .3s ease;
+  display: flex; flex-direction: column;
+}
+.profile-panel.open { transform: translateX(0); }
+.panel-header { flex-shrink: 0; padding: 16px 20px; border-bottom: 1px solid rgba(240,237,232,.05); display: flex; align-items: center; gap: 8px; }
+.panel-close { background: transparent; border: none; color: rgba(240,237,232,.30); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; margin-left: auto; transition: color .2s; }
+.panel-close:hover { color: var(--fg); }
+.btn-panel-full { background: transparent; border: 1px solid rgba(240,237,232,.10); color: rgba(240,237,232,.30); font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px; cursor: pointer; border-radius: 6px; transition: all .2s; }
+.btn-panel-full:hover { border-color: rgba(240,237,232,.35); color: var(--fg); }
+.panel-scroll { flex: 1; overflow-y: auto; padding: 16px 20px 32px; }
+
+/* profile button in top bar */
+.btn-profile { background: transparent; border: none; color: rgba(240,237,232,.25); cursor: pointer; padding: 4px; display: flex; align-items: center; transition: color .2s; margin-left: auto; }
+.btn-profile:hover { color: rgba(240,237,232,.65); }
 </style>
 </head>
 <body>
@@ -390,7 +486,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 
   <!-- top bar -->
   <div class="top-bar">
-    <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
       <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
       <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
       <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
@@ -422,7 +518,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 
   <!-- top bar -->
   <div class="top-bar">
-    <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
       <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
       <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
       <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
@@ -491,7 +587,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 <div id="screen-persona" class="screen">
 
   <div class="top-bar">
-    <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
       <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
       <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
       <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
@@ -505,9 +601,82 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 
   <div class="thread" style="flex:1;">
     <div class="thread-inner" style="padding-top:20px;">
-      <p id="persona-message" class="bubble-s" style="margin-bottom:20px;"></p>
+
+      <!-- sensi intro message with avatar -->
+      <div class="bubble-wrap">
+        <svg class="sensi-avatar" width="28" height="28" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+          <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+          <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+          <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+          <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+          <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+          <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+        </svg>
+        <p id="persona-message" class="bubble-s" style="margin-bottom:0;"></p>
+      </div>
+
+      <!-- S1: Identity -->
+      <div id="persona-identity" class="persona-identity"></div>
+
+      <!-- S2: Top 3 priorities -->
+      <div class="persona-section-label">top comfort priorities</div>
+      <div id="persona-top3" class="top3-grid"></div>
+
+      <!-- S3: Sense spectrum -->
+      <div class="persona-section-label">sense spectrum</div>
+      <div class="bar-legend">
+        <span><span style="display:inline-block;width:18px;height:2px;background:rgba(240,237,232,.45);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>stated</span>
+        <span><span style="display:inline-block;width:1px;height:9px;background:rgba(240,237,232,.32);vertical-align:middle;margin-right:4px;"></span>evidence baseline</span>
+      </div>
       <div id="persona-bars" style="width:100%;"></div>
+
+      <!-- S4: Stated Preference · Evidence Baseline -->
+      <div id="persona-gaps-wrap" style="display:none;">
+        <div class="persona-section-label">stated preference · evidence baseline</div>
+        <div id="persona-gaps"></div>
+      </div>
+
+      <!-- S5: Aesthetic signature -->
+      <div class="persona-section-label">aesthetic signature</div>
       <div id="persona-moodboard" class="moodboard-strip"></div>
+      <p id="persona-aesthetic-note" class="aesthetic-note"></p>
+
+      <!-- S6: How Sensi built this -->
+      <div class="formula-toggle" id="formula-toggle" onclick="toggleFormula()">how sensi built this +</div>
+      <div id="persona-formula" class="formula-content" style="display:none;">
+
+        <!-- Equations -->
+        <div class="formula-eq-block">
+          <div class="formula-eq-row">
+            <span class="formula-eq-lhs">w(s)</span>
+            <span class="formula-eq-rhs">= derive( quiz, inspire )</span>
+            <span class="formula-eq-note">learned from your responses</span>
+          </div>
+          <div class="formula-eq-row">
+            <span class="formula-eq-lhs">score(room, s)</span>
+            <span class="formula-eq-rhs">= w(s) × raw(room, s)</span>
+            <span class="formula-eq-note">weight × room data per sense</span>
+          </div>
+          <div class="formula-eq-row">
+            <span class="formula-eq-lhs">C(room)</span>
+            <span class="formula-eq-rhs">= &Sigma; score(room, s)</span>
+            <span class="formula-eq-note">sum across all 6 senses</span>
+          </div>
+          <div class="formula-eq-row">
+            <span class="formula-eq-lhs">flag(s)</span>
+            <span class="formula-eq-rhs">= |w(s) &minus; baseline(s)| &gt; 0.25</span>
+            <span class="formula-eq-note">proactive gap detection</span>
+          </div>
+        </div>
+
+        <!-- Natural language breakdown -->
+        <div class="formula-prose">
+          Your quiz answers revealed your sensory priorities and living situation. Your inspire session — written description plus moodboard — mapped your aesthetic world. Sensi weighted the six comfort senses from what you shared, then compared each against <em>evidence baselines</em>: research-backed minimum thresholds for your profile type. Where your stated weight falls below a baseline, Sensi flags it proactively — because the data says it matters even if you haven't noticed it yet.
+        </div>
+
+      </div>
+
     </div>
   </div>
 
@@ -527,7 +696,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 <div id="screen-chat" class="screen">
 
   <div class="top-bar">
-    <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
       <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
       <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
       <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
@@ -537,7 +706,15 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
       <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
     </svg>
     <span class="top-bar-label">sensi</span>
-    <span id="chat-layout-tag" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.15em;color:rgba(240,237,232,.16);"></span>
+    <span id="chat-layout-tag" style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.15em;color:rgba(240,237,232,.16);margin-left:12px;"></span>
+    <button class="btn-profile" id="btn-profile-chat" onclick="openProfilePanel()" title="your comfort profile" style="display:none;">
+      <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14.5" stroke="currentColor" stroke-width=".9"/>
+        <circle cx="16" cy="16" r="9.5"  stroke="currentColor" stroke-width=".9"/>
+        <circle cx="16" cy="16" r="4.5"  stroke="currentColor" stroke-width=".9"/>
+        <circle cx="16" cy="16" r="1.4" fill="currentColor"/>
+      </svg>
+    </button>
   </div>
 
   <div class="thread" id="chat-thread">
@@ -553,6 +730,28 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
     </div>
   </div>
 
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     PROFILE SIDE PANEL  (layout mode — condensed, slide-in)
+══════════════════════════════════════════════════════════ -->
+<div id="profile-panel" class="profile-panel">
+  <div class="panel-header">
+    <svg width="16" height="16" viewBox="0 0 32 32" fill="none" style="opacity:.5;">
+      <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8"/>
+      <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8"/>
+      <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8"/>
+      <circle cx="16" cy="16" r="1.4" fill="#F0EDE8" opacity=".80"/>
+    </svg>
+    <span class="top-bar-label">comfort profile</span>
+    <button class="btn-panel-full" onclick="showFullProfileFromPanel()">full view</button>
+    <button class="panel-close" onclick="closeProfilePanel()">×</button>
+  </div>
+  <div class="panel-scroll">
+    <div id="panel-top3"></div>
+    <div id="panel-bars"></div>
+  </div>
 </div>
 
 
@@ -587,31 +786,101 @@ function showScreen(name) {
 }
 
 // ── Overlay ───────────────────────────────────────────────
+const _PROGRESS_PCT = {
+  "reading your aesthetic...":  25,
+  "building search queries...": 55,
+  "gathering images...":        80,
+  "finding more images...":     80,
+  "building your comfort profile...": 90,
+};
+
+function _setBarPct(pct) {
+  const bar = document.querySelector(".overlay-bar");
+  if (!bar) return;
+  if (pct == null) {
+    // No known progress — hide bar entirely, no looping animation
+    bar.style.animation = "none";
+    bar.style.opacity = "0";
+    bar.style.transform = "scaleX(0)";
+    bar.style.transition = "none";
+  } else {
+    // Known progress — show bar at exact percentage
+    bar.style.animation = "none";
+    bar.style.opacity = ".85";
+    bar.style.transform = `scaleX(${pct / 100})`;
+    bar.style.transition = "transform .5s ease, opacity .2s ease";
+  }
+}
+
 function showOverlay(msg) {
   document.getElementById("overlay-msg").textContent = msg || "thinking...";
   document.getElementById("overlay").classList.add("visible");
+  _setBarPct(null); // hide bar — no looping, bar appears only when progress is known
 }
 function hideOverlay() {
-  document.getElementById("overlay").classList.remove("visible");
+  const bar = document.querySelector(".overlay-bar");
+  if (bar && bar.style.opacity === ".85") {
+    // Bar was showing real progress — snap to 100% then hide
+    bar.style.transform = "scaleX(1)";
+    bar.style.transition = "transform .3s ease";
+    setTimeout(() => {
+      document.getElementById("overlay").classList.remove("visible");
+      _setBarPct(null);
+    }, 380);
+  } else {
+    // No bar was shown — hide immediately
+    document.getElementById("overlay").classList.remove("visible");
+    _setBarPct(null);
+  }
 }
 
-// ── Step dots (top bar) ───────────────────────────────────
+// ── Step dots + top bar label ─────────────────────────────
 function renderDots(step) {
   document.getElementById("quiz-dots").innerHTML = STEPS.map((_, i) => {
     const op = i < step ? ".45" : i === step ? "1" : ".14";
     const sz = i === step ? "5" : "4";
     return `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:rgba(240,237,232,${op});transition:all .3s;"></div>`;
   }).join("");
+  // update top-bar label to show progress
+  const lbl = document.querySelector("#screen-quiz .top-bar-label");
+  if (lbl) lbl.textContent = `step ${Math.min(step + 1, STEPS.length)} of ${STEPS.length}`;
 }
+
+// ── Sensi avatar SVG (mini, reused in bubbles) ───────────
+const _AVATAR_SVG = `<svg class="sensi-avatar" width="28" height="28" viewBox="0 0 32 32" fill="none">
+  <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+  <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+  <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+  <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+  <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+  <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+  <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+</svg>`;
 
 // ── Quiz thread helpers ───────────────────────────────────
 function addBubble(role, html, isHTML) {
   const inner = document.getElementById("quiz-thread-inner");
-  const div   = document.createElement("div");
-  div.className = role === "s" ? "bubble-s" : "bubble-u";
-  if (isHTML) div.innerHTML = html; else div.textContent = html;
-  inner.appendChild(div);
-  // Scroll to bottom
+  if (role === "s") {
+    // Demote any existing animated avatars in this thread to static dots
+    inner.querySelectorAll(".sensi-avatar").forEach(av => {
+      const dot = document.createElement("div");
+      dot.className = "sensi-avatar-static";
+      av.parentNode.replaceChild(dot, av);
+    });
+    const wrap = document.createElement("div");
+    wrap.className = "bubble-wrap";
+    wrap.innerHTML = _AVATAR_SVG;
+    const div = document.createElement("div");
+    div.className = "bubble-s";
+    if (isHTML) div.innerHTML = html; else div.textContent = html;
+    wrap.appendChild(div);
+    inner.appendChild(wrap);
+  } else {
+    const div = document.createElement("div");
+    div.className = "bubble-u";
+    if (isHTML) div.innerHTML = html; else div.textContent = html;
+    inner.appendChild(div);
+  }
   const thread = document.getElementById("quiz-thread");
   setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
 }
@@ -865,25 +1134,164 @@ function finaliseMoodboard() {
 }
 
 // ── Persona reveal ────────────────────────────────────────
-function renderPersonaBars(weights, pvb) {
-  const c = document.getElementById("persona-bars");
-  c.innerHTML = "";
-  SENSES.forEach(s => {
-    const color = SC[s];
-    const w     = (weights && weights[s] != null) ? weights[s] : 0;
-    const b     = (pvb     && pvb[s]     != null) ? pvb[s]     : 0;
-    const wPct  = Math.min(100, Math.max(0, w * 10));
-    const bPct  = Math.min(100, Math.max(0, (b + 5) * 10));
-    c.innerHTML += `
-      <div class="pbar-row">
-        <span class="pbar-lbl" style="color:${color};">${SI[s]} ${s}</span>
-        <div class="pbar-track">
-          <div class="pbar-fill" style="width:${wPct}%;background:${color};opacity:.60;"></div>
-          <div class="pbar-tick" style="left:${bPct}%;"></div>
-        </div>
-        <span class="pbar-val">${w.toFixed ? w.toFixed(1) : w}</span>
+// Research baselines (mirrors _COMFORT_BASELINES in persona_compiler.py)
+const BASELINES = {
+  thermal: 0.70, visual: 0.60, acoustic: 0.65,
+  spatial: 0.50, olfactory: 0.40, tactile: 0.35,
+};
+
+// Role-aware implications for the top 3 priority cards
+const IMPLICATIONS = {
+  thermal:   { architect: "Thermal performance will be a primary metric in every room scored.", client: "A cold or overheated room will register before anything else.", student: "Thermal comfort directly affects focus — spaces will be evaluated against this." },
+  visual:    { architect: "Daylighting quality will drive comfort scores across all rooms.", client: "Light quality shapes how every space feels to you.", student: "Visual comfort — light, contrast, glare — will be a strong factor in your analysis." },
+  acoustic:  { architect: "Acoustic performance and noise transmission will be closely tracked.", client: "Background noise and sound bleed will flag consistently in your results.", student: "Acoustic comfort affects concentration — this sense will score sensitively for you." },
+  spatial:   { architect: "Room proportions and adjacency quality will drive spatial scores.", client: "Cramped or poorly proportioned spaces will score low consistently.", student: "How spaces flow and feel proportionally will be a key dimension of analysis." },
+  olfactory: { architect: "Ventilation and air quality metrics will be flagged at your weight level.", client: "Air freshness and ventilation adequacy matter to you — Sensi will track this.", student: "Air quality and odor transmission will be scored against your preferences." },
+  tactile:   { architect: "Material texture and finish quality will contribute to comfort assessments.", client: "The physical feel of surfaces and materials registers in your comfort model.", student: "Material tactility and finish quality will feature in your layout analysis." },
+};
+
+// Store persona for the side panel
+S.persona = null;
+
+function renderPersonaProfile(profile, moodboardUrls) {
+  const weights    = profile.comfort_weights        || {};
+  const pvb        = profile.preference_vs_baseline || {};
+  const role       = (profile.role || 'client').toLowerCase();
+  const priorities = profile.sensory_priorities     || SENSES;
+
+  // S1: Identity
+  const idEl = document.getElementById("persona-identity");
+  if (idEl) {
+    const roleTxt = profile.role  ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : '';
+    const lifeTxt = profile.lifestyle ? ' · ' + profile.lifestyle : '';
+    idEl.innerHTML = `
+      <div class="persona-name">${profile.name || 'Your'}</div>
+      <div class="persona-role">${roleTxt}${lifeTxt}</div>
+      ${profile.description ? `<p class="persona-desc">${profile.description}</p>` : ''}`;
+  }
+
+  // S2: Top 3 priorities
+  const top3El = document.getElementById("persona-top3");
+  if (top3El) {
+    top3El.innerHTML = priorities.slice(0, 3).map(s => {
+      const impl = (IMPLICATIONS[s] && IMPLICATIONS[s][role]) || '';
+      return `<div class="top3-card" style="border-color:${SC[s]}33;">
+        <div class="top3-icon" style="color:${SC[s]};">${SI[s]}</div>
+        <div class="top3-sense" style="color:${SC[s]};">${s}</div>
+        <div class="top3-note">${impl}</div>
       </div>`;
-  });
+    }).join("");
+  }
+
+  // S3: Sense spectrum bars
+  const barsEl = document.getElementById("persona-bars");
+  if (barsEl) {
+    barsEl.innerHTML = "";
+    SENSES.forEach(s => {
+      const color = SC[s];
+      const w     = (weights[s] != null) ? weights[s] : 0;
+      const wPct  = Math.min(100, Math.max(0, w * 100));
+      const bPct  = Math.min(100, Math.max(0, (BASELINES[s] || 0.5) * 100));
+      barsEl.innerHTML += `
+        <div class="pbar-row">
+          <span class="pbar-lbl" style="color:${color};">${SI[s]} ${s}</span>
+          <div class="pbar-track">
+            <div class="pbar-fill" style="width:${wPct}%;background:${color};opacity:.60;"></div>
+            <div class="pbar-tick" style="left:${bPct}%;"></div>
+          </div>
+          <span class="pbar-val">${w.toFixed ? w.toFixed(1) : w}</span>
+        </div>`;
+    });
+  }
+
+  // S4: Stated preference · evidence baseline gaps
+  const gapsWrap = document.getElementById("persona-gaps-wrap");
+  const gapsEl   = document.getElementById("persona-gaps");
+  const gapSenses = Object.keys(pvb).filter(s => pvb[s] && typeof pvb[s] === 'string');
+  if (gapsWrap && gapsEl && gapSenses.length > 0) {
+    gapsEl.innerHTML = gapSenses.map(s => `
+      <div class="gap-item" style="border-color:${SC[s] || 'rgba(240,237,232,.2)'};">
+        <div class="gap-item-sense" style="color:${SC[s] || 'rgba(240,237,232,.4)'};">${SI[s] || ''} ${s}</div>
+        <div class="gap-item-note">${pvb[s]}</div>
+      </div>`).join("");
+    gapsWrap.style.display = "";
+  }
+
+  // S5: Aesthetic signature
+  const moodEl = document.getElementById("persona-moodboard");
+  const aeNote = document.getElementById("persona-aesthetic-note");
+  if (moodEl) {
+    moodEl.innerHTML = "";
+    (moodboardUrls || []).slice(0, 6).forEach(url => {
+      const img = document.createElement("img");
+      img.src = url; img.loading = "lazy";
+      moodEl.appendChild(img);
+    });
+  }
+  if (aeNote && profile.aesthetic_preferences) {
+    aeNote.textContent = profile.aesthetic_preferences;
+  }
+}
+
+function toggleFormula() {
+  const el     = document.getElementById("persona-formula");
+  const toggle = document.getElementById("formula-toggle");
+  if (!el) return;
+  const open = el.style.display !== "none";
+  el.style.display     = open ? "none" : "block";
+  toggle.textContent   = open ? "how sensi built this +" : "how sensi built this −";
+}
+
+// ── Profile side panel ────────────────────────────────────
+function openProfilePanel() {
+  document.getElementById("profile-panel").classList.add("open");
+  _renderPanelContent();
+}
+function closeProfilePanel() {
+  document.getElementById("profile-panel").classList.remove("open");
+}
+function showFullProfileFromPanel() {
+  closeProfilePanel();
+  showScreen("persona");
+}
+
+function _renderPanelContent() {
+  const profile   = S.persona || {};
+  const weights   = profile.comfort_weights    || {};
+  const priorities = profile.sensory_priorities || SENSES;
+  const role      = (profile.role || 'client').toLowerCase();
+
+  const top3El = document.getElementById("panel-top3");
+  if (top3El) {
+    top3El.innerHTML = `<div class="persona-section-label" style="margin-top:0;">top priorities</div>` +
+      priorities.slice(0, 3).map(s => `
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
+          <span style="color:${SC[s]};font-size:13px;flex-shrink:0;margin-top:1px;">${SI[s]}</span>
+          <div>
+            <div style="font-family:'DM Mono',monospace;font-size:7px;letter-spacing:.16em;text-transform:uppercase;color:${SC[s]};margin-bottom:3px;">${s}</div>
+            <div style="font-family:'Roboto',sans-serif;font-weight:300;font-size:10px;line-height:1.5;color:rgba(240,237,232,.42);">${(IMPLICATIONS[s] && IMPLICATIONS[s][role]) || ''}</div>
+          </div>
+        </div>`).join("");
+  }
+
+  const barsEl = document.getElementById("panel-bars");
+  if (barsEl) {
+    barsEl.innerHTML = `<div class="persona-section-label">sense spectrum</div>`;
+    SENSES.forEach(s => {
+      const w    = (weights[s] != null) ? weights[s] : 0;
+      const wPct = Math.min(100, Math.max(0, w * 100));
+      const bPct = Math.min(100, Math.max(0, (BASELINES[s] || 0.5) * 100));
+      barsEl.innerHTML += `
+        <div class="pbar-row" style="margin-bottom:8px;">
+          <span class="pbar-lbl" style="color:${SC[s]};">${SI[s]} ${s}</span>
+          <div class="pbar-track">
+            <div class="pbar-fill" style="width:${wPct}%;background:${SC[s]};opacity:.60;"></div>
+            <div class="pbar-tick" style="left:${bPct}%;"></div>
+          </div>
+          <span class="pbar-val">${w.toFixed ? w.toFixed(1) : w}</span>
+        </div>`;
+    });
+  }
 }
 
 function confirmPersona() { showScreen("chat"); }
@@ -895,10 +1303,27 @@ function tweakPersona()   {
 // ── Chat ──────────────────────────────────────────────────
 function addChatBubble(role, text) {
   const inner = document.getElementById("chat-thread-inner");
-  const div   = document.createElement("div");
-  div.className = role === "s" ? "bubble-s" : "bubble-u";
-  div.textContent = text;
-  inner.appendChild(div);
+  if (role === "s") {
+    // Demote any existing animated avatars in this thread to static dots
+    inner.querySelectorAll(".sensi-avatar").forEach(av => {
+      const dot = document.createElement("div");
+      dot.className = "sensi-avatar-static";
+      av.parentNode.replaceChild(dot, av);
+    });
+    const wrap = document.createElement("div");
+    wrap.className = "bubble-wrap";
+    wrap.innerHTML = _AVATAR_SVG;
+    const div = document.createElement("div");
+    div.className = "bubble-s";
+    div.textContent = text;
+    wrap.appendChild(div);
+    inner.appendChild(wrap);
+  } else {
+    const div = document.createElement("div");
+    div.className = "bubble-u";
+    div.textContent = text;
+    inner.appendChild(div);
+  }
   const thread = document.getElementById("chat-thread");
   setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
 }
@@ -936,6 +1361,12 @@ document.addEventListener("keydown", e => {
 window.receiveInit = function(data) {
   hideOverlay();
   if (data.screen === "chat") {
+    // Returning user — persona already loaded
+    if (data.persona) {
+      S.persona = data.persona;
+      const btn = document.getElementById("btn-profile-chat");
+      if (btn) btn.style.display = "flex";
+    }
     showScreen("chat");
     addChatBubble("s", data.message);
   } else {
@@ -974,24 +1405,24 @@ window.receiveImages = function(data) {
 
 window.receivePersona = function(data) {
   hideOverlay();
-  const profile = data.persona  || {};
-  const weights = profile.comfort_weights        || {};
-  const pvb     = profile.preference_vs_baseline || {};
-  document.getElementById("persona-message").textContent =
-    data.message || "here's what I know about you.";
-  renderPersonaBars(weights, pvb);
-  // Moodboard strip
-  const strip = document.getElementById("persona-moodboard");
-  strip.innerHTML = "";
-  (data.moodboard_urls || []).slice(0, 6).forEach(url => {
-    const img = document.createElement("img"); img.src = url; img.loading = "lazy";
-    strip.appendChild(img);
-  });
+  const profile = data.persona || {};
+  // Store for side panel
+  S.persona = profile;
+  // Sensi intro message
+  const msgEl = document.getElementById("persona-message");
+  if (msgEl) msgEl.textContent = data.message || "here's what I know about you.";
+  // Render full 6-section profile
+  renderPersonaProfile(profile, data.moodboard_urls || []);
+  // Show profile button in chat top bar for future layout sessions
+  const btn = document.getElementById("btn-profile-chat");
+  if (btn) btn.style.display = "flex";
   showScreen("persona");
 };
 
 window.receiveProgress = function(msg) {
   document.getElementById("overlay-msg").textContent = msg;
+  const pct = _PROGRESS_PCT[msg];
+  if (pct != null) _setBarPct(pct);
 };
 
 window.receiveFiles = function(b64s) {

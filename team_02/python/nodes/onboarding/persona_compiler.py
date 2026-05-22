@@ -175,8 +175,6 @@ def build_persona_compiler_node(llm, persona_output_path: str):
                 delta  = user_w - baseline
                 if abs(delta) > 0.25:
                     direction = "above" if delta > 0 else "below"
-                if abs(delta) > 0.25:
-                    direction = "above" if delta > 0 else "below"
                     note = (
                         "User rates this highly -- aligns well with research."
                         if delta > 0 else
