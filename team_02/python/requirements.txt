@@ -9,9 +9,9 @@ langchain-anthropic
 httpx
 python-dotenv
 
-# ── GUI ───────────────────────────────────────────────────────────────────────
-streamlit>=1.29          # st.container(height=...) requires 1.29+
-plotly
+# ── GUI (PyQt5 desktop app — more stable on Windows than PyQt6) ──────────────
+PyQt5
+PyQtWebEngine
 
 # ── Embeddings / ML (optional — comment out if not needed) ───────────────────
 grandalf

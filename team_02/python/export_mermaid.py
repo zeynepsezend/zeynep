@@ -116,7 +116,7 @@ flowchart TB
             QUIZ["QUIZ  [LLM]\nQ0 Who are you?\nQ1 Comfortable space memory\nQ2 What bothers you in a space?\nQ3 How do you use your home?\nQ4 Specific needs or sensitivities?\nQ5 One non-negotiable quality?"]:::onboard
         end
 
-        subgraph INSPIRE_BOX["INSPIRE  —  aesthetic profiler  (2 graph turns · 7 GUI stages)"]
+        subgraph INSPIRE_BOX["INSPIRE  —  aesthetic profiler  (2 graph turns · PyQt5 GUI pipeline)"]
             direction TB
             INSPIRE["INSPIRE  [LLM]\nTurn A — GUI moodboard pipeline:\n  ① Atmosphere question  +  reference image upload\n  ② VLM analysis of uploaded images\n  ③ LLM generates Unsplash search queries\n  ④ Round 1: browse candidates → pick favourites\n  ⑤ Round 2: refined candidates → pick favourites\n  ⑥ Round 3: final candidates → pick favourites\n  ⑦ Moodboard approval\nTurn B — LLM synthesis:\n  merges VLM image analysis + written description\n  → inspire_summary  (feeds persona_compiler)"]:::onboard
         end

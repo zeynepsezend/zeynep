@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>sensi</title>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&family=DM+Mono:wght@300&display=swap" rel="stylesheet">
+
+<style>
+/* ── tokens ── */
+:root {
+  --bg:        #0D0D0D;
+  --fg:        #F0EDE8;
+  --thermal:   #E8836A;
+  --visual:    #D4B96A;
+  --acoustic:  #9B8FD4;
+  --spatial:   #6AB8C8;
+  --olfactory: #8BB88A;
+  --tactile:   #C4A882;
+}
+
+/* ── reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { width: 100%; height: 100%; }
+body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'DM Sans', sans-serif;
+  overflow: hidden;
+  animation: breathe 4s ease-in-out infinite;
+}
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(240,237,232,.07); }
+
+/* ── keyframes ── */
+@keyframes breathe { 0%,100%{background:#0D0D0D} 50%{background:#101010} }
+@keyframes fadeUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+@keyframes sensiBar {
+  0%,100% { transform:scaleX(.2); opacity:.30; }
+  50%      { transform:scaleX(1);  opacity:.60; }
+}
+@keyframes srg0 { 0%,100%{opacity:.14} 50%{opacity:.55} }
+@keyframes srg1 { 0%,100%{opacity:.14} 50%{opacity:.55} }
+@keyframes srg2 { 0%,100%{opacity:.14} 50%{opacity:.55} }
+@keyframes srg3 { 0%,100%{opacity:.14} 50%{opacity:.55} }
+@keyframes srg4 { 0%,100%{opacity:.14} 50%{opacity:.55} }
+@keyframes srg5 { 0%,100%{opacity:.14} 50%{opacity:.55} }
+
+/* ── screen system ── */
+.screen {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s ease;
+}
+.screen.active { opacity: 1; pointer-events: auto; }
+
+/* ── loading overlay — FULLSCREEN ── */
+#overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 9999;
+  background: rgba(13,13,13,.95);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0;
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s ease;
+}
+#overlay.visible { opacity: 1; pointer-events: auto; }
+.overlay-bar {
+  width: 100px; height: 2px; border-radius: 99px;
+  background: linear-gradient(90deg,
+    var(--thermal), var(--visual), var(--acoustic),
+    var(--spatial), var(--olfactory), var(--tactile));
+  animation: sensiBar 1.8s ease-in-out infinite;
+  transform-origin: left;
+  margin: 20px 0;
+  opacity: .55;
+}
+.overlay-msg {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 300; font-size: 14px;
+  color: rgba(240,237,232,.40);
+  text-align: center; max-width: 280px; line-height: 1.6;
+}
+
+/* ── shared top bar ── */
+.top-bar {
+  flex-shrink: 0;
+  width: 100%;
+  padding: 16px 24px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid rgba(240,237,232,.04);
+}
+.top-bar-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px; letter-spacing: .38em;
+  text-transform: uppercase;
+  color: rgba(240,237,232,.14);
+}
+
+/* ── CONVERSATION THREAD (quiz + chat share this) ── */
+.thread {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 0 8px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.thread-inner {
+  width: 100%; max-width: 560px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+/* sensi bubble */
+.bubble-s {
+  align-self: flex-start;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 300;
+  font-size: clamp(15px, 2.2vw, 18px);
+  line-height: 1.6;
+  color: rgba(240,237,232,.82);
+  max-width: 88%;
+  animation: fadeUp .35s ease-out both;
+}
+/* user bubble */
+.bubble-u {
+  align-self: flex-end;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: .12em;
+  color: rgba(240,237,232,.28);
+  background: rgba(240,237,232,.03);
+  border: 1px solid rgba(240,237,232,.08);
+  padding: 7px 14px;
+  border-radius: 99px;
+  max-width: 72%;
+  text-align: right;
+  animation: fadeIn .2s ease-out both;
+}
+
+/* ── ACTIVE INPUT AREA ── */
+.input-area {
+  flex-shrink: 0;
+  width: 100%; max-width: 560px;
+  margin: 0 auto;
+  padding: 10px 24px 24px;
+  border-top: 1px solid rgba(240,237,232,.04);
+}
+
+/* text + textarea inputs */
+.sensi-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(240,237,232,.16);
+  color: var(--fg);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  padding: 8px 0;
+  outline: none;
+  caret-color: var(--fg);
+  transition: border-color .2s;
+}
+.sensi-input::placeholder { color: rgba(240,237,232,.20); }
+.sensi-input:focus { border-bottom-color: rgba(240,237,232,.55); }
+textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top: 6px; }
+
+/* inline send row */
+.send-row {
+  display: flex; align-items: flex-end; gap: 8px; width: 100%;
+}
+.send-row .sensi-input { flex: 1; }
+.btn-send {
+  background: transparent;
+  border: 1px solid rgba(240,237,232,.15);
+  color: rgba(240,237,232,.40);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: .2em;
+  padding: 7px 14px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all .2s;
+  white-space: nowrap;
+  margin-bottom: 1px;
+}
+.btn-send:hover { border-color: rgba(240,237,232,.55); color: var(--fg); }
+
+/* action button (continue, build, etc.) */
+.btn-action {
+  background: transparent;
+  border: 1px solid rgba(240,237,232,.15);
+  color: rgba(240,237,232,.40);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: .22em; text-transform: uppercase;
+  padding: 9px 24px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all .2s;
+  margin-top: 14px;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+.btn-action:hover { border-color: rgba(240,237,232,.55); color: var(--fg); }
+.btn-action:disabled { opacity: .2; cursor: not-allowed; }
+
+/* ghost secondary button */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(240,237,232,.07);
+  color: rgba(240,237,232,.22);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: .2em; text-transform: uppercase;
+  padding: 8px 20px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all .2s;
+}
+.btn-ghost:hover { border-color: rgba(240,237,232,.35); color: rgba(240,237,232,.60); }
+
+/* ── PILLS ── */
+.pill-group {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  width: 100%; margin-top: 10px;
+}
+.pill {
+  flex: 1; min-width: 70px;
+  border: 1px solid rgba(240,237,232,.10);
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 99px;
+  transition: all .16s ease;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: .16em; text-transform: uppercase;
+  color: rgba(240,237,232,.32);
+  user-select: none;
+}
+.pill:hover { border-color: rgba(240,237,232,.32); color: rgba(240,237,232,.70); background: rgba(240,237,232,.02); }
+.pill.selected { border-color: rgba(240,237,232,.55); color: var(--fg); background: rgba(240,237,232,.04); }
+
+/* ── SENSE PILLS ── */
+.sense-grid { display: flex; gap: 5px; width: 100%; margin-top: 10px; }
+.sense-pill {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 11px 4px;
+  border: 1px solid rgba(240,237,232,.07);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all .16s ease;
+  user-select: none;
+}
+.sense-pill .si { font-size: 13px; color: rgba(240,237,232,.28); transition: color .16s; line-height: 1; }
+.sense-pill .sn { font-family:'DM Mono',monospace; font-size:6px; letter-spacing:.12em; text-transform:uppercase; color:rgba(240,237,232,.22); transition:color .16s; }
+
+.sense-pill[data-sense="thermal"]:hover   { border-color:var(--thermal);   background:rgba(232,131,106,.06); }
+.sense-pill[data-sense="visual"]:hover    { border-color:var(--visual);    background:rgba(212,185,106,.06); }
+.sense-pill[data-sense="acoustic"]:hover  { border-color:var(--acoustic);  background:rgba(155,143,212,.06); }
+.sense-pill[data-sense="spatial"]:hover   { border-color:var(--spatial);   background:rgba(106,184,200,.06); }
+.sense-pill[data-sense="olfactory"]:hover { border-color:var(--olfactory); background:rgba(139,184,138,.06); }
+.sense-pill[data-sense="tactile"]:hover   { border-color:var(--tactile);   background:rgba(196,168,130,.06); }
+
+.sense-pill[data-sense="thermal"]:hover   .si, .sense-pill[data-sense="thermal"]:hover   .sn { color:var(--thermal);   }
+.sense-pill[data-sense="visual"]:hover    .si, .sense-pill[data-sense="visual"]:hover    .sn { color:var(--visual);    }
+.sense-pill[data-sense="acoustic"]:hover  .si, .sense-pill[data-sense="acoustic"]:hover  .sn { color:var(--acoustic);  }
+.sense-pill[data-sense="spatial"]:hover   .si, .sense-pill[data-sense="spatial"]:hover   .sn { color:var(--spatial);   }
+.sense-pill[data-sense="olfactory"]:hover .si, .sense-pill[data-sense="olfactory"]:hover .sn { color:var(--olfactory); }
+.sense-pill[data-sense="tactile"]:hover   .si, .sense-pill[data-sense="tactile"]:hover   .sn { color:var(--tactile);   }
+
+.sense-pill[data-sense="thermal"].selected   { border-color:var(--thermal);   background:rgba(232,131,106,.10); }
+.sense-pill[data-sense="visual"].selected    { border-color:var(--visual);    background:rgba(212,185,106,.10); }
+.sense-pill[data-sense="acoustic"].selected  { border-color:var(--acoustic);  background:rgba(155,143,212,.10); }
+.sense-pill[data-sense="spatial"].selected   { border-color:var(--spatial);   background:rgba(106,184,200,.10); }
+.sense-pill[data-sense="olfactory"].selected { border-color:var(--olfactory); background:rgba(139,184,138,.10); }
+.sense-pill[data-sense="tactile"].selected   { border-color:var(--tactile);   background:rgba(196,168,130,.10); }
+
+.sense-pill[data-sense="thermal"].selected   .si, .sense-pill[data-sense="thermal"].selected   .sn { color:var(--thermal);   }
+.sense-pill[data-sense="visual"].selected    .si, .sense-pill[data-sense="visual"].selected    .sn { color:var(--visual);    }
+.sense-pill[data-sense="acoustic"].selected  .si, .sense-pill[data-sense="acoustic"].selected  .sn { color:var(--acoustic);  }
+.sense-pill[data-sense="spatial"].selected   .si, .sense-pill[data-sense="spatial"].selected   .sn { color:var(--spatial);   }
+.sense-pill[data-sense="olfactory"].selected .si, .sense-pill[data-sense="olfactory"].selected .sn { color:var(--olfactory); }
+.sense-pill[data-sense="tactile"].selected   .si, .sense-pill[data-sense="tactile"].selected   .sn { color:var(--tactile);   }
+
+/* ── INSPIRE IMAGE GRID ── */
+.img-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px; width: 100%; margin-top: 6px;
+}
+.img-cell {
+  position: relative; overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid rgba(240,237,232,.05);
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+.img-cell img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  display: block; opacity: .38;
+  transition: opacity .2s ease;
+}
+.img-cell:hover img     { opacity: .68; }
+.img-cell.selected img  { opacity: 1; }
+.img-cell.selected      { border-color: rgba(240,237,232,.50); box-shadow: 0 0 0 1px rgba(240,237,232,.16); }
+
+/* ── PERSONA BARS ── */
+.pbar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.pbar-lbl { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.16em; text-transform:uppercase; width:62px; flex-shrink:0; }
+.pbar-track { flex:1; height:3px; background:rgba(240,237,232,.07); border-radius:99px; position:relative; }
+.pbar-fill  { height:100%; border-radius:99px; transition:width .6s ease; }
+.pbar-tick  { position:absolute; top:-3px; width:1px; height:9px; background:rgba(240,237,232,.32); }
+.pbar-val   { font-family:'DM Mono',monospace; font-size:8px; color:rgba(240,237,232,.30); width:26px; text-align:right; }
+
+/* ── MOODBOARD STRIP ── */
+.moodboard-strip { display:flex; gap:5px; width:100%; margin-top:14px; }
+.moodboard-strip img { flex:1; height:58px; object-fit:cover; border-radius:4px; opacity:.70; }
+
+/* ── FILE UPLOAD AREA ── */
+.upload-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px;
+}
+.btn-upload {
+  background: transparent;
+  border: 1px dashed rgba(240,237,232,.12);
+  color: rgba(240,237,232,.25);
+  font-family: 'DM Mono', monospace;
+  font-size: 8px; letter-spacing: .18em; text-transform: uppercase;
+  padding: 7px 14px;
+  cursor: pointer; border-radius: 0;
+  transition: all .2s;
+}
+.btn-upload:hover { border-color: rgba(240,237,232,.35); color: rgba(240,237,232,.55); }
+.upload-names {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px; letter-spacing: .10em;
+  color: rgba(240,237,232,.22);
+  flex: 1; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+
+/* ── two-button row ── */
+.btn-row { display: flex; gap: 8px; margin-top: 16px; width: 100%; }
+.btn-row .btn-action { flex: 1; margin-top: 0; }
+
+/* label */
+.label {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px; letter-spacing: .24em; text-transform: uppercase;
+  color: rgba(240,237,232,.18);
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     LOADING OVERLAY
+══════════════════════════════════════════════════════════ -->
+<div id="overlay">
+  <svg width="52" height="52" viewBox="0 0 32 32" fill="none">
+    <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".9" style="animation:srg0 3s ease-in-out infinite;animation-delay:0s"/>
+    <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".9" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+    <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".9" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+    <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".9" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+    <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".9" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+    <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".9" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+    <circle cx="16" cy="16" r="1.4" fill="#F0EDE8" opacity=".85"/>
+  </svg>
+  <div class="overlay-bar"></div>
+  <p id="overlay-msg" class="overlay-msg">starting sensi...</p>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: QUIZ  (conversational)
+══════════════════════════════════════════════════════════ -->
+<div id="screen-quiz" class="screen">
+
+  <!-- top bar -->
+  <div class="top-bar">
+    <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+      <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+      <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+      <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+      <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+      <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+      <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+    </svg>
+    <span class="top-bar-label">sensi</span>
+    <!-- subtle step dots -->
+    <div id="quiz-dots" style="margin-left:auto;display:flex;gap:5px;align-items:center;"></div>
+  </div>
+
+  <!-- conversation thread -->
+  <div class="thread" id="quiz-thread">
+    <div class="thread-inner" id="quiz-thread-inner"></div>
+  </div>
+
+  <!-- active input (changes per step) -->
+  <div class="input-area" id="quiz-input-area"></div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: INSPIRE
+══════════════════════════════════════════════════════════ -->
+<div id="screen-inspire" class="screen">
+
+  <!-- top bar -->
+  <div class="top-bar">
+    <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+      <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+      <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+      <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+      <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+      <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+      <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+    </svg>
+    <span id="inspire-top-label" class="top-bar-label">aesthetic · profile</span>
+  </div>
+
+  <!-- question stage -->
+  <div id="ins-question" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div class="thread" style="flex:1;">
+      <div class="thread-inner" style="padding-top:24px;">
+        <p id="ins-q-text" class="bubble-s"></p>
+      </div>
+    </div>
+    <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
+      <textarea id="ins-text" class="sensi-input" placeholder="describe your ideal sensory world…" style="height:90px;"></textarea>
+      <div class="upload-row">
+        <button class="btn-upload" onclick="window.bridge.openFilePicker()">+ add reference images</button>
+        <span id="upload-names" class="upload-names">optional · up to 5</span>
+      </div>
+      <button class="btn-action" onclick="submitInspireQuestion()">build my moodboard →</button>
+    </div>
+  </div>
+
+  <!-- grid stage -->
+  <div id="ins-grid" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+    <div class="thread" style="flex:1;">
+      <div class="thread-inner" style="padding-top:16px;">
+        <p class="bubble-s">which of these feel like you?</p>
+        <p class="label" style="margin-top:4px;">click to select · pick what resonates</p>
+        <div class="img-grid" id="inspire-img-grid"></div>
+        <p id="inspire-sel-count" class="label" style="margin-top:8px;"></p>
+      </div>
+    </div>
+    <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
+      <button id="ins-next-btn" class="btn-action" onclick="advanceInspireRound()" disabled>continue →</button>
+    </div>
+  </div>
+
+  <!-- moodboard stage -->
+  <div id="ins-moodboard" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+    <div class="thread" style="flex:1;">
+      <div class="thread-inner" style="padding-top:16px;">
+        <p class="bubble-s">here's your moodboard.</p>
+        <div class="img-grid" id="moodboard-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px;"></div>
+      </div>
+    </div>
+    <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
+      <div class="btn-row">
+        <button class="btn-action btn-ghost" onclick="keepPicking()">keep picking</button>
+        <button class="btn-action" onclick="finaliseMoodboard()">this is it →</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: PERSONA REVEAL
+══════════════════════════════════════════════════════════ -->
+<div id="screen-persona" class="screen">
+
+  <div class="top-bar">
+    <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+      <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+      <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+      <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+      <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+      <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+      <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+    </svg>
+    <span class="top-bar-label">your comfort profile</span>
+  </div>
+
+  <div class="thread" style="flex:1;">
+    <div class="thread-inner" style="padding-top:20px;">
+      <p id="persona-message" class="bubble-s" style="margin-bottom:20px;"></p>
+      <div id="persona-bars" style="width:100%;"></div>
+      <div id="persona-moodboard" class="moodboard-strip"></div>
+    </div>
+  </div>
+
+  <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
+    <div class="btn-row">
+      <button class="btn-action btn-ghost" onclick="tweakPersona()">tweak it</button>
+      <button class="btn-action" onclick="confirmPersona()">this is me →</button>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: CHAT
+══════════════════════════════════════════════════════════ -->
+<div id="screen-chat" class="screen">
+
+  <div class="top-bar">
+    <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+      <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+      <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+      <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+      <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+      <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+      <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+    </svg>
+    <span class="top-bar-label">sensi</span>
+    <span id="chat-layout-tag" style="margin-left:auto;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.15em;color:rgba(240,237,232,.16);"></span>
+  </div>
+
+  <div class="thread" id="chat-thread">
+    <div class="thread-inner" id="chat-thread-inner"></div>
+  </div>
+
+  <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
+    <div class="send-row">
+      <textarea id="chat-input" class="sensi-input" style="height:36px;max-height:100px;overflow-y:auto;"
+                placeholder="ask sensi about your layout…"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+      <button class="btn-send" onclick="sendChat()">send →</button>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+// ── State ─────────────────────────────────────────────────
+const S = {
+  quizStep:     0,
+  inspireRound: 1,
+  inspireUrlsPerRound:     [[], [], []],
+  inspireSelectedPerRound: [{}, {}, {}],
+  uploadedB64s: [],
+};
+
+const SC = {
+  thermal:"#E8836A", visual:"#D4B96A", acoustic:"#9B8FD4",
+  spatial:"#6AB8C8", olfactory:"#8BB88A", tactile:"#C4A882",
+};
+const SI = { thermal:"△", visual:"○", acoustic:"∿", spatial:"□", olfactory:"≈", tactile:"∶" };
+const SENSES = ["thermal","visual","acoustic","spatial","olfactory","tactile"];
+const STEPS  = ["hello","role","space","senses","life","feel"];
+
+// ── Screen router ─────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const el = document.getElementById("screen-" + name);
+  if (el) el.classList.add("active");
+}
+
+// ── Overlay ───────────────────────────────────────────────
+function showOverlay(msg) {
+  document.getElementById("overlay-msg").textContent = msg || "thinking...";
+  document.getElementById("overlay").classList.add("visible");
+}
+function hideOverlay() {
+  document.getElementById("overlay").classList.remove("visible");
+}
+
+// ── Step dots (top bar) ───────────────────────────────────
+function renderDots(step) {
+  document.getElementById("quiz-dots").innerHTML = STEPS.map((_, i) => {
+    const op = i < step ? ".45" : i === step ? "1" : ".14";
+    const sz = i === step ? "5" : "4";
+    return `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:rgba(240,237,232,${op});transition:all .3s;"></div>`;
+  }).join("");
+}
+
+// ── Quiz thread helpers ───────────────────────────────────
+function addBubble(role, html, isHTML) {
+  const inner = document.getElementById("quiz-thread-inner");
+  const div   = document.createElement("div");
+  div.className = role === "s" ? "bubble-s" : "bubble-u";
+  if (isHTML) div.innerHTML = html; else div.textContent = html;
+  inner.appendChild(div);
+  // Scroll to bottom
+  const thread = document.getElementById("quiz-thread");
+  setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
+}
+
+// ── Render active input per step ──────────────────────────
+function renderInput(step) {
+  const area = document.getElementById("quiz-input-area");
+  area.innerHTML = "";
+  renderDots(step);
+  S.quizStep = step;
+
+  if (step === 0) {
+    area.innerHTML = `
+      <div class="send-row">
+        <input id="q-in" class="sensi-input" type="text" placeholder="your name" autocomplete="off" style="flex:1;">
+        <button class="btn-send" onclick="submitStep(0)">→</button>
+      </div>`;
+    const inp = area.querySelector("#q-in");
+    inp.focus();
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") submitStep(0); });
+
+  } else if (step === 1) {
+    area.innerHTML = `
+      <div class="pill-group" id="role-pills">
+        <div class="pill" data-role="architect" onclick="pillAutoSubmit(this,'role-pills',1)">◎ &nbsp;i design spaces</div>
+        <div class="pill" data-role="client"    onclick="pillAutoSubmit(this,'role-pills',1)">⌂ &nbsp;i live in them</div>
+        <div class="pill" data-role="student"   onclick="pillAutoSubmit(this,'role-pills',1)">◈ &nbsp;here to learn</div>
+      </div>`;
+
+  } else if (step === 2) {
+    area.innerHTML = `
+      <div class="send-row" style="align-items:flex-end;">
+        <textarea id="q-in" class="sensi-input" placeholder="could be anywhere — a room, a café, a corner of the world..." style="flex:1;height:72px;"></textarea>
+        <button class="btn-send" onclick="submitStep(2)">→</button>
+      </div>`;
+    const ta = area.querySelector("#q-in");
+    ta.focus();
+    ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitStep(2); } });
+
+  } else if (step === 3) {
+    area.innerHTML = `
+      <div class="sense-grid" id="sense-grid">
+        <div class="sense-pill" data-sense="thermal"   onclick="toggleSense(this)"><span class="si">△</span><span class="sn">thermal</span></div>
+        <div class="sense-pill" data-sense="visual"    onclick="toggleSense(this)"><span class="si">○</span><span class="sn">visual</span></div>
+        <div class="sense-pill" data-sense="acoustic"  onclick="toggleSense(this)"><span class="si">∿</span><span class="sn">acoustic</span></div>
+        <div class="sense-pill" data-sense="spatial"   onclick="toggleSense(this)"><span class="si">□</span><span class="sn">spatial</span></div>
+        <div class="sense-pill" data-sense="olfactory" onclick="toggleSense(this)"><span class="si">≈</span><span class="sn">olfactory</span></div>
+        <div class="sense-pill" data-sense="tactile"   onclick="toggleSense(this)"><span class="si">∶</span><span class="sn">tactile</span></div>
+      </div>
+      <button id="sense-done-btn" class="btn-action" onclick="submitStep(3)" style="opacity:.2;pointer-events:none;">done →</button>`;
+
+  } else if (step === 4) {
+    area.innerHTML = `
+      <p class="label" style="margin-bottom:10px;text-align:left;">life stage</p>
+      <div class="pill-group" id="stage-pills">
+        <div class="pill" data-val="20s-30s" onclick="selectPill(this,'stage-pills')">20s – 30s</div>
+        <div class="pill" data-val="30s-40s" onclick="selectPill(this,'stage-pills')">30s – 40s</div>
+        <div class="pill" data-val="40s+"    onclick="selectPill(this,'stage-pills')">40s +</div>
+      </div>
+      <p class="label" style="margin:16px 0 10px;text-align:left;">who do you share your home with?</p>
+      <div class="pill-group" id="living-pills">
+        <div class="pill" data-val="just me"   onclick="selectPill(this,'living-pills')">just me</div>
+        <div class="pill" data-val="partner"   onclick="selectPill(this,'living-pills')">partner</div>
+        <div class="pill" data-val="family"    onclick="selectPill(this,'living-pills')">family</div>
+        <div class="pill" data-val="flatmates" onclick="selectPill(this,'living-pills')">flatmates</div>
+        <div class="pill" data-val="other"     onclick="selectPill(this,'living-pills');toggleOther(this)">other...</div>
+      </div>
+      <input id="other-in" class="sensi-input" type="text" placeholder="tell us a bit more..." style="display:none;margin-top:8px;">
+      <button class="btn-action" onclick="submitStep(4)">continue →</button>`;
+
+  } else if (step === 5) {
+    area.innerHTML = `
+      <div class="send-row" style="align-items:flex-end;">
+        <textarea id="q-in" class="sensi-input" placeholder="e.g. natural light, silence, warmth..." style="flex:1;height:72px;"></textarea>
+        <button class="btn-send" onclick="submitStep(5)">→</button>
+      </div>`;
+    const ta = area.querySelector("#q-in");
+    ta.focus();
+    ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitStep(5); } });
+  }
+}
+
+// ── Pill helpers ──────────────────────────────────────────
+function selectPill(el, groupId) {
+  document.querySelectorAll(`#${groupId} .pill`).forEach(p => p.classList.remove("selected"));
+  el.classList.add("selected");
+}
+function toggleOther(el) {
+  const inp = document.getElementById("other-in");
+  if (inp) inp.style.display = el.classList.contains("selected") ? "block" : "none";
+}
+function pillAutoSubmit(el, groupId, step) {
+  selectPill(el, groupId);
+  setTimeout(() => submitStep(step), 220); // brief visual confirm before submitting
+}
+function toggleSense(el) {
+  el.classList.toggle("selected");
+  const anySelected = document.querySelectorAll(".sense-pill.selected").length > 0;
+  const btn = document.getElementById("sense-done-btn");
+  if (btn) {
+    btn.style.opacity   = anySelected ? "1"   : ".2";
+    btn.style.pointerEvents = anySelected ? "auto" : "none";
+  }
+}
+
+// ── Submit quiz step ──────────────────────────────────────
+function submitStep(step) {
+  let text = "";
+
+  if (step === 0) {
+    const inp = document.getElementById("q-in");
+    text = inp ? inp.value.trim() : "";
+    if (!text) return;
+
+  } else if (step === 1) {
+    const sel = document.querySelector("#role-pills .pill.selected");
+    if (!sel) return;
+    const map = { architect: "I design spaces -- architect", client: "I live in spaces -- client", student: "I am here to learn -- student" };
+    text = map[sel.dataset.role] || sel.dataset.role;
+
+  } else if (step === 2) {
+    const ta = document.getElementById("q-in");
+    text = ta ? ta.value.trim() : "";
+    if (!text) return;
+
+  } else if (step === 3) {
+    const sel = Array.from(document.querySelectorAll(".sense-pill.selected")).map(p => p.dataset.sense);
+    text = sel.length ? "The senses that pull me out of comfort: " + sel.join(", ") + "." : "No specific sensory bothers mentioned.";
+
+  } else if (step === 4) {
+    const stageSel  = document.querySelector("#stage-pills .pill.selected");
+    const livingSel = document.querySelector("#living-pills .pill.selected");
+    if (!stageSel || !livingSel) return;
+    const other = document.getElementById("other-in");
+    const living = (livingSel.dataset.val === "other" && other && other.value.trim())
+      ? other.value.trim() : livingSel.dataset.val;
+    text = `Life stage: ${stageSel.dataset.val}. Living situation: ${living}.`;
+
+  } else if (step === 5) {
+    const ta = document.getElementById("q-in");
+    text = ta ? ta.value.trim() : "";
+    if (!text) return;
+  }
+
+  // Add user bubble to thread
+  addBubble("u", text);
+  // Clear input area while waiting
+  document.getElementById("quiz-input-area").innerHTML = "";
+  showOverlay("thinking...");
+  window.bridge.sendMessage(text);
+}
+
+// ── Inspire ───────────────────────────────────────────────
+function showInspireStage(stage) {
+  ["question","grid","moodboard"].forEach(s => {
+    const el = document.getElementById("ins-" + s);
+    if (el) el.style.display = "none";
+  });
+  const el = document.getElementById("ins-" + stage);
+  if (el) el.style.display = "flex";
+}
+
+function submitInspireQuestion() {
+  const text = document.getElementById("ins-text").value.trim();
+  if (!text) return;
+  S.inspireRound = 1;
+  showOverlay("reading your aesthetic...");
+  window.bridge.prepareInspire(text, JSON.stringify(S.uploadedB64s), 1);
+}
+
+function renderInspireGrid(urls, round) {
+  const grid = document.getElementById("inspire-img-grid");
+  grid.innerHTML = "";
+  S.inspireUrlsPerRound[round - 1]     = urls;
+  S.inspireSelectedPerRound[round - 1] = {};
+
+  urls.forEach((url, i) => {
+    const cell = document.createElement("div");
+    cell.className = "img-cell";
+    cell.innerHTML = `<img src="${url}" loading="lazy">`;
+    cell.addEventListener("click", () => {
+      cell.classList.toggle("selected");
+      const sel = S.inspireSelectedPerRound[round - 1];
+      cell.classList.contains("selected") ? (sel[i] = true) : delete sel[i];
+      updateInspireCount(round);
+    });
+    grid.appendChild(cell);
+  });
+
+  document.getElementById("inspire-top-label").textContent = `aesthetic · round ${round} of 3`;
+  updateInspireCount(round);
+  showInspireStage("grid");
+}
+
+function updateInspireCount(round) {
+  const n = Object.keys(S.inspireSelectedPerRound[round - 1]).length;
+  document.getElementById("inspire-sel-count").textContent = n + " selected";
+  const btn = document.getElementById("ins-next-btn");
+  if (btn) btn.disabled = n === 0;
+}
+
+function advanceInspireRound() {
+  const round = S.inspireRound;
+  const sel   = S.inspireSelectedPerRound[round - 1];
+  const urls  = S.inspireUrlsPerRound[round - 1];
+  const picks = Object.keys(sel).map(i => urls[parseInt(i)]);
+
+  // Save picks for this round BEFORE advancing
+  window.bridge.saveInspirePicks(round, JSON.stringify(picks));
+
+  if (round < 3) {
+    S.inspireRound++;
+    showOverlay("finding more images...");
+    window.bridge.refineInspire("", S.inspireRound);
+  } else {
+    buildMoodboardDisplay();
+  }
+}
+
+function buildMoodboardDisplay() {
+  const allUrls = [];
+  const seen    = new Set();
+  for (let r = 0; r < 3; r++) {
+    const sel  = S.inspireSelectedPerRound[r];
+    const urls = S.inspireUrlsPerRound[r];
+    Object.keys(sel).forEach(i => {
+      const u = urls[parseInt(i)];
+      if (u && !seen.has(u)) { seen.add(u); allUrls.push(u); }
+    });
+  }
+  const grid = document.getElementById("moodboard-grid");
+  grid.innerHTML = "";
+  allUrls.slice(0, 6).forEach(url => {
+    const cell = document.createElement("div");
+    cell.className = "img-cell selected";
+    cell.innerHTML = `<img src="${url}" loading="lazy">`;
+    grid.appendChild(cell);
+  });
+  showInspireStage("moodboard");
+}
+
+function keepPicking() {
+  S.inspireRound = 3;
+  showOverlay("finding more images...");
+  window.bridge.refineInspire("", 3);
+}
+
+function finaliseMoodboard() {
+  showOverlay("building your comfort profile...");
+  window.bridge.buildMoodboard();
+}
+
+// ── Persona reveal ────────────────────────────────────────
+function renderPersonaBars(weights, pvb) {
+  const c = document.getElementById("persona-bars");
+  c.innerHTML = "";
+  SENSES.forEach(s => {
+    const color = SC[s];
+    const w     = (weights && weights[s] != null) ? weights[s] : 0;
+    const b     = (pvb     && pvb[s]     != null) ? pvb[s]     : 0;
+    const wPct  = Math.min(100, Math.max(0, w * 10));
+    const bPct  = Math.min(100, Math.max(0, (b + 5) * 10));
+    c.innerHTML += `
+      <div class="pbar-row">
+        <span class="pbar-lbl" style="color:${color};">${SI[s]} ${s}</span>
+        <div class="pbar-track">
+          <div class="pbar-fill" style="width:${wPct}%;background:${color};opacity:.60;"></div>
+          <div class="pbar-tick" style="left:${bPct}%;"></div>
+        </div>
+        <span class="pbar-val">${w.toFixed ? w.toFixed(1) : w}</span>
+      </div>`;
+  });
+}
+
+function confirmPersona() { showScreen("chat"); }
+function tweakPersona()   {
+  showScreen("chat");
+  setTimeout(() => addChatBubble("s", "What doesn't feel right? Tell me and I'll adjust your profile."), 300);
+}
+
+// ── Chat ──────────────────────────────────────────────────
+function addChatBubble(role, text) {
+  const inner = document.getElementById("chat-thread-inner");
+  const div   = document.createElement("div");
+  div.className = role === "s" ? "bubble-s" : "bubble-u";
+  div.textContent = text;
+  inner.appendChild(div);
+  const thread = document.getElementById("chat-thread");
+  setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
+}
+
+function sendChat() {
+  const ta  = document.getElementById("chat-input");
+  const txt = ta.value.trim();
+  if (!txt) return;
+  ta.value = "";
+  ta.style.height = "36px";
+  addChatBubble("u", txt);
+  showOverlay("thinking...");
+  window.bridge.sendMessage(txt);
+}
+
+// auto-resize chat textarea
+document.addEventListener("DOMContentLoaded", () => {
+  const ta = document.getElementById("chat-input");
+  if (ta) ta.addEventListener("input", () => {
+    ta.style.height = "36px";
+    ta.style.height = Math.min(ta.scrollHeight, 100) + "px";
+  });
+});
+
+// ── Prevent Ctrl+Scroll zoom ──────────────────────────────
+document.addEventListener("wheel", e => {
+  if (e.ctrlKey) e.preventDefault();
+}, { passive: false });
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey && (e.key === "+" || e.key === "-" || e.key === "0")) e.preventDefault();
+});
+
+// ── Bridge callbacks ──────────────────────────────────────
+
+window.receiveInit = function(data) {
+  hideOverlay();
+  if (data.screen === "chat") {
+    showScreen("chat");
+    addChatBubble("s", data.message);
+  } else {
+    showScreen("quiz");
+    addBubble("s", data.message);
+    renderInput(data.quiz_step || 0);
+  }
+};
+
+window.receiveResponse = function(data) {
+  hideOverlay();
+  if (data.screen === "quiz") {
+    showScreen("quiz");
+    addBubble("s", data.message);
+    renderInput(data.quiz_step || 0);
+  } else if (data.screen === "inspire") {
+    showScreen("inspire");
+    showInspireStage("question");
+    document.getElementById("ins-q-text").textContent = data.message;
+  } else if (data.screen === "chat") {
+    showScreen("chat");
+    addChatBubble("s", data.message);
+  }
+};
+
+window.receiveImages = function(data) {
+  hideOverlay();
+  showScreen("inspire");
+  if (!data.urls || data.urls.length === 0) {
+    // No Unsplash key — skip straight to moodboard
+    buildMoodboardDisplay();
+    return;
+  }
+  renderInspireGrid(data.urls, data.round);
+};
+
+window.receivePersona = function(data) {
+  hideOverlay();
+  const profile = data.persona  || {};
+  const weights = profile.comfort_weights        || {};
+  const pvb     = profile.preference_vs_baseline || {};
+  document.getElementById("persona-message").textContent =
+    data.message || "here's what I know about you.";
+  renderPersonaBars(weights, pvb);
+  // Moodboard strip
+  const strip = document.getElementById("persona-moodboard");
+  strip.innerHTML = "";
+  (data.moodboard_urls || []).slice(0, 6).forEach(url => {
+    const img = document.createElement("img"); img.src = url; img.loading = "lazy";
+    strip.appendChild(img);
+  });
+  showScreen("persona");
+};
+
+window.receiveProgress = function(msg) {
+  document.getElementById("overlay-msg").textContent = msg;
+};
+
+window.receiveFiles = function(b64s) {
+  S.uploadedB64s = b64s || [];
+  const n = S.uploadedB64s.length;
+  document.getElementById("upload-names").textContent =
+    n ? `${n} image${n > 1 ? "s" : ""} selected` : "optional · up to 5";
+};
+
+window.receiveError = function(msg) {
+  hideOverlay();
+  console.error("[sensi]", msg);
+  if (document.getElementById("screen-chat").classList.contains("active")) {
+    addChatBubble("s", "something went wrong — " + msg);
+  } else {
+    showOverlay("⚠ " + msg);
+    setTimeout(hideOverlay, 3500);
+  }
+};
+
+// ── Bridge init ───────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  showOverlay("starting sensi...");
+  new QWebChannel(qt.webChannelTransport, function(channel) {
+    window.bridge = channel.objects.bridge;
+    window.bridge.initApp();
+  });
+});
+</script>
+</body>
+</html>

@@ -175,8 +175,8 @@ class AgentState(TypedDict, total=False):
     inspire_prompted:        bool       # True after inspire asked its question
     inspire_summary:         str        # synthesised from user's aesthetic answer
     inspire_complete:        bool       # True after inspire captured the answer
-    inspire_image_analysis:  str        # VLM aesthetic analysis (set by Streamlit moodboard pipeline)
-    inspire_moodboard_urls:  list       # final image URLs approved in moodboard (Streamlit)
+    inspire_image_analysis:  str        # VLM aesthetic analysis (set by PyQt5 moodboard pipeline)
+    inspire_moodboard_urls:  list       # final image URLs approved in moodboard (PyQt5 GUI)
     onboarding_complete:     bool       # True after persona_compiler runs
 
     # ── User identity (set by quiz + persona_compiler, persisted across turns) ─
