@@ -2,7 +2,7 @@ import json
 import networkx as nx
 import matplotlib.pyplot as plt
 from pathlib import Path
-from schema_to_graph import create_graph_from_layout
+from team_06.python.utils.parser.schema_to_graph import create_graph_from_layout
 
 # Load the JSON file
 with open('team_06/layout_inputs/sample_layouts.json', 'r') as f:
