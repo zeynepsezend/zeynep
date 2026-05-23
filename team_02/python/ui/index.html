@@ -1615,6 +1615,7 @@ function _renderPanelContent() {
 }
 
 function confirmPersona() {
+  setLayoutTag(null);
   showScreen("chat");
 }
 
@@ -1756,6 +1757,13 @@ document.addEventListener("keydown", e => {
   if (e.ctrlKey && (e.key === "+" || e.key === "-" || e.key === "0")) e.preventDefault();
 });
 
+// ── Layout phase tag ─────────────────────────────────────
+function setLayoutTag(layoutId) {
+  const tag = document.getElementById("chat-layout-tag");
+  if (!tag) return;
+  tag.textContent = layoutId ? "layout " + layoutId : "layout phase";
+}
+
 // ── Bridge callbacks ──────────────────────────────────────
 
 window.receiveInit = function(data) {
@@ -1767,6 +1775,7 @@ window.receiveInit = function(data) {
       const btn = document.getElementById("btn-profile-chat");
       if (btn) btn.style.display = "flex";
     }
+    setLayoutTag(data.layout_id || null);
     showScreen("chat");
     addChatBubble("s", data.message);
   } else {
@@ -1787,6 +1796,7 @@ window.receiveResponse = function(data) {
     showInspireStage("question");
     document.getElementById("ins-q-text").textContent = data.message;
   } else if (data.screen === "chat") {
+    setLayoutTag(data.layout_id || null);
     showScreen("chat");
     addChatBubble("s", data.message);
   }

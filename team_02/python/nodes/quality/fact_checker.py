@@ -1,7 +1,7 @@
 """
 FACT_CHECKER node — data integrity gate. Every score, room name, and sense
 in the response must be traceable to MCP tool output.
-Returns VERIFIED or DISCREPANCY with exact location. Max 3 loops.
+Returns VERIFIED or DISCREPANCY with exact location. Max 1 loop.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def build_fact_checker_node(llm):
         loops: int = state.get("fact_check_loops", 0)
 
         new_loops = loops + 1
-        print(f"[fact_checker] Checking facts (loop {new_loops}/3)...")
+        print(f"[fact_checker] Checking facts (loop {new_loops}/1)...")
 
         # If no tool data was generated (e.g. chitchat path somehow reached here)
         if not scores and not conflicts and not suggestions:

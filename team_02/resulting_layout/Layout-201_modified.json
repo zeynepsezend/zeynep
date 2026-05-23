@@ -60,7 +60,7 @@
           "_source": "Sensi",
           "persona": "Neutral",
           "depth": "analyze",
-          "timestamp": "2026-05-20T20:49:44",
+          "timestamp": "2026-05-23T21:12:17",
           "overallScore": 0.73,
           "comfortScores": {
             "thermal": 0.72,
@@ -111,7 +111,7 @@
           "_source": "Sensi",
           "persona": "Neutral",
           "depth": "analyze",
-          "timestamp": "2026-05-20T20:49:44",
+          "timestamp": "2026-05-23T21:12:17",
           "overallScore": 0.56,
           "comfortScores": {
             "thermal": 0.52,
@@ -162,7 +162,7 @@
           "_source": "Sensi",
           "persona": "Neutral",
           "depth": "analyze",
-          "timestamp": "2026-05-20T20:49:44",
+          "timestamp": "2026-05-23T21:12:17",
           "overallScore": 0.74,
           "comfortScores": {
             "thermal": 0.72,
@@ -213,7 +213,7 @@
           "_source": "Sensi",
           "persona": "Neutral",
           "depth": "analyze",
-          "timestamp": "2026-05-20T20:49:44",
+          "timestamp": "2026-05-23T21:12:17",
           "overallScore": 0.69,
           "comfortScores": {
             "thermal": 0.72,
@@ -264,7 +264,7 @@
           "_source": "Sensi",
           "persona": "Neutral",
           "depth": "analyze",
-          "timestamp": "2026-05-20T20:49:44",
+          "timestamp": "2026-05-23T21:12:17",
           "overallScore": 0.56,
           "comfortScores": {
             "thermal": 0.62,
@@ -315,7 +315,7 @@
           "_source": "Sensi",
           "persona": "Neutral",
           "depth": "analyze",
-          "timestamp": "2026-05-20T20:49:44",
+          "timestamp": "2026-05-23T21:12:17",
           "overallScore": 0.56,
           "comfortScores": {
             "thermal": 0.62,
@@ -881,7 +881,7 @@
     "_source": "Sensi",
     "persona": "Neutral",
     "depth": "analyze",
-    "timestamp": "2026-05-20T20:49:44",
+    "timestamp": "2026-05-23T21:12:17",
     "overallScore": 0.64,
     "bestRoom": "room-3",
     "worstRoom": "room-2"

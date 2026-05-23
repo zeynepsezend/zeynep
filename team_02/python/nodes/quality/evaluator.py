@@ -1,7 +1,7 @@
 """
 EVALUATOR node — quality gate before the response reaches the user.
 Checks coherence, completeness, and tone (per user_type).
-Returns APPROVED or REVISE with a one-sentence instruction. Max 3 loops.
+Returns APPROVED or REVISE with a one-sentence instruction. Max 1 loop.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ def build_evaluator_node(llm):
         loops: int = state.get("evaluator_loops", 0)
 
         new_loops = loops + 1
-        print(f"[evaluator] Evaluating response (loop {new_loops}/3)...")
+        print(f"[evaluator] Evaluating response (loop {new_loops}/1)...")
 
         # Build persona summary
         primary = persona_profile.get("primary_user", {})

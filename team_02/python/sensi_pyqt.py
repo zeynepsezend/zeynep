@@ -541,6 +541,7 @@ class SensiBridge(QObject):
             "quiz_complete":        sess.get("quiz_complete", False),
             "inspire_complete":     sess.get("inspire_complete", False),
             "onboarding_complete":  sess.get("onboarding_complete", False),
+            "layout_id":            sess.get("layout_id"),
         })
 
     # ── File picker (native OS dialog) ───────────────────────────────────────

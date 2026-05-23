@@ -1,0 +1,41 @@
+{
+  "name": "Emilie",
+  "role": "architect",
+  "description": "An architect in her 20s-30s designing spaces while living with her grandfather and a dog, prioritizing sensory harmony in her environment",
+  "age_group": "young_adult",
+  "household_type": "dual",
+  "sensory_priorities": [
+    "thermal",
+    "visual",
+    "olfactory",
+    "tactile",
+    "spatial",
+    "acoustic"
+  ],
+  "sensory_sensitivities": [
+    "thermal discomfort",
+    "visual overstimulation",
+    "olfactory sensitivities"
+  ],
+  "comfort_weights": {
+    "thermal": 0.75,
+    "visual": 0.75,
+    "acoustic": 0.5,
+    "spatial": 0.5,
+    "olfactory": 0.75,
+    "tactile": 0.5
+  },
+  "aesthetic_preferences": "Warm earthy tones, natural light, wood textures, plants, and serene spaces blending rustic and elegant elements",
+  "lifestyle": "Balances architectural work with domestic life in a shared household",
+  "key_requirements": [
+    "Natural light",
+    "Wooden elements",
+    "Air quality management"
+  ],
+  "notes": "Living with a grandparent and dog requires spatial considerations; values material authenticity and light quality",
+  "preference_vs_baseline": {
+    "thermal": "Higher than baseline (0.75 vs 0.70)",
+    "visual": "Significantly higher than baseline (0.75 vs 0.60)",
+    "olfactory": "Significantly higher than baseline (0.75 vs 0.40)"
+  }
+}

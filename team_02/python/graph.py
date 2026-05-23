@@ -59,8 +59,8 @@ LAYOUT MODE FLOW
   │  biophilic: biophilic_audit → (opt) add_furniture → score_interp    │
   └──────────────────────────────────────────────────────────────────────┘
   ┌─ QUALITY LOOP ───────────────────────────────────────────────────────┐
-  │  respond → evaluator [LLM] ←→ respond  (max 3)                      │
-  │  evaluator → fact_checker [LLM] ←→ respond  (max 3)                 │
+  │  respond → evaluator [LLM] ←→ respond  (max 1)                      │
+  │  evaluator → fact_checker [LLM] ←→ respond  (max 1)                 │
   └──────────────────────────────────────────────────────────────────────┘
   ┌─ FEEDBACK LOOP ──────────────────────────────────────────────────────┐
   │  fact_checker → what_next [LLM] → END                               │
@@ -217,10 +217,10 @@ class AgentState(TypedDict, total=False):
     # ── Quality loop ─────────────────────────────────────────────────────────
     evaluator_decision:     str        # "APPROVED" | "REVISE"
     evaluator_feedback:     str
-    evaluator_loops:        int        # max 3
+    evaluator_loops:        int        # max 1
     fact_check_decision:    str        # "VERIFIED" | "DISCREPANCY"
     fact_check_feedback:    str
-    fact_check_loops:       int        # max 3
+    fact_check_loops:       int        # max 1
 
     # ── Output ───────────────────────────────────────────────────────────────
     final_response:         str | None
@@ -337,7 +337,7 @@ def _route_after_biophilic_audit(state: AgentState) -> str:
 def _route_after_evaluator(state: AgentState) -> str:
     decision = state.get("evaluator_decision", "APPROVED")
     loops = state.get("evaluator_loops", 0)
-    if decision == "REVISE" and loops < 3:
+    if decision == "REVISE" and loops < 1:
         return "respond"
     return "fact_checker"
 
@@ -345,7 +345,7 @@ def _route_after_evaluator(state: AgentState) -> str:
 def _route_after_fact_checker(state: AgentState) -> str:
     decision = state.get("fact_check_decision", "VERIFIED")
     loops = state.get("fact_check_loops", 0)
-    if decision == "DISCREPANCY" and loops < 3:
+    if decision == "DISCREPANCY" and loops < 1:
         return "respond"
     return "what_next"
 

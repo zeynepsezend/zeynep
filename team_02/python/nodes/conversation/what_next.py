@@ -76,10 +76,11 @@ def build_what_next_node(llm):
 
         offer = call_llm_simple(llm, system, "Offer next steps.")
 
-        # For chitchat turns, CHITCHAT already wrote the real answer into
-        # final_response. Append the next-step nudge rather than replacing it.
+        # Always append the next-step nudge to the existing response.
+        # For comfort/tools paths the respond node already wrote the full
+        # analysis into final_response — we must not overwrite it.
         existing = state.get("final_response", "")
-        if intent == "chitchat" and existing:
+        if existing:
             combined = existing + "\n\n" + offer
         else:
             combined = offer
