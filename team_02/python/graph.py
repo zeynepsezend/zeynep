@@ -686,6 +686,12 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         # Layout
         "layout_json_string":  final_state.get("layout_json_string") or session.get("layout_json_string", ""),
         "layout_id":           final_state.get("layout_id")          or session.get("layout_id"),
+        # Analysis results — per-turn only (empty on chitchat/non-analysis turns).
+        # JS tracks panel state across turns; Python just passes what this turn produced.
+        "last_scores_json":      final_state.get("last_scores_json", ""),
+        "last_conflicts_json":   final_state.get("last_conflicts_json", ""),
+        "last_suggestions_json": final_state.get("last_suggestions_json", ""),
+        "comfort_depth":         final_state.get("comfort_depth", ""),
     }
 
     return response, updated_session

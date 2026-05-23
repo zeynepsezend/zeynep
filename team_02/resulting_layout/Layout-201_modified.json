@@ -59,8 +59,8 @@
         "analysis": {
           "_source": "Sensi",
           "persona": "Neutral",
-          "depth": "analyze",
-          "timestamp": "2026-05-23T21:12:17",
+          "depth": "full",
+          "timestamp": "2026-05-23T22:10:34",
           "overallScore": 0.73,
           "comfortScores": {
             "thermal": 0.72,
@@ -70,8 +70,16 @@
             "olfactory": 0.78,
             "tactile": 0.66
           },
-          "conflicts": [],
-          "suggestions": []
+          "conflicts": [
+            "acoustic score 0.40 below threshold 0.45"
+          ],
+          "suggestions": [
+            {
+              "sense": "acoustic",
+              "priority": 1,
+              "suggestion": "Add rugs and curtains to absorb sound"
+            }
+          ]
         }
       }
     },
@@ -110,8 +118,8 @@
         "analysis": {
           "_source": "Sensi",
           "persona": "Neutral",
-          "depth": "analyze",
-          "timestamp": "2026-05-23T21:12:17",
+          "depth": "full",
+          "timestamp": "2026-05-23T22:10:34",
           "overallScore": 0.56,
           "comfortScores": {
             "thermal": 0.52,
@@ -121,8 +129,22 @@
             "olfactory": 0.3,
             "tactile": 0.57
           },
-          "conflicts": [],
-          "suggestions": []
+          "conflicts": [
+            "acoustic score 0.30 below threshold 0.45",
+            "olfactory score 0.30 below threshold 0.45"
+          ],
+          "suggestions": [
+            {
+              "sense": "acoustic",
+              "priority": 1,
+              "suggestion": "Add rugs and curtains to absorb sound"
+            },
+            {
+              "sense": "olfactory",
+              "priority": 2,
+              "suggestion": "Upgrade to mixed or mechanical ventilation for active air exchange"
+            }
+          ]
         }
       }
     },
@@ -161,8 +183,8 @@
         "analysis": {
           "_source": "Sensi",
           "persona": "Neutral",
-          "depth": "analyze",
-          "timestamp": "2026-05-23T21:12:17",
+          "depth": "full",
+          "timestamp": "2026-05-23T22:10:34",
           "overallScore": 0.74,
           "comfortScores": {
             "thermal": 0.72,
@@ -212,8 +234,8 @@
         "analysis": {
           "_source": "Sensi",
           "persona": "Neutral",
-          "depth": "analyze",
-          "timestamp": "2026-05-23T21:12:17",
+          "depth": "full",
+          "timestamp": "2026-05-23T22:10:34",
           "overallScore": 0.69,
           "comfortScores": {
             "thermal": 0.72,
@@ -263,8 +285,8 @@
         "analysis": {
           "_source": "Sensi",
           "persona": "Neutral",
-          "depth": "analyze",
-          "timestamp": "2026-05-23T21:12:17",
+          "depth": "full",
+          "timestamp": "2026-05-23T22:10:34",
           "overallScore": 0.56,
           "comfortScores": {
             "thermal": 0.62,
@@ -274,8 +296,22 @@
             "olfactory": 0.4,
             "tactile": 0.63
           },
-          "conflicts": [],
-          "suggestions": []
+          "conflicts": [
+            "visual score 0.40 below threshold 0.45",
+            "olfactory score 0.40 below threshold 0.45"
+          ],
+          "suggestions": [
+            {
+              "sense": "visual",
+              "priority": 1,
+              "suggestion": "Add larger windows or skylights"
+            },
+            {
+              "sense": "olfactory",
+              "priority": 2,
+              "suggestion": "Upgrade to mixed or mechanical ventilation for active air exchange"
+            }
+          ]
         }
       }
     },
@@ -314,8 +350,8 @@
         "analysis": {
           "_source": "Sensi",
           "persona": "Neutral",
-          "depth": "analyze",
-          "timestamp": "2026-05-23T21:12:17",
+          "depth": "full",
+          "timestamp": "2026-05-23T22:10:34",
           "overallScore": 0.56,
           "comfortScores": {
             "thermal": 0.62,
@@ -325,8 +361,16 @@
             "olfactory": 0.65,
             "tactile": 0.55
           },
-          "conflicts": [],
-          "suggestions": []
+          "conflicts": [
+            "visual score 0.40 below threshold 0.45"
+          ],
+          "suggestions": [
+            {
+              "sense": "visual",
+              "priority": 1,
+              "suggestion": "Add larger windows or skylights"
+            }
+          ]
         }
       }
     }
@@ -880,8 +924,8 @@
   "analysis": {
     "_source": "Sensi",
     "persona": "Neutral",
-    "depth": "analyze",
-    "timestamp": "2026-05-23T21:12:17",
+    "depth": "full",
+    "timestamp": "2026-05-23T22:10:34",
     "overallScore": 0.64,
     "bestRoom": "room-3",
     "worstRoom": "room-2"

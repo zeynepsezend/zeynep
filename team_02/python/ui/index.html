@@ -578,6 +578,148 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 /* ── upload image preview strip ── */
 .upload-preview { display:flex; flex-wrap:wrap; margin-top:8px; }
 .upload-preview img { width:46px; height:46px; object-fit:cover; border-radius:6px; opacity:.72; margin-right:6px; margin-bottom:6px; border:1px solid rgba(240,237,232,.10); }
+
+/* ── analysis split panel ── */
+#chat-body {
+  -webkit-flex:1; flex:1;
+  overflow:hidden;
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  min-height:0;
+}
+#chat-left {
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-flex-direction:column; flex-direction:column;
+  overflow:hidden;
+  -webkit-flex:1; flex:1;
+  min-width:0;
+}
+#chat-left.panel-open { -webkit-flex:0 0 42%; flex:0 0 42%; }
+#analysis-panel-right {
+  display:none;
+  -webkit-flex-direction:column; flex-direction:column;
+  -webkit-flex:1; flex:1;
+  overflow:hidden;
+  border-left:1px solid rgba(240,237,232,.07);
+  background:rgba(10,10,10,.82);
+  min-width:0;
+}
+#analysis-panel-right.open { display:-webkit-box; display:-webkit-flex; display:flex; }
+.ap-header {
+  -webkit-flex-shrink:0; flex-shrink:0;
+  padding:9px 14px;
+  border-bottom:1px solid rgba(240,237,232,.06);
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-align-items:center; align-items:center;
+}
+.ap-header-label {
+  font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+  color:rgba(240,237,232,.55); margin-right:8px;
+}
+.ap-depth-tag {
+  font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.12em; text-transform:uppercase;
+  color:rgba(232,131,106,.75); background:rgba(232,131,106,.10);
+  border:1px solid rgba(232,131,106,.22); border-radius:999px;
+  padding:2px 8px; margin-right:auto;
+}
+.ap-view-toggle {
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  border:1px solid rgba(240,237,232,.10); border-radius:6px;
+  overflow:hidden; margin-right:8px;
+}
+.ap-toggle-btn {
+  background:transparent; border:none;
+  color:rgba(240,237,232,.25); font-family:'DM Mono',monospace;
+  font-size:8px; letter-spacing:.12em; text-transform:uppercase;
+  padding:4px 10px; cursor:pointer; transition:all .15s;
+}
+.ap-toggle-btn.ap-toggle-active { background:rgba(240,237,232,.07); color:rgba(240,237,232,.75); }
+.ap-close {
+  background:transparent; border:none;
+  color:rgba(240,237,232,.22); font-size:16px;
+  cursor:pointer; padding:0 2px; line-height:1; transition:color .2s;
+}
+.ap-close:hover { color:var(--fg); }
+.ap-scroll { -webkit-flex:1; flex:1; overflow-y:auto; overflow-x:hidden; padding:10px 14px 24px; }
+.ap-section-label {
+  font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.22em; text-transform:uppercase;
+  color:rgba(240,237,232,.22); margin:16px 0 8px;
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-align-items:center; align-items:center;
+}
+.ap-section-label::before { content:''; -webkit-flex:0 0 10px; flex:0 0 10px; height:1px; background:rgba(240,237,232,.08); margin-right:6px; }
+.ap-section-label::after  { content:''; -webkit-flex:1; flex:1; height:1px; background:rgba(240,237,232,.08); margin-left:6px; }
+.ap-section-label:first-child { margin-top:0; }
+.ap-room-label {
+  font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+  color:rgba(240,237,232,.65); margin-bottom:7px; margin-top:16px; display:block;
+  border-bottom:1px solid rgba(240,237,232,.05); padding-bottom:4px;
+}
+.ap-room-label:first-child { margin-top:0; }
+.ap-bar-row {
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-align-items:center; align-items:center; margin-bottom:6px;
+}
+.ap-bar-sense {
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.06em;
+  color:rgba(240,237,232,.40); width:58px; -webkit-flex-shrink:0; flex-shrink:0;
+}
+.ap-bar-track {
+  -webkit-flex:1; flex:1; height:6px;
+  background:rgba(240,237,232,.05); border-radius:99px;
+  position:relative; overflow:visible; margin-right:8px;
+}
+.ap-bar-fill { height:100%; border-radius:99px; position:relative; z-index:1; }
+.ap-bar-threshold {
+  position:absolute; top:-2px; width:1px; height:10px;
+  background:rgba(240,237,232,.20); z-index:2;
+}
+.ap-bar-val {
+  font-family:'DM Mono',monospace; font-size:9px; color:rgba(240,237,232,.38);
+  width:30px; text-align:right; -webkit-flex-shrink:0; flex-shrink:0;
+}
+.ap-conflict-room {
+  margin-bottom:8px;
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-flex-wrap:wrap; flex-wrap:wrap;
+  -webkit-align-items:center; align-items:center;
+}
+.ap-conflict-room .ap-room-label { margin:0; margin-right:6px; display:inline; }
+.ap-conflict-flag {
+  font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.10em; text-transform:uppercase;
+  padding:2px 7px; border-radius:999px; margin-right:4px; margin-bottom:2px;
+}
+.ap-conflict-flag[data-sense="thermal"]   { background:rgba(232,131,106,.14); color:var(--thermal);   border:1px solid rgba(232,131,106,.24); }
+.ap-conflict-flag[data-sense="visual"]    { background:rgba(212,185,106,.14); color:var(--visual);    border:1px solid rgba(212,185,106,.24); }
+.ap-conflict-flag[data-sense="acoustic"]  { background:rgba(155,143,212,.14); color:var(--acoustic);  border:1px solid rgba(155,143,212,.24); }
+.ap-conflict-flag[data-sense="spatial"]   { background:rgba(106,184,200,.14); color:var(--spatial);   border:1px solid rgba(106,184,200,.24); }
+.ap-conflict-flag[data-sense="olfactory"] { background:rgba(139,184,138,.14); color:var(--olfactory); border:1px solid rgba(139,184,138,.24); }
+.ap-conflict-flag[data-sense="tactile"]   { background:rgba(196,168,130,.14); color:var(--tactile);   border:1px solid rgba(196,168,130,.24); }
+.ap-suggestion-item {
+  border-left:2px solid rgba(240,237,232,.08); padding:6px 10px;
+  margin-bottom:6px; border-radius:0 5px 5px 0; background:rgba(240,237,232,.02);
+}
+.ap-suggestion-room {
+  font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.14em; text-transform:uppercase;
+  color:rgba(240,237,232,.28); display:block; margin-bottom:2px;
+}
+.ap-suggestion-sense {
+  font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.08em; text-transform:uppercase;
+  padding:1px 5px; border-radius:999px; margin-right:5px;
+}
+.ap-suggestion-sense[data-sense="thermal"]   { color:var(--thermal);   background:rgba(232,131,106,.10); }
+.ap-suggestion-sense[data-sense="visual"]    { color:var(--visual);    background:rgba(212,185,106,.10); }
+.ap-suggestion-sense[data-sense="acoustic"]  { color:var(--acoustic);  background:rgba(155,143,212,.10); }
+.ap-suggestion-sense[data-sense="spatial"]   { color:var(--spatial);   background:rgba(106,184,200,.10); }
+.ap-suggestion-sense[data-sense="olfactory"] { color:var(--olfactory); background:rgba(139,184,138,.10); }
+.ap-suggestion-sense[data-sense="tactile"]   { color:var(--tactile);   background:rgba(196,168,130,.10); }
+.ap-suggestion-text {
+  font-family:'Roboto',sans-serif; font-weight:300; font-size:11px;
+  color:rgba(240,237,232,.48); line-height:1.5; display:block; margin-top:3px;
+}
+.ap-empty {
+  font-family:'DM Mono',monospace; font-size:9px; color:rgba(240,237,232,.18);
+  text-align:center; padding:14px 0; letter-spacing:.10em;
+}
 </style>
 </head>
 <body>
@@ -960,18 +1102,41 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
     </div>
   </div>
 
-  <div class="thread" id="chat-thread">
-    <div class="thread-inner" id="chat-thread-inner"></div>
-  </div>
+  <div id="chat-body">
 
-  <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
-    <div class="send-row">
-      <textarea id="chat-input" class="sensi-input"
-                placeholder="ask sensi about your layout…"
-                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
-      <button class="btn-send" onclick="sendChat()">→</button>
-    </div>
-  </div>
+    <div id="chat-left">
+      <div class="thread" id="chat-thread">
+        <div class="thread-inner" id="chat-thread-inner"></div>
+      </div>
+      <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
+        <div class="send-row">
+          <textarea id="chat-input" class="sensi-input"
+                    placeholder="ask sensi about your layout…"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+          <button class="btn-send" onclick="sendChat()">→</button>
+        </div>
+      </div>
+    </div><!-- /#chat-left -->
+
+    <div id="analysis-panel-right">
+      <div class="ap-header">
+        <span class="ap-header-label">analysis</span>
+        <span id="ap-depth-tag" class="ap-depth-tag">analyze</span>
+        <div class="ap-view-toggle">
+          <button id="ap-toggle-bars"  class="ap-toggle-btn ap-toggle-active" onclick="setChartView('bars')">bars</button>
+          <button id="ap-toggle-radar" class="ap-toggle-btn" onclick="setChartView('radar')">radar</button>
+        </div>
+        <button class="ap-close" onclick="closeAnalysisPanel()">×</button>
+      </div>
+      <div class="ap-scroll" id="ap-scroll">
+        <div id="ap-scores"></div>
+        <div id="ap-conflicts"></div>
+        <div id="ap-topology"></div>
+        <div id="ap-suggestions"></div>
+      </div>
+    </div><!-- /#analysis-panel-right -->
+
+  </div><!-- /#chat-body -->
 
 </div>
 
@@ -997,6 +1162,10 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   </div>
 </div>
 
+
+<!-- Chart.js + Cytoscape.js for analysis panel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
 
 <!-- ══════════════════════════════════════════════════════════
      JAVASCRIPT
@@ -1799,6 +1968,14 @@ window.receiveResponse = function(data) {
     setLayoutTag(data.layout_id || null);
     showScreen("chat");
     addChatBubble("s", data.message);
+    if (data.scores_json) {
+      renderAnalysisPanel(
+        data.scores_json,
+        data.conflicts_json  || '',
+        data.suggestions_json || '',
+        data.analysis_depth  || 'analyze'
+      );
+    }
   }
 };
 
@@ -1858,6 +2035,298 @@ window.receiveError = function(msg) {
     setTimeout(hideOverlay, 3500);
   }
 };
+
+// ══════════════════════════════════════════════════════════
+// ANALYSIS PANEL
+// ══════════════════════════════════════════════════════════
+
+var _chartView  = 'bars';
+var _apChart    = null;
+var _apCy       = null;
+var _panelScores      = null;
+var _panelConflicts   = null;
+var _panelSuggestions = null;
+var _panelDepth       = '';
+
+var SENSE_COLORS = {
+  thermal:   '#E8836A', visual:    '#D4B96A', acoustic:  '#9B8FD4',
+  spatial:   '#6AB8C8', olfactory: '#8BB88A', tactile:   '#C4A882'
+};
+var ALL_SENSES = ['thermal','visual','acoustic','spatial','olfactory','tactile'];
+
+function openAnalysisPanel() {
+  document.getElementById('chat-left').classList.add('panel-open');
+  document.getElementById('analysis-panel-right').classList.add('open');
+}
+
+function closeAnalysisPanel() {
+  document.getElementById('chat-left').classList.remove('panel-open');
+  document.getElementById('analysis-panel-right').classList.remove('open');
+}
+
+function setChartView(view) {
+  _chartView = view;
+  var bBars  = document.getElementById('ap-toggle-bars');
+  var bRadar = document.getElementById('ap-toggle-radar');
+  if (bBars)  bBars.classList.toggle('ap-toggle-active',  view === 'bars');
+  if (bRadar) bRadar.classList.toggle('ap-toggle-active', view === 'radar');
+  if (!_panelScores) return;
+  var rooms = _panelScores.rooms || [];
+  if (view === 'bars') _renderScoreBars(rooms);
+  else _renderRadar(rooms);
+}
+
+function _renderScoreBars(rooms) {
+  var c = document.getElementById('ap-scores');
+  c.innerHTML = '<div class="ap-section-label">scores</div>';
+  rooms.forEach(function(room) {
+    var sc = room.comfortScores || {};
+    var overall = (room.overallScore || 0).toFixed(2);
+    var lbl = document.createElement('div');
+    lbl.className = 'ap-room-label';
+    lbl.textContent = (room.roomName || '?') + '  ·  ' + overall;
+    c.appendChild(lbl);
+    ALL_SENSES.forEach(function(s) {
+      var val = sc[s] !== undefined ? sc[s] : 0;
+      var pct = (val * 100).toFixed(1);
+      // Failing scores: full brightness. Good scores: muted.
+      var opacity = val < 0.50 ? '1.0' : val < 0.65 ? '0.65' : '0.38';
+      var row = document.createElement('div');
+      row.className = 'ap-bar-row';
+      // Threshold tick at 50% and 65% of track width
+      var ticks =
+        '<div class="ap-bar-threshold" style="left:50%;"></div>' +
+        '<div class="ap-bar-threshold" style="left:65%;opacity:0.10;"></div>';
+      row.innerHTML =
+        '<span class="ap-bar-sense">' + s + '</span>' +
+        '<div class="ap-bar-track">' +
+          '<div class="ap-bar-fill" style="width:' + pct + '%;background:' + SENSE_COLORS[s] + ';opacity:' + opacity + ';"></div>' +
+          ticks +
+        '</div>' +
+        '<span class="ap-bar-val" style="color:' + (val < 0.50 ? SENSE_COLORS[s] : 'rgba(240,237,232,.35)') + '">' + val.toFixed(2) + '</span>';
+      c.appendChild(row);
+    });
+  });
+}
+
+var SENSE_SYMBOLS = {
+  thermal: '~ thm', visual: '◎ vis', acoustic: ')) aco',
+  spatial: '⬡ spt', olfactory: '✿ olf', tactile: '≈ tac'
+};
+
+function _renderRadar(rooms) {
+  var c = document.getElementById('ap-scores');
+  c.innerHTML = '<div class="ap-section-label">scores — radar</div><canvas id="ap-radar-canvas" style="width:100%;min-height:300px;"></canvas>';
+  if (typeof Chart === 'undefined') {
+    c.innerHTML += '<div class="ap-empty">chart.js not loaded</div>';
+    return;
+  }
+  if (_apChart) { try { _apChart.destroy(); } catch(e) {} _apChart = null; }
+  var canvas = document.getElementById('ap-radar-canvas');
+  var roomColors = [
+    'rgba(232,131,106,0.85)','rgba(212,185,106,0.85)','rgba(155,143,212,0.85)',
+    'rgba(106,184,200,0.85)','rgba(139,184,138,0.85)','rgba(196,168,130,0.85)'
+  ];
+  var datasets = rooms.map(function(room, i) {
+    var sc = room.comfortScores || {};
+    return {
+      label: room.roomName || '?',
+      data: ALL_SENSES.map(function(s) { return ((sc[s] || 0) * 100); }),
+      backgroundColor: roomColors[i % roomColors.length].replace('0.85','0.07'),
+      borderColor: roomColors[i % roomColors.length],
+      borderWidth: 1.5,
+      pointRadius: 0,
+      pointHoverRadius: 3
+    };
+  });
+  var labels = ALL_SENSES.map(function(s) { return SENSE_SYMBOLS[s] || s; });
+  _apChart = new Chart(canvas, {
+    type: 'radar',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true,
+      scales: { r: {
+        min: 0, max: 100, stepSize: 25,
+        ticks: { color: 'rgba(240,237,232,0.20)', font: { size: 8 }, backdropColor: 'transparent' },
+        pointLabels: {
+          color: 'rgba(240,237,232,0.60)', font: { size: 10, family: "'DM Mono', monospace" }
+        },
+        grid:       { color: 'rgba(240,237,232,0.08)' },
+        angleLines: { color: 'rgba(240,237,232,0.08)' }
+      }},
+      plugins: {
+        legend: { labels: { color: 'rgba(240,237,232,0.55)', font: { size: 9 }, padding: 10, boxWidth: 12, usePointStyle: true } }
+      }
+    }
+  });
+}
+
+function _sensesFromConflicts(conflicts) {
+  /* Handles both string items ("acoustic score 0.40 below threshold 0.45")
+     and object items ({acoustic: 0.40}) — the MCP may return either format. */
+  var senses = [];
+  (conflicts || []).forEach(function(conf) {
+    ALL_SENSES.forEach(function(s) {
+      if (senses.indexOf(s) !== -1) return;
+      if (typeof conf === 'string') {
+        if (conf.indexOf(s) !== -1) senses.push(s);
+      } else if (conf !== null && typeof conf === 'object') {
+        if (s in conf) senses.push(s);
+      }
+    });
+  });
+  return senses;
+}
+
+function _renderConflicts(flaggedRooms) {
+  var c = document.getElementById('ap-conflicts');
+  c.innerHTML = '<div class="ap-section-label">conflicts</div>';
+  if (!flaggedRooms || flaggedRooms.length === 0) {
+    c.innerHTML += '<div class="ap-empty">no conflicts detected</div>';
+    return;
+  }
+  flaggedRooms.forEach(function(room) {
+    var senses = _sensesFromConflicts(room.conflicts);
+    var div = document.createElement('div');
+    div.className = 'ap-conflict-room';
+    div.innerHTML = '<span class="ap-room-label">' + (room.roomName || '?') + '</span>' +
+      senses.map(function(s) {
+        return '<span class="ap-conflict-flag" data-sense="' + s + '">' + s + '</span>';
+      }).join('');
+    c.appendChild(div);
+  });
+}
+
+function _renderTopology(flaggedRooms, allRooms) {
+  var c = document.getElementById('ap-topology');
+  c.innerHTML = '<div class="ap-section-label">room network</div><div id="cy-container" style="width:100%;height:200px;"></div>';
+  if (typeof cytoscape === 'undefined') {
+    c.innerHTML += '<div class="ap-empty">cytoscape not loaded</div>';
+    return;
+  }
+  // Build room → failing senses map (reuses the type-safe helper)
+  var roomSenses = {};
+  (flaggedRooms || []).forEach(function(r) {
+    var senses = _sensesFromConflicts(r.conflicts);
+    if (senses.length > 0) roomSenses[r.roomName] = senses;
+  });
+  // Nodes from scores data (all rooms)
+  var nodes = (allRooms || []).map(function(room) {
+    var overall = room.overallScore || 0.5;
+    var issueCount = (roomSenses[room.roomName] || []).length;
+    var color = overall < 0.50 ? '#E8836A' : overall < 0.65 ? '#D4B96A' : '#8BB88A';
+    var size = 24 + issueCount * 10;
+    return { data: { id: room.roomName, label: room.roomName, color: color, size: size } };
+  });
+  // Edges between rooms sharing a failing sense
+  var edges = [];
+  var conflictedNames = Object.keys(roomSenses);
+  for (var i = 0; i < conflictedNames.length; i++) {
+    for (var j = i + 1; j < conflictedNames.length; j++) {
+      var a = conflictedNames[i], b = conflictedNames[j];
+      var shared = roomSenses[a].filter(function(s) { return roomSenses[b].indexOf(s) !== -1; });
+      if (shared.length > 0) {
+        edges.push({ data: { id: a + '_' + b, source: a, target: b, label: shared.join(' · ') } });
+      }
+    }
+  }
+  if (_apCy) { try { _apCy.destroy(); } catch(e) {} _apCy = null; }
+  _apCy = cytoscape({
+    container: document.getElementById('cy-container'),
+    elements: { nodes: nodes, edges: edges },
+    style: [
+      { selector: 'node', style: {
+        'background-color': 'data(color)',
+        'label': 'data(label)',
+        'color': 'rgba(240,237,232,0.75)',
+        'font-size': '8px',
+        'font-family': "'DM Mono', monospace",
+        'text-valign': 'bottom',
+        'text-margin-y': '5px',
+        'width':  'data(size)',
+        'height': 'data(size)',
+        'border-width': 1,
+        'border-color': 'rgba(240,237,232,0.18)'
+      }},
+      { selector: 'edge', style: {
+        'width': 1.5,
+        'line-color': 'rgba(212,185,106,0.35)',
+        'label': 'data(label)',
+        'font-size': '7px',
+        'color': 'rgba(212,185,106,0.65)',
+        'font-family': "'DM Mono', monospace",
+        'text-rotation': 'autorotate',
+        'curve-style': 'bezier',
+        'text-margin-y': '-6px'
+      }}
+    ],
+    layout: { name: 'cose', animate: false, padding: 18, nodeRepulsion: 4000 },
+    userZoomingEnabled: false,
+    userPanningEnabled: false,
+    boxSelectionEnabled: false,
+    autoungrabify: true
+  });
+}
+
+function _renderSuggestions(improvements) {
+  var c = document.getElementById('ap-suggestions');
+  c.innerHTML = '<div class="ap-section-label">suggestions</div>';
+  var any = false;
+  (improvements || []).forEach(function(room) {
+    (room.suggestions || []).forEach(function(s) {
+      any = true;
+      var div = document.createElement('div');
+      div.className = 'ap-suggestion-item';
+      div.innerHTML =
+        '<span class="ap-suggestion-room">' + (room.roomName || '?') + '</span>' +
+        '<span class="ap-suggestion-sense" data-sense="' + (s.sense || '') + '">' + (s.sense || '') + '</span>' +
+        '<span class="ap-suggestion-text">' + (s.suggestion || '') + '</span>';
+      c.appendChild(div);
+    });
+  });
+  if (!any) c.innerHTML += '<div class="ap-empty">no suggestions generated</div>';
+}
+
+function renderAnalysisPanel(scoresJson, conflictsJson, suggestionsJson, depth) {
+  if (!scoresJson) return;
+  var scores = null, conflicts = null, suggestions = null;
+  try { scores = JSON.parse(scoresJson); } catch(e) { return; }
+  if (conflictsJson) try { conflicts = JSON.parse(conflictsJson); } catch(e) {}
+  if (suggestionsJson) try { suggestions = JSON.parse(suggestionsJson); } catch(e) {}
+
+  _panelScores      = scores;
+  _panelConflicts   = conflicts;
+  _panelSuggestions = suggestions;
+  _panelDepth       = depth || 'analyze';
+
+  openAnalysisPanel();
+
+  // depth tag
+  var tag = document.getElementById('ap-depth-tag');
+  if (tag) tag.textContent = _panelDepth;
+
+  // scores section
+  var rooms = scores.rooms || [];
+  if (_chartView === 'bars') _renderScoreBars(rooms);
+  else _renderRadar(rooms);
+
+  // conflicts section
+  var cEl = document.getElementById('ap-conflicts');
+  cEl.innerHTML = '';
+  var tEl = document.getElementById('ap-topology');
+  tEl.innerHTML = '';
+  if (conflicts && (depth === 'detect' || depth === 'full')) {
+    _renderConflicts(conflicts.flaggedRooms || []);
+    _renderTopology(conflicts.flaggedRooms || [], rooms);
+  }
+
+  // suggestions section
+  var sEl = document.getElementById('ap-suggestions');
+  sEl.innerHTML = '';
+  if (suggestions && depth === 'full') {
+    _renderSuggestions(suggestions.improvements || []);
+  }
+}
 
 // ── Bridge init ───────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
