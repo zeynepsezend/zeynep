@@ -363,7 +363,7 @@ def build_graph(ctx: Any) -> Any:
     exists the session is pre-loaded and onboarding is skipped.
     """
 
-    persona_path = str(ctx.layout_input_dir.parent / "persona.json")
+    persona_path = str(ctx.layout_input_dir.parent / "personas" / "persona.json")
 
     # ── Onboarding nodes ──────────────────────────────────────────────────
     greet            = build_greet_node(ctx.llm_simple)

@@ -46,7 +46,7 @@ from _runtime.bootstrap import bootstrap
 from graph import run_agent
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-_PERSONA_PATH = Path(__file__).resolve().parent.parent / "persona.json"
+_PERSONA_PATH = Path(__file__).resolve().parent.parent / "personas" / "persona.json"
 _UI_PATH      = Path(__file__).resolve().parent / "ui" / "index.html"
 
 
@@ -103,17 +103,19 @@ class InspireWorker(QThread):
                 or _vlm_analyze(llm, self.b64s, self.text)
             )
 
-            # Step 2 — Sense-tagged query generation (2 queries per sense = 12 for 3×4 grid)
+            # Step 2 — Sense-tagged query generation (1 query per sense, 6 total)
             self.progress.emit("building search queries...")
             queries_sensed = _gen_queries_sensed(
                 llm, analysis,
                 prev_desc=self.refine_desc,
-                n_per_sense=2,
+                n_per_sense=1,
             )
 
-            # Step 3 — Fetch images, tagged by sense
+            # Step 3 — Fetch 2 images per query = 12 total for the 3×4 grid
             self.progress.emit("gathering images...")
-            urls, descs, senses = _fetch_unsplash_sensed(queries_sensed, per_query=1)
+            urls, descs, senses = _fetch_unsplash_sensed(
+                queries_sensed, per_query=2, target=12
+            )
 
             self.finished.emit(json.dumps({
                 "ok":       True,
@@ -123,6 +125,46 @@ class InspireWorker(QThread):
                 "senses":   senses,
                 "analysis": analysis,
             }))
+        except Exception as exc:
+            self.finished.emit(json.dumps({"ok": False, "error": str(exc)}))
+
+
+class ProfileChatWorker(QThread):
+    """
+    Lightweight profile-review chat — direct LLM call, no graph required.
+    Answers questions about the persona profile, formula, and weights.
+    """
+    finished = pyqtSignal(str)   # JSON: {ok, message}
+
+    _SYSTEM = (
+        "You are Sensi, helping the user understand and optionally refine their comfort profile.\n"
+        "Speak warmly and specifically — reference actual numbers from their profile.\n\n"
+        "You can:\n"
+        "  • Explain how each comfort weight was derived from quiz answers and moodboard picks\n"
+        "  • Explain the formula: C(room) = Σ w(s) × raw(room, s)\n"
+        "  • Explain what 'evidence baseline' means and why a deviation matters\n"
+        "  • Help the user reflect on whether something feels wrong\n"
+        "  • Note requested changes (but explain major edits require a fresh session)\n\n"
+        "Keep replies concise — 2–4 sentences. No bullet points. No markdown."
+    )
+
+    def __init__(self, text: str, profile: dict, llm):
+        super().__init__()
+        self.text    = text
+        self.profile = profile
+        self.llm     = llm
+
+    def run(self):
+        from langchain_core.messages import HumanMessage, SystemMessage
+        try:
+            profile_block = json.dumps(self.profile, indent=2, ensure_ascii=False)
+            system_full   = f"{self._SYSTEM}\n\nCurrent profile:\n{profile_block}"
+            messages = [
+                SystemMessage(content=system_full),
+                HumanMessage(content=self.text),
+            ]
+            reply = self.llm.invoke(messages).content.strip()
+            self.finished.emit(json.dumps({"ok": True, "message": reply}))
         except Exception as exc:
             self.finished.emit(json.dumps({"ok": False, "error": str(exc)}))
 
@@ -257,21 +299,47 @@ def _gen_queries_sensed(llm, analysis: str, prev_desc: str = "", n_per_sense: in
     return result
 
 
-def _fetch_unsplash_sensed(queries_with_senses: list, per_query: int = 1) -> tuple:
+_SENSE_FALLBACKS = {
+    "thermal":   "warm sunlit room interior",
+    "visual":    "natural light minimal interior",
+    "acoustic":  "quiet cozy reading nook interior",
+    "spatial":   "open loft architectural space",
+    "olfactory": "indoor plants greenery room",
+    "tactile":   "wood texture material interior",
+}
+_SENSE_EXTRAS = [
+    ("minimalist interior warm light",      "visual"),
+    ("cozy residential room texture",       "tactile"),
+    ("serene architectural space calm",     "spatial"),
+    ("warm wood interior sunlight",         "thermal"),
+    ("calm interior soft diffuse light",    "acoustic"),
+    ("earthy natural material room",        "olfactory"),
+]
+
+
+def _fetch_unsplash_sensed(queries_with_senses: list, per_query: int = 2,
+                           target: int = 12) -> tuple:
     """
-    queries_with_senses: list of (query_str, sense_str)
+    queries_with_senses: list of (query_str, sense_str).
+    Fetches per_query images per query, tags each with its source sense.
+    Retries senses that returned 0 images using fallback queries.
+    Pads up to target=12 with generic extras if still short.
     Returns (urls, descs, senses) where senses is a list of [sense] lists.
     """
     import httpx
     key = os.getenv("UNSPLASH_ACCESS_KEY", "")
     if not key:
         return [], [], []
-    urls, descs, senses = [], [], []
-    for q, sense in queries_with_senses:
+
+    urls, descs, sense_tags = [], [], []
+    sense_counts: dict = {}
+
+    def _call(q: str, sense: str, n: int) -> int:
+        added = 0
         try:
             resp = httpx.get(
                 "https://api.unsplash.com/search/photos",
-                params={"query": q, "per_page": per_query, "orientation": "landscape"},
+                params={"query": q, "per_page": n, "orientation": "landscape"},
                 headers={"Authorization": f"Client-ID {key}"},
                 timeout=10.0,
             )
@@ -279,10 +347,29 @@ def _fetch_unsplash_sensed(queries_with_senses: list, per_query: int = 1) -> tup
                 for r in resp.json().get("results", []):
                     urls.append(r["urls"]["small"])
                     descs.append(r.get("alt_description") or q)
-                    senses.append([sense])
+                    sense_tags.append([sense])
+                    sense_counts[sense] = sense_counts.get(sense, 0) + 1
+                    added += 1
         except Exception:
             pass
-    return urls, descs, senses
+        return added
+
+    # Primary pass
+    for q, sense in queries_with_senses:
+        _call(q, sense, per_query)
+
+    # Retry senses that returned 0 images
+    for sense in _SENSE_ORDER:
+        if sense_counts.get(sense, 0) == 0 and len(urls) < target:
+            _call(_SENSE_FALLBACKS[sense], sense, 2)
+
+    # Generic top-up if still short of target
+    for q, sense in _SENSE_EXTRAS:
+        if len(urls) >= target:
+            break
+        _call(q, sense, target - len(urls))
+
+    return urls[:target], descs[:target], sense_tags[:target]
 
 
 def _fetch_unsplash(queries: list, per_query: int = 3) -> tuple:
@@ -557,7 +644,11 @@ class SensiBridge(QObject):
         self._session["inspire_moodboard_urls"]  = all_picks
         self._session["inspire_prompted"]        = True  # UI handled the aesthetic question; skip inspire sub-step A
 
+        # Include user_name explicitly so persona_compiler has it even if
+        # quiz_answers didn't carry through cleanly.
+        user_name = self._session.get("user_name", "")
         context = (
+            f"User name: {user_name}\n"
             f"{self._inspire['text']}\n\n"
             f"[Moodboard context: user selected {len(all_picks)} reference image(s) "
             f"across aesthetic refinement rounds.]"
@@ -574,14 +665,49 @@ class SensiBridge(QObject):
         result = json.loads(result_json)
         if result.get("ok"):
             self._session = result["session"]
-            persona       = self._session.get("persona_profile", {})
+            persona = dict(self._session.get("persona_profile") or {})
+
+            # Fallback: patch name/role from session data if LLM returned defaults
+            stored_name = persona.get("name", "")
+            if not stored_name or stored_name.lower() in ("user", "there", ""):
+                fallback_name = self._session.get("user_name", "")
+                if fallback_name and fallback_name.lower() not in ("there", ""):
+                    persona["name"] = fallback_name.strip().capitalize()
+
+            stored_role = persona.get("role", "client")
+            if stored_role == "client":
+                sess_role = (
+                    self._session.get("user_type") or
+                    self._session.get("preliminary_role", "client")
+                )
+                if sess_role and sess_role not in ("client", "", None):
+                    persona["role"] = sess_role
+
             self._js("receivePersona", {
-                "persona":       persona,
+                "persona":        persona,
                 "moodboard_urls": all_picks[:6],
-                "message":       result["message"],
+                "message":        result["message"],
             })
         else:
             self._js("receiveError", result.get("error", "moodboard failed"))
+
+    # ── Profile review chat ───────────────────────────────────────────────────
+
+    @pyqtSlot(str)
+    def profileChat(self, text: str):
+        """
+        Handle profile-review chat messages.
+        Responds to questions about the formula, weights, and persona details.
+        Uses a lightweight direct LLM call — no graph required.
+        """
+        profile = self._session.get("persona_profile") or {}
+        worker  = ProfileChatWorker(text, profile, self._ctx.llm_simple)
+        # Keep reference to prevent GC
+        self._worker = worker
+        worker.finished.connect(
+            lambda r: self._js("receiveProfileChat", json.loads(r))
+        )
+        worker.start()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

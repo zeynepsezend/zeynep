@@ -123,10 +123,15 @@ def build_persona_compiler_node(llm, persona_output_path: str):
     """
 
     def persona_compiler_node(state: dict) -> dict:
-        quiz_answers: dict = state.get("quiz_answers") or {}
+        quiz_answers: dict   = state.get("quiz_answers") or {}
         inspire_summary: str = state.get("inspire_summary", "")
+        # Carry session-level identity so we can patch LLM fallbacks
+        user_name: str        = state.get("user_name", "") or ""
+        preliminary_role: str = state.get("preliminary_role", "client") or "client"
 
         print("[persona_compiler] Compiling full persona profile...")
+        print(f"[persona_compiler] quiz_answers keys: {list(quiz_answers.keys())}")
+        print(f"[persona_compiler] user_name={user_name!r}  role={preliminary_role!r}")
 
         # ── Build the input message for the LLM ──────────────────────────
         quiz_block = "\n".join(
@@ -145,10 +150,21 @@ def build_persona_compiler_node(llm, persona_output_path: str):
         try:
             raw = call_llm_simple(llm, _SYSTEM_PROMPT, user_message)
             clean = raw.strip()
+            # Strip markdown fences if present
             if clean.startswith("```"):
                 lines = clean.splitlines()
                 clean = "\n".join(lines[1:-1]).strip()
-            persona_profile = json.loads(clean)
+            # Try direct parse
+            try:
+                persona_profile = json.loads(clean)
+            except json.JSONDecodeError:
+                # Fallback: extract first {...} block
+                import re as _re
+                m = _re.search(r"\{.*\}", clean, _re.DOTALL)
+                if m:
+                    persona_profile = json.loads(m.group())
+                else:
+                    raise ValueError("No JSON object found in LLM response")
             print(f"[persona_compiler] Profile compiled for: {persona_profile.get('name', '?')}")
         except Exception as exc:
             print(f"[persona_compiler] LLM error ({exc}) — falling back to minimal profile")
@@ -187,6 +203,18 @@ def build_persona_compiler_node(llm, persona_output_path: str):
         persona_profile["preference_vs_baseline"] = pvb
         if pvb:
             print(f"[persona_compiler] Preference vs baseline deviations: {list(pvb.keys())}")
+
+        # ── Patch name / role from session if LLM missed them ─────────────
+        stored_name = persona_profile.get("name", "")
+        if not stored_name or stored_name.lower() in ("user", "there", ""):
+            if user_name and user_name.lower() not in ("there", ""):
+                persona_profile["name"] = user_name.strip().capitalize()
+                print(f"[persona_compiler] Name patched from session: {persona_profile['name']}")
+
+        stored_role = persona_profile.get("role", "client")
+        if stored_role == "client" and preliminary_role not in ("client", "", None):
+            persona_profile["role"] = preliminary_role
+            print(f"[persona_compiler] Role patched from session: {preliminary_role}")
 
         # -- Save to disk -----------------------------------------------------
         try:

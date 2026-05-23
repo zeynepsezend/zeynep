@@ -358,7 +358,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 .img-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px; width: 100%; margin-top: 6px;
+  gap: 4px; width: 100%; margin-top: 6px;
 }
 .img-cell {
   position: relative;
@@ -373,7 +373,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   animation: sg 3s ease infinite;
 }
 .img-cell img {
-  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  width: 100%; aspect-ratio: 1/1; object-fit: cover;
   display: block; opacity: .60;
   border-radius: 6px;
   transition: opacity .2s ease;
@@ -403,9 +403,33 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   letter-spacing: .05em;
 }
 
+/* ── SENSE LEGEND ── */
+.sense-legend {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  margin: 6px 0 8px;
+}
+.sl-item {
+  display: inline-flex; align-items: center;
+  margin-right: 10px; margin-bottom: 4px;
+}
+.sl-item:last-child { margin-right: 0; }
+.sl-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  display: inline-block; margin-right: 4px; flex-shrink: 0;
+}
+.sl-sym {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: rgba(240,237,232,.55); margin-right: 3px; letter-spacing: .04em;
+}
+.sl-name {
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(240,237,232,.28);
+}
+
 /* ── PERSONA BARS ── */
 .pbar-row { display:flex; align-items:center; margin-bottom:10px; }
-.pbar-lbl { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.16em; text-transform:uppercase; width:62px; flex-shrink:0; margin-right:10px; }
+.pbar-lbl { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.12em; text-transform:uppercase; width:80px; flex-shrink:0; margin-right:10px; }
 .pbar-track { flex:1; height:3px; background:rgba(240,237,232,.07); border-radius:99px; position:relative; margin-right:10px; }
 .pbar-fill  { height:100%; border-radius:99px; transition:width .6s ease; }
 .pbar-tick  { position:absolute; top:-3px; width:1px; height:9px; background:rgba(240,237,232,.32); }
@@ -688,6 +712,14 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
           <p class="bubble-s" style="margin-bottom:0;">which of these feel like you?</p>
         </div>
         <p class="label" style="margin-top:4px;">click to select · pick what resonates</p>
+        <div class="sense-legend">
+          <span class="sl-item"><span class="sl-dot" style="background:#E8836A"></span><span class="sl-sym">△</span><span class="sl-name">thermal</span></span>
+          <span class="sl-item"><span class="sl-dot" style="background:#D4B96A"></span><span class="sl-sym">○</span><span class="sl-name">visual</span></span>
+          <span class="sl-item"><span class="sl-dot" style="background:#9B8FD4"></span><span class="sl-sym">∿</span><span class="sl-name">acoustic</span></span>
+          <span class="sl-item"><span class="sl-dot" style="background:#6AB8C8"></span><span class="sl-sym">□</span><span class="sl-name">spatial</span></span>
+          <span class="sl-item"><span class="sl-dot" style="background:#8BB88A"></span><span class="sl-sym">≈</span><span class="sl-name">olfactory</span></span>
+          <span class="sl-item"><span class="sl-dot" style="background:#C4A882"></span><span class="sl-sym">∶</span><span class="sl-name">tactile</span></span>
+        </div>
         <div class="img-grid" id="inspire-img-grid"></div>
         <p id="inspire-sel-count" class="label" style="margin-top:8px;"></p>
       </div>
@@ -830,6 +862,9 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
           Your quiz answers revealed your sensory priorities and living situation. Your inspire session — written description plus moodboard — mapped your aesthetic world. Sensi weighted the six comfort senses from what you shared, then compared each against <em>evidence baselines</em>: research-backed minimum thresholds for your profile type. Where your stated weight falls below a baseline, Sensi flags it proactively — because the data says it matters even if you haven't noticed it yet.
         </div>
 
+        <!-- Dynamic weight table — filled by renderPersonaProfile() -->
+        <div id="formula-weights-table" style="margin-top:14px;"></div>
+
       </div>
 
     </div>
@@ -840,6 +875,57 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
       <button class="btn-action btn-ghost" onclick="tweakPersona()">tweak it</button>
       <button class="btn-action" onclick="confirmPersona()">this is me →</button>
     </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: PROFILE CHAT  (profile review before layout mode)
+══════════════════════════════════════════════════════════ -->
+<div id="screen-profile-chat" class="screen">
+
+  <div class="top-bar">
+    <div class="top-bar-pill top-bar-pill--wide">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+        <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+        <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+        <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+        <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+        <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+        <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+      </svg>
+      <span class="top-bar-label">sensi</span>
+      <span class="top-bar-section" style="margin-left:4px;">profile review</span>
+    </div>
+  </div>
+
+  <!-- Compact profile summary strip -->
+  <div id="pchat-summary" style="
+    max-width:560px;margin:0 auto;width:100%;
+    padding:10px 20px 0;display:flex;align-items:center;flex-wrap:wrap;">
+    <span id="pchat-name" style="
+      font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.12em;
+      color:rgba(240,237,232,.75);text-transform:uppercase;margin-right:10px;"></span>
+    <span id="pchat-role" style="
+      font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.10em;
+      color:rgba(240,237,232,.35);text-transform:uppercase;margin-right:12px;"></span>
+    <div id="pchat-top3" style="display:flex;"></div>
+  </div>
+
+  <div class="thread" id="profile-chat-thread">
+    <div class="thread-inner" id="profile-chat-thread-inner"></div>
+  </div>
+
+  <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
+    <div class="send-row">
+      <textarea id="profile-chat-input" class="sensi-input"
+                placeholder="ask about your profile, weights, or formula…"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendProfileChat();}"></textarea>
+      <button class="btn-send" onclick="sendProfileChat()">→</button>
+    </div>
+    <button class="btn-action" onclick="confirmPersona()" style="margin-top:10px;">profile looks good →</button>
   </div>
 
 </div>
@@ -1004,7 +1090,7 @@ function showThinking(threadInnerId) {
   setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
 }
 function hideThinking() {
-  ["quiz-thread-inner","chat-thread-inner"].forEach(id => {
+  ["quiz-thread-inner","chat-thread-inner","profile-chat-thread-inner"].forEach(id => {
     const inner = document.getElementById(id);
     if (inner) { const b = inner.querySelector("#thinking-bubble"); if (b) b.remove(); }
   });
@@ -1427,6 +1513,30 @@ function renderPersonaProfile(profile, moodboardUrls) {
     gapsWrap.style.display = "";
   }
 
+  // S3b: Dynamic weight table inside formula section
+  const wtEl = document.getElementById("formula-weights-table");
+  if (wtEl) {
+    const rows = SENSES.map(s => {
+      const w    = (weights[s] != null) ? weights[s] : 0;
+      const base = BASELINES[s] || 0.5;
+      const delta = w - base;
+      const deltaStr = (delta >= 0 ? "+" : "") + delta.toFixed(2);
+      const deltaColor = Math.abs(delta) > 0.25
+        ? (delta > 0 ? "rgba(138,184,138,.80)" : "rgba(232,131,106,.80)")
+        : "rgba(240,237,232,.28)";
+      return `<div style="display:flex;align-items:center;margin-bottom:6px;">
+        <span style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.10em;text-transform:uppercase;color:${SC[s]};width:80px;flex-shrink:0;">${SI[s]} ${s}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(240,237,232,.70);width:28px;text-align:right;flex-shrink:0;">${w.toFixed(2)}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:8px;color:rgba(240,237,232,.30);margin:0 6px;">vs</span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(240,237,232,.35);width:28px;flex-shrink:0;">${base.toFixed(2)}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:8px;color:${deltaColor};margin-left:8px;">${deltaStr}</span>
+      </div>`;
+    }).join("");
+    wtEl.innerHTML = `
+      <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:rgba(240,237,232,.25);margin-bottom:8px;">your weights · research baseline · delta</div>
+      ${rows}`;
+  }
+
   // S5: Aesthetic signature
   const moodEl = document.getElementById("persona-moodboard");
   const aeNote = document.getElementById("persona-aesthetic-note");
@@ -1504,11 +1614,91 @@ function _renderPanelContent() {
   }
 }
 
-function confirmPersona() { showScreen("chat"); }
-function tweakPersona()   {
+function confirmPersona() {
   showScreen("chat");
-  setTimeout(() => addChatBubble("s", "What doesn't feel right? Tell me and I'll adjust your profile."), 300);
 }
+
+function tweakPersona() {
+  // Build the compact summary strip before switching screens
+  _renderProfileChatSummary();
+  showScreen("profile-chat");
+  // Opening message from Sensi — explains the profile and invites questions
+  const p = S.persona || {};
+  const name = p.name || "you";
+  const weights = p.comfort_weights || {};
+  const top = (p.sensory_priorities || SENSES).slice(0, 3).join(", ");
+  const opener =
+    `Your profile is live, ${name}. Your top comfort drivers are ${top}. ` +
+    `Ask me anything — why a weight landed where it did, what the evidence baseline means, ` +
+    `or whether something feels off. I'm here to make sure this feels right before we move on.`;
+  setTimeout(() => addProfileChatBubble("s", opener), 160);
+}
+
+function _renderProfileChatSummary() {
+  const p = S.persona || {};
+  const nameEl = document.getElementById("pchat-name");
+  const roleEl = document.getElementById("pchat-role");
+  const top3El = document.getElementById("pchat-top3");
+  if (nameEl) nameEl.textContent = p.name || "";
+  if (roleEl) roleEl.textContent = p.role  || "";
+  if (top3El) {
+    const priorities = (p.sensory_priorities || SENSES).slice(0, 3);
+    top3El.innerHTML = priorities.map(s =>
+      `<span style="
+        display:inline-flex;align-items:center;
+        font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.10em;
+        color:${SC[s]||'rgba(240,237,232,.4)'};text-transform:uppercase;
+        margin-right:8px;">
+        <span style="width:5px;height:5px;border-radius:50%;background:${SC[s]||'#888'};display:inline-block;margin-right:4px;flex-shrink:0;"></span>${s}
+      </span>`
+    ).join("");
+  }
+}
+
+function addProfileChatBubble(who, text) {
+  const inner = document.getElementById("profile-chat-thread-inner");
+  if (!inner) return;
+  const wrap = document.createElement("div");
+  if (who === "s") {
+    wrap.className = "bubble-wrap";
+    wrap.innerHTML = `
+      <svg class="sensi-avatar" width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+        <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+        <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+        <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+        <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+        <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+        <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+      </svg>
+      <p class="bubble-s">${text}</p>`;
+  } else {
+    wrap.className = "bubble-wrap bubble-user-wrap";
+    wrap.innerHTML = `<p class="bubble-u">${text}</p>`;
+  }
+  inner.appendChild(wrap);
+  const thread = document.getElementById("profile-chat-thread");
+  if (thread) thread.scrollTop = thread.scrollHeight;
+}
+
+function sendProfileChat() {
+  const inp  = document.getElementById("profile-chat-input");
+  const text = (inp ? inp.value : "").trim();
+  if (!text) return;
+  if (inp) inp.value = "";
+  addProfileChatBubble("u", text);
+  showThinking("profile-chat-thread-inner");
+  window.bridge.profileChat(text);
+}
+
+window.receiveProfileChat = function(data) {
+  hideThinking();
+  if (data.ok !== false) {
+    addProfileChatBubble("s", data.message || "");
+  } else {
+    addProfileChatBubble("s", "Something went wrong — try asking again.");
+  }
+};
 
 // ── Chat ──────────────────────────────────────────────────
 function addChatBubble(role, text) {
