@@ -90,6 +90,15 @@ def build_add_objects_node(mcp_client, workspace_path):
                     updates["layout_json_string"] = layout_json_string
                     save_session(parsed, workspace_path)
                     updates["last_placement_result"] = parsed
+                    # Rebuild base spatial graph from updated layout.
+                    # Rebuild from scratch — prior analysis edges are stale.
+                    try:
+                        from spatial_graph import build_graph_from_layout, graph_to_dict, serialize_for_llm
+                        _sg = build_graph_from_layout(parsed)
+                        updates["spatial_graph"] = graph_to_dict(_sg)
+                        updates["spatial_graph_text"] = serialize_for_llm(_sg)
+                    except Exception:
+                        pass
                 else:
                     updates["last_placement_result"] = parsed
         except (json.JSONDecodeError, AttributeError):
@@ -217,6 +226,14 @@ def build_add_objects_node(mcp_client, workspace_path):
                     layout_json_string = json.dumps(current_layout)
                     updates["layout_json_string"] = layout_json_string
                     save_session(current_layout, workspace_path)
+                    # Rebuild base spatial graph from updated layout (fallback path).
+                    try:
+                        from spatial_graph import build_graph_from_layout, graph_to_dict, serialize_for_llm
+                        _sg = build_graph_from_layout(current_layout)
+                        updates["spatial_graph"] = graph_to_dict(_sg)
+                        updates["spatial_graph_text"] = serialize_for_llm(_sg)
+                    except Exception:
+                        pass
 
                     updated_placement_history = updated_placement_history + changes
                     updates["placement_history"] = updated_placement_history

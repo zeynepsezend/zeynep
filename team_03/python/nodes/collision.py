@@ -657,6 +657,48 @@ def check_collision(
             else:
                 equipment_warning += 1
 
+    # ── Compute real clearance per object (Voronoi boundary method) ──
+    # The min_clearance_m from the loop above tracks the distance from
+    # free cells to their nearest obstacle surface, which bottoms out at
+    # 1 cell (0.1m) for every object.  What we actually need is the gap
+    # between each object and its nearest OTHER obstacle (wall, furniture,
+    # mep).  We detect this at Voronoi boundaries — adjacent free cells
+    # whose nearest-obstacle attribution differs.  At such a boundary the
+    # gap ≈ dist[a] + dist[b] (cells from each obstacle surface).
+    _obj_real_clearance: dict[int, float] = {}
+    for _idx in range(total):
+        _d = dist[_idx]
+        if _d <= 0:
+            continue
+        _oi = nearest[_idx]
+        if _oi < 0:
+            continue
+        _ix = _idx % cols
+        _iy = _idx // cols
+        for _dx, _dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            _nx = _ix + _dx
+            _ny = _iy + _dy
+            if 0 <= _nx < cols and 0 <= _ny < rows:
+                _nidx = _ny * cols + _nx
+                _dn = dist[_nidx]
+                if _dn <= 0:
+                    continue
+                _oj = nearest[_nidx]
+                if _oj >= 0 and _oj != _oi:
+                    _gap = (_d + _dn) * cs
+                    if _oi not in _obj_real_clearance or _gap < _obj_real_clearance[_oi]:
+                        _obj_real_clearance[_oi] = _gap
+                    if _oj not in _obj_real_clearance or _gap < _obj_real_clearance[_oj]:
+                        _obj_real_clearance[_oj] = _gap
+
+    for _oi_key, _vdata in obj_violation_data.items():
+        if _oi_key in _obj_real_clearance:
+            _vdata["min_clearance_m"] = _obj_real_clearance[_oi_key]
+        else:
+            # Object has violations but no Voronoi boundary — touching
+            # another obstacle directly (gap ≈ 0).
+            _vdata["min_clearance_m"] = 0.0
+
     # Violation messages now include structure vs equipment breakdown
     if violation_cells:
         violations.append(

@@ -120,6 +120,13 @@ class AgentState(TypedDict):
     # Routes to query_agent instead of analysis_fan_out.
     _query_mode:         Annotated[bool | None, _keep_last]
 
+    # Spatial relationship graph — NetworkX MultiGraph stored as node-link dict
+    # for JSON serialization, plus a compact text version for LLM context.
+    # Rebuilt from layout JSON after each placement (base edges only).
+    # Enriched by enrich_graph_node after all analysis tools complete.
+    spatial_graph:       Annotated[dict | None, _keep_last]
+    spatial_graph_text:  Annotated[str | None,  _keep_last]
+
 
 # ---------------------------------------------------------------------------
 # Routing functions — pure state reads, no side effects.
@@ -208,6 +215,198 @@ def _route_after_checkpoint(state: AgentState) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Spatial graph helpers
+# ---------------------------------------------------------------------------
+
+def _build_correction_message(state: dict, G=None) -> str:
+    """Build an explicit correction message from spatial graph findings.
+
+    Injected into conversation history when the router sends the LLM back for
+    adjustments, so the LLM knows exactly what to fix (move vectors, positions,
+    clearance details) instead of guessing.
+
+    Pass G directly from enrich_graph_node to avoid deserializing stale state.
+    """
+    if G is None:
+        graph_data = state.get("spatial_graph")
+        if not graph_data:
+            return ""
+        try:
+            from spatial_graph import dict_to_graph
+            G = dict_to_graph(graph_data)
+        except Exception:
+            return ""
+
+    issues = []
+
+    for nid, nd in G.nodes(data=True):
+        if nd.get("ntype") not in ("furniture", "mep"):
+            continue
+        name = nd.get("name", nid)
+
+        if nd.get("clearance_ok") is False:
+            md = nd.get("move_direction")
+            mdist = nd.get("move_distance_m")
+            deficit = nd.get("deficit_m", "?")
+            has_m = nd.get("min_clearance_m")
+            req_m = nd.get("required_clearance_m")
+            detail = f"has {has_m}m clearance, needs {req_m}m" if has_m and req_m else f"deficit {deficit}m"
+            center = nd.get("center")
+            pos_str = f" (currently at x={center[0]:.1f}, y={center[1]:.1f})" if center else ""
+            if md and mdist:
+                issues.append(
+                    f"- {name}{pos_str}: CLEARANCE VIOLATION ({detail}). "
+                    f"Fix: move [{md[0]:+.2f}, {md[1]:+.2f}] by {mdist}m")
+            else:
+                issues.append(
+                    f"- {name}{pos_str}: CLEARANCE VIOLATION ({detail}). "
+                    f"Reposition away from walls and obstacles.")
+
+        if nd.get("reachable") is False:
+            reasons = []
+            if not nd.get("height_ok", True):
+                reasons.append("height out of reach range")
+            if not nd.get("radius_ok", True):
+                reasons.append("too far from use point")
+            issues.append(
+                f"- {name}: UNREACHABLE ({', '.join(reasons) if reasons else 'blocked'})")
+
+        if nd.get("facing_ok") is False:
+            issues.append(
+                f"- {name}: WRONG FACING (off by {nd.get('angle_diff', '?')}deg)")
+
+    blocks = [(u, v) for u, v, d in G.edges(data=True) if d.get("etype") == "blocks"]
+    for u, v in blocks:
+        un = G.nodes[u].get("name", u)
+        vn = G.nodes[v].get("name", v)
+        issues.append(f"- {un} BLOCKS the functional line of {vn}. Move {un} out of the way.")
+
+    unreachable_paths = [(u, v) for u, v, d in G.edges(data=True)
+                         if d.get("etype") == "path" and not d.get("reachable")]
+    for u, v in unreachable_paths:
+        un = G.nodes[u].get("name", u)
+        vn = G.nodes[v].get("name", v)
+        issues.append(f"- Path from {un} to {vn} is BLOCKED.")
+
+    if not issues:
+        return ""
+
+    adj = state.get("adjustment_count", 0) + 1
+    return (
+        f"SPATIAL GRAPH CORRECTION (attempt {adj}/{MAX_ADJUSTMENTS})\n"
+        f"The analysis found {len(issues)} issue(s) that need fixing:\n\n"
+        + "\n".join(issues) + "\n\n"
+        "Use move_object with the vectors above. "
+        "Do NOT call analysis tools -- they run automatically after placement."
+    )
+
+
+def enrich_graph_node(state: AgentState) -> dict:
+    """Enrich the spatial graph with analysis tool results.
+
+    Runs after all 5 analysis tools complete (after reachability) and before
+    the group2 routing decision. Adds analysis-derived node attributes and
+    edges, prints ANSI-colored FINDINGS, and injects a correction message
+    into the conversation when violations are found after placement.
+    """
+    graph_data = state.get("spatial_graph")
+    if not graph_data:
+        return {}
+    try:
+        from spatial_graph import (
+            dict_to_graph, enrich_graph_from_analysis,
+            graph_to_dict, serialize_for_llm,
+        )
+        G = dict_to_graph(graph_data)
+        G = enrich_graph_from_analysis(
+            G,
+            state.get("collision_results"),
+            state.get("visibility_results"),
+            state.get("path_results"),
+            state.get("reachability_results"),
+            state.get("orientation_results"),
+        )
+        text = serialize_for_llm(G)
+        print(f"\n[enrich_graph] Spatial graph: {G.number_of_nodes()} nodes, "
+              f"{G.number_of_edges()} edges")
+        print(text)
+
+        # Collect actionable findings for ANSI display
+        # Skip walls (structural, not movable) — their "clearance" is
+        # just wall thickness, not an actionable issue.
+        _skip_ntypes = {"wall"}
+        _findings = []
+        for nid, nd in G.nodes(data=True):
+            if nd.get("ntype") in _skip_ntypes:
+                continue
+            name = nd.get("name", nid)
+            if nd.get("clearance_ok") is False:
+                deficit = nd.get("deficit_m", "?")
+                has_m = nd.get("min_clearance_m")
+                req_m = nd.get("required_clearance_m")
+                detail = f"has {has_m}m, needs {req_m}m" if has_m and req_m else f"deficit {deficit}m"
+                md = nd.get("move_direction")
+                mdist = nd.get("move_distance_m")
+                if md and mdist:
+                    _findings.append(
+                        f"  \033[91mCLEARANCE\033[0m  {name}: {detail} "
+                        f"-> move [{md[0]:+.1f},{md[1]:+.1f}] {mdist}m")
+                else:
+                    _findings.append(f"  \033[91mCLEARANCE\033[0m  {name}: {detail}")
+            if nd.get("reachable") is False:
+                reasons = []
+                if not nd.get("height_ok", True):
+                    reasons.append("height")
+                if not nd.get("radius_ok", True):
+                    reasons.append("radius")
+                _findings.append(
+                    f"  \033[93mUNREACH \033[0m  {name}: "
+                    f"{', '.join(reasons) if reasons else 'blocked'}")
+            if nd.get("facing_ok") is False:
+                _findings.append(
+                    f"  \033[93mFACING  \033[0m  {name}: off by {nd.get('angle_diff', '?')}deg")
+
+        for u, v in [(u, v) for u, v, d in G.edges(data=True) if d.get("etype") == "blocks"]:
+            un = G.nodes[u].get("name", u)
+            vn = G.nodes[v].get("name", v)
+            _findings.append(f"  \033[91mBLOCKS  \033[0m  {un} blocks {vn}")
+
+        for u, v, d in [(u, v, d) for u, v, d in G.edges(data=True)
+                        if d.get("etype") == "path" and not d.get("reachable")]:
+            un = G.nodes[u].get("name", u)
+            vn = G.nodes[v].get("name", v)
+            _findings.append(f"  \033[91mNO PATH \033[0m  {un} -> {vn}: unreachable")
+
+        if _findings:
+            print(f"\n\033[1m[enrich_graph] === FINDINGS ({len(_findings)}) ===\033[0m")
+            for f in _findings:
+                print(f)
+            print()
+        else:
+            print(f"\n\033[92m[enrich_graph] No issues found - all clear\033[0m\n")
+
+        print("\033[36m[tip] Visualize the current graph in another terminal:\033[0m")
+        print("\033[36m      python test_spatial_graph.py --session\033[0m\n")
+
+        updates = {
+            "spatial_graph": graph_to_dict(G),
+            "spatial_graph_text": text,
+        }
+
+        # Inject correction message if findings exist and objects were placed this round.
+        # The router may send the LLM back to reason — this message tells it what to fix.
+        if _findings and state.get("last_placement_result") is not None:
+            correction = _build_correction_message(state, G=G)
+            if correction:
+                updates["messages"] = [{"role": "user", "content": correction}]
+
+        return updates
+    except Exception as exc:
+        print(f"[enrich_graph] Warning: {exc}")
+        return {}
+
+
+# ---------------------------------------------------------------------------
 # Graph wiring — build all nodes, then wire edges and conditional routes.
 # ---------------------------------------------------------------------------
 
@@ -251,6 +450,7 @@ def build_graph(ctx: Any) -> Any:
     graph.add_node("orientation",      orientation)
     graph.add_node("collision",        collision)
     graph.add_node("group1_join",      group1_join_node)
+    graph.add_node("enrich_graph",     enrich_graph_node)
     graph.add_node("scoring",          scoring)
     graph.add_node("user_checkpoint",  user_checkpoint)
     graph.add_node("explain",          explain_node)
@@ -302,10 +502,13 @@ def build_graph(ctx: Any) -> Any:
         {"adjust": "reason", "continue": "path"},
     )
 
-    # Group 2: path then reachability; poor connectivity sends back to reason.
+    # Group 2: path → reachability → enrich_graph → routing decision.
+    # enrich_graph runs BEFORE _route_after_group2 so the spatial graph has
+    # all analysis data when the router (and _build_correction_message) reads it.
     graph.add_edge("path", "reachability")
+    graph.add_edge("reachability", "enrich_graph")
     graph.add_conditional_edges(
-        "reachability", _route_after_group2,
+        "enrich_graph", _route_after_group2,
         {"adjust": "reason", "continue": "scoring"},
     )
 
@@ -356,6 +559,19 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
     # LLM context lean. But layout_json_string stores the FULL layout because
     # MCP tools (collision-detector-grid, visualize_visibility) need all fields
     # (outline, structure, mep) that _slim_layout strips.
+
+    # Build the initial spatial graph from the base layout (geometry only,
+    # no furniture placed yet). Gives the LLM room topology from the first turn.
+    from spatial_graph import build_graph_from_layout, graph_to_dict, serialize_for_llm
+    _sg = build_graph_from_layout(ctx.layout_data)
+    _sg_dict = graph_to_dict(_sg)
+    _sg_text = serialize_for_llm(_sg)
+    print(f"\n[spatial_graph] Initial graph: {_sg.number_of_nodes()} nodes, "
+          f"{_sg.number_of_edges()} edges")
+    print(_sg_text)
+    print("\033[36m[tip] Visualize the spatial graph in another terminal:\033[0m")
+    print("\033[36m      python test_spatial_graph.py --session\033[0m\n")
+
     slim = _slim_layout(ctx.layout_data)
     layout_text = json.dumps(slim, indent=2)
     user_message = (
@@ -393,6 +609,8 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
         "original_layout":       ctx.layout_data,
         "_llm":                  ctx.llm,
         "_query_mode":           None,
+        "spatial_graph":         _sg_dict,
+        "spatial_graph_text":    _sg_text,
     }
 
 

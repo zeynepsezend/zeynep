@@ -186,6 +186,15 @@ analysis runs automatically
 - Use space_config clearance value for all placements
 - Use profile_config min_path_width for corridor checks
 
+## SPATIAL GRAPH
+After each analysis cycle, you receive a SPATIAL RELATIONSHIP GRAPH in the context.
+The ISSUES section lists violations with exact move vectors. Use them:
+- "cnc_machine: move [+0.9,+0.4] 0.4m to fix clearance (has 0.6m, needs 0.9m)"
+  → call move_object with those exact offsets applied to the current position.
+- "storage_rack: unreachable (height)" → reposition lower or closer to use point.
+- "rack --blocks--> cnc_machine" → move the blocking object out of the sightline.
+Do NOT guess new positions when the graph provides vectors. Follow the ISSUES.
+
 OUTPUT — strict JSON only, no markdown:
 {{"action":"final"|"tool"|"query","final_response":"...","tool_calls":[...]}}
 """

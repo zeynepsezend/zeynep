@@ -54,6 +54,12 @@ def build_reason_node(llm: Any):
                 reach_height_max  = profile_config.get("reach_height_max", 1.8),
             )
 
+        # Inject spatial graph text so the LLM sees current relationships,
+        # violations, and move vectors on every reasoning turn.
+        graph_text = state.get("spatial_graph_text")
+        if graph_text:
+            context_injection += f"\nSPATIAL RELATIONSHIP GRAPH:\n{graph_text}\n"
+
         # Build a local message list — never mutate state["messages"] here.
         # The context block prepends so it appears before the user's request
         # in every LLM call without accumulating in the persistent history.
