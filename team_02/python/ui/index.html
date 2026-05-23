@@ -75,36 +75,73 @@ body {
   transition: opacity .25s ease;
 }
 #overlay.visible { opacity: 1; pointer-events: auto; }
-.overlay-bar {
-  width: 100px; height: 2px; border-radius: 99px;
-  background: linear-gradient(90deg,
-    var(--thermal), var(--visual), var(--acoustic),
-    var(--spatial), var(--olfactory), var(--tactile));
-  animation: sensiBar 1.8s ease-in-out infinite;
-  transform-origin: left;
-  margin: 20px 0;
-  opacity: .55;
-}
 .overlay-msg {
-  font-family: 'Roboto', sans-serif;
-  font-weight: 300; font-size: 14px;
-  color: rgba(240,237,232,.40);
+  font-family: 'DM Mono', monospace;
+  font-weight: 300; font-size: 12px; letter-spacing: .12em;
+  color: rgba(240,237,232,.38);
   text-align: center; max-width: 280px; line-height: 1.6;
+  margin-top: 20px;
 }
 
-/* ── shared top bar ── */
+/* ── shared top bar — floating pill ── */
 .top-bar {
   flex-shrink: 0;
   width: 100%;
-  padding: 20px 28px;
-  display: flex; align-items: center; gap: 12px;
-  border-bottom: 1px solid rgba(240,237,232,.06);
+  padding: 16px 24px;
+  display: flex; align-items: center; justify-content: center;
+}
+.top-bar-pill {
+  display: inline-flex; align-items: center;
+  height: 54px;
+  border-radius: 999px;
+  background: rgba(22,22,22,1);
+  border: 1px solid rgba(240,237,232,.13);
+  padding: 0 28px;
+}
+/* chat screen needs a wider pill to push the profile button right */
+.top-bar-pill--wide {
+  width: 100%;
+  max-width: 640px;
 }
 .top-bar-label {
   font-family: 'DM Mono', monospace;
-  font-size: 11px; letter-spacing: .18em;
+  font-size: 14px; letter-spacing: .18em;
   text-transform: uppercase;
-  color: rgba(240,237,232,.45);
+  color: rgba(240,237,232,.88);
+  margin-left: 12px;
+}
+.top-bar-sep {
+  /* gap is broken in PyQt5 Chromium — sep carries all the spacing via padding */
+  padding: 0 16px;
+  color: rgba(240,237,232,.28);
+  font-size: 15px;
+  line-height: 1;
+}
+.top-bar-section {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(240,237,232,.42);
+}
+.top-bar-step {
+  display: flex; align-items: center;
+  background: rgba(232,131,106,.12);
+  border: 1px solid rgba(232,131,106,.30);
+  border-radius: 999px;
+  padding: 0 18px;
+  height: 36px;
+  white-space: nowrap;
+}
+.top-bar-step-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #E8836A; flex-shrink: 0;
+  margin-right: 9px;
+}
+.top-bar-step-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(232,131,106,.95);
 }
 
 /* ── CONVERSATION THREAD (quiz + chat share this) ── */
@@ -167,40 +204,44 @@ body {
 /* text + textarea inputs */
 .sensi-input {
   width: 100%;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgba(240,237,232,.16);
-  color: var(--fg);
+  background: rgba(232,131,106,.07);
+  border: 1px solid rgba(232,131,106,.28);
+  border-radius: 999px;
+  color: rgba(232,131,106,.90);
   font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
   font-size: 16px;
-  padding: 10px 0;
+  padding: 13px 22px;
   outline: none;
-  caret-color: var(--fg);
+  caret-color: rgba(232,131,106,.80);
   transition: border-color .2s;
 }
-.sensi-input::placeholder { color: rgba(240,237,232,.20); }
-.sensi-input:focus { border-bottom-color: rgba(240,237,232,.55); }
-textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top: 6px; }
+.sensi-input::placeholder { color: rgba(232,131,106,.28); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: .10em; }
+.sensi-input:focus { border-color: rgba(232,131,106,.55); }
+/* tall textareas (inspire): rounded-rect, not oval */
+textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radius: 20px; padding: 13px 22px; }
 
-/* inline send row */
+/* inline send row — positioning context for the inside button */
 .send-row {
-  display: flex; align-items: flex-end; gap: 8px; width: 100%;
+  position: relative; width: 100%;
 }
-.send-row .sensi-input { flex: 1; }
+.send-row .sensi-input {
+  width: 100%; height: 50px; overflow-y: auto;
+  border-radius: 20px; padding: 13px 54px 13px 20px; margin-right: 0;
+}
+/* arrow button sits inside the pill at bottom-right */
 .btn-send {
-  background: transparent;
-  border: 1px solid rgba(240,237,232,.15);
-  color: rgba(240,237,232,.40);
-  font-family: 'DM Mono', monospace;
-  font-size: 12px; letter-spacing: .16em;
-  padding: 10px 18px;
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(232,131,106,.18);
+  border: 1px solid rgba(232,131,106,.35);
+  color: rgba(232,131,106,.90);
+  font-size: 15px;
   cursor: pointer;
-  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
   transition: all .2s;
-  white-space: nowrap;
-  margin-bottom: 1px;
 }
-.btn-send:hover { border-color: rgba(240,237,232,.55); color: var(--fg); }
+.btn-send:hover { background: rgba(232,131,106,.28); border-color: rgba(232,131,106,.55); color: rgba(232,131,106,1); }
 
 /* action button (continue, build, etc.) */
 .btn-action {
@@ -208,7 +249,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   border: 1px solid rgba(240,237,232,.15);
   color: rgba(240,237,232,.40);
   font-family: 'DM Mono', monospace;
-  font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
   padding: 12px 28px;
   cursor: pointer;
   border-radius: 6px;
@@ -227,7 +268,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   border: 1px solid rgba(240,237,232,.07);
   color: rgba(240,237,232,.22);
   font-family: 'DM Mono', monospace;
-  font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+  font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
   padding: 12px 24px;
   cursor: pointer;
   border-radius: 6px;
@@ -237,7 +278,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 
 /* ── PILLS ── */
 .pill-group {
-  display: flex; gap: 6px; flex-wrap: wrap;
+  display: flex; flex-wrap: wrap;
   width: 100%; margin-top: 10px;
 }
 .pill {
@@ -249,18 +290,20 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   border-radius: 99px;
   transition: all .16s ease;
   font-family: 'DM Mono', monospace;
-  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
   color: rgba(240,237,232,.32);
   user-select: none;
+  margin-right: 6px; margin-bottom: 6px;
 }
 .pill:hover { border-color: rgba(240,237,232,.32); color: rgba(240,237,232,.70); background: rgba(240,237,232,.02); }
 .pill.selected { border-color: rgba(240,237,232,.55); color: var(--fg); background: rgba(240,237,232,.04); }
 
 /* ── SENSE PILLS ── */
-.sense-grid { display: flex; gap: 5px; width: 100%; margin-top: 10px; }
+.sense-grid { display: flex; width: 100%; margin-top: 10px; }
+.sense-pill:not(:last-child) { margin-right: 5px; }
 .sense-pill {
   flex: 1;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  display: flex; flex-direction: column; align-items: center;
   padding: 14px 6px;
   border: 1px solid rgba(240,237,232,.12);
   border-radius: 99px;
@@ -268,7 +311,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   transition: all .16s ease;
   user-select: none;
 }
-.sense-pill .si { font-size: 16px; color: rgba(240,237,232,.38); transition: color .16s; line-height: 1; }
+.sense-pill .si { font-size: 16px; color: rgba(240,237,232,.38); transition: color .16s; line-height: 1; margin-bottom: 6px; }
 .sense-pill .sn { font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.12em; text-transform:uppercase; color:rgba(240,237,232,.30); transition:color .16s; }
 /* subtle tint at rest so pills read as interactive */
 .sense-pill[data-sense="thermal"]   { background: rgba(232,131,106,.04); }
@@ -307,47 +350,81 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 .sense-pill[data-sense="tactile"].selected   .si, .sense-pill[data-sense="tactile"].selected   .sn { color:var(--tactile);   }
 
 /* ── INSPIRE IMAGE GRID ── */
+@keyframes sg {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 .img-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px; width: 100%; margin-top: 6px;
 }
 .img-cell {
-  position: relative; overflow: hidden;
-  border-radius: 6px;
-  border: 1px solid rgba(240,237,232,.05);
+  position: relative;
+  border-radius: 8px;
+  padding: 2.5px;
+  background: rgba(240,237,232,.05);
   cursor: pointer;
-  transition: border-color .2s, box-shadow .2s;
+  transition: background .4s;
+}
+.img-cell.sg-anim {
+  background-size: 400% 400%;
+  animation: sg 3s ease infinite;
 }
 .img-cell img {
   width: 100%; aspect-ratio: 4/3; object-fit: cover;
-  display: block; opacity: .38;
+  display: block; opacity: .60;
+  border-radius: 6px;
   transition: opacity .2s ease;
 }
-.img-cell:hover img     { opacity: .68; }
-.img-cell.selected img  { opacity: 1; }
-.img-cell.selected      { border-color: rgba(240,237,232,.50); box-shadow: 0 0 0 1px rgba(240,237,232,.16); }
+.img-cell:hover img    { opacity: .82; }
+.img-cell.selected img { opacity: 1; }
+.sense-badge {
+  position: absolute; bottom: 6px; right: 8px;
+  display: flex; align-items: center;
+  background: rgba(13,13,13,.72);
+  border-radius: 999px;
+  padding: 2px 6px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.img-cell.selected .sense-badge { opacity: 1; }
+.sense-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  display: inline-block; margin-right: 3px;
+}
+.sense-dot:last-of-type { margin-right: 0; }
+.sense-sym {
+  font-size: 9px; margin-left: 3px;
+  font-family: 'DM Mono', monospace;
+  color: rgba(240,237,232,.70);
+  letter-spacing: .05em;
+}
 
 /* ── PERSONA BARS ── */
-.pbar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-.pbar-lbl { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.16em; text-transform:uppercase; width:62px; flex-shrink:0; }
-.pbar-track { flex:1; height:3px; background:rgba(240,237,232,.07); border-radius:99px; position:relative; }
+.pbar-row { display:flex; align-items:center; margin-bottom:10px; }
+.pbar-lbl { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.16em; text-transform:uppercase; width:62px; flex-shrink:0; margin-right:10px; }
+.pbar-track { flex:1; height:3px; background:rgba(240,237,232,.07); border-radius:99px; position:relative; margin-right:10px; }
 .pbar-fill  { height:100%; border-radius:99px; transition:width .6s ease; }
 .pbar-tick  { position:absolute; top:-3px; width:1px; height:9px; background:rgba(240,237,232,.32); }
 .pbar-val   { font-family:'DM Mono',monospace; font-size:8px; color:rgba(240,237,232,.30); width:26px; text-align:right; }
 
 /* ── MOODBOARD STRIP ── */
-.moodboard-strip { display:flex; gap:5px; width:100%; margin-top:14px; }
+.moodboard-strip { display:flex; width:100%; margin-top:14px; }
 .moodboard-strip img { flex:1; height:58px; object-fit:cover; border-radius:4px; opacity:.70; }
+.moodboard-strip img:not(:last-child) { margin-right: 5px; }
 
 /* ── FILE UPLOAD AREA ── */
 .upload-row {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center;
   margin-top: 10px;
 }
 .btn-upload {
   background: transparent;
   border: 1px dashed rgba(240,237,232,.12);
+  margin-right: 8px;
   color: rgba(240,237,232,.25);
   font-family: 'DM Mono', monospace;
   font-size: 8px; letter-spacing: .18em; text-transform: uppercase;
@@ -365,8 +442,9 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 }
 
 /* ── two-button row ── */
-.btn-row { display: flex; gap: 8px; margin-top: 16px; width: 100%; }
+.btn-row { display: flex; margin-top: 16px; width: 100%; }
 .btn-row .btn-action { flex: 1; margin-top: 0; }
+.btn-row > *:not(:last-child) { margin-right: 8px; }
 
 /* label */
 .label {
@@ -377,9 +455,9 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 }
 
 /* ── avatar + bubble row ── */
-.bubble-wrap { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 28px; }
+.bubble-wrap { display: flex; align-items: flex-start; margin-bottom: 28px; }
 /* avatar aligns with bubble top — flat top-left corner of bubble "connects" to avatar */
-.sensi-avatar { flex-shrink: 0; margin-top: 0; opacity: .88; }
+.sensi-avatar { flex-shrink: 0; margin-top: 0; opacity: .88; margin-right: 14px; }
 /* previous messages: demoted to a small static dot, no animation */
 .sensi-avatar-static {
   flex-shrink: 0;
@@ -387,6 +465,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   border-radius: 50%;
   background: rgba(240,237,232,.22);
   margin-top: 8px;
+  margin-right: 14px;
 }
 
 /* ── persona profile sections ── */
@@ -398,21 +477,23 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 .persona-section-label {
   font-family: 'DM Mono',monospace; font-size: 7px; letter-spacing: .24em; text-transform: uppercase;
   color: rgba(240,237,232,.28); margin: 24px 0 10px;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center;
 }
-.persona-section-label::before { content: ''; flex: 0 0 12px; height: 1px; background: rgba(240,237,232,.10); }
-.persona-section-label::after  { content: ''; flex: 1; height: 1px; background: rgba(240,237,232,.10); }
+.persona-section-label::before { content: ''; flex: 0 0 12px; height: 1px; background: rgba(240,237,232,.10); margin-right: 8px; }
+.persona-section-label::after  { content: ''; flex: 1; height: 1px; background: rgba(240,237,232,.10); margin-left: 8px; }
 
 /* top 3 cards */
-.top3-grid { display: flex; gap: 7px; width: 100%; }
-.top3-card  { flex: 1; padding: 12px 10px; border: 1px solid rgba(240,237,232,.08); border-radius: 6px; display: flex; flex-direction: column; gap: 5px; }
-.top3-icon  { font-size: 14px; line-height: 1; }
-.top3-sense { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; }
-.top3-note  { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 10px; line-height: 1.5; color: rgba(240,237,232,.48); }
+.top3-grid { display: flex; width: 100%; }
+.top3-grid > .top3-card:not(:last-child) { margin-right: 7px; }
+.top3-card  { flex: 1; padding: 12px 10px; border: 1px solid rgba(240,237,232,.08); border-radius: 6px; display: flex; flex-direction: column; }
+.top3-icon  { font-size: 14px; line-height: 1; margin-bottom: 5px; }
+.top3-sense { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 5px; }
+.top3-note  { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; line-height: 1.5; color: rgba(240,237,232,.48); }
 
 /* bar legend */
-.bar-legend { display: flex; gap: 16px; margin-bottom: 8px; }
-.bar-legend span { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .12em; color: rgba(240,237,232,.28); display: flex; align-items: center; gap: 5px; }
+.bar-legend { display: flex; margin-bottom: 8px; }
+.bar-legend > span:not(:last-child) { margin-right: 16px; }
+.bar-legend span { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .12em; color: rgba(240,237,232,.28); display: flex; align-items: center; }
 
 /* gap items */
 .gap-item { padding: 10px 12px; border-left: 2px solid; margin-bottom: 8px; border-radius: 0 5px 5px 0; background: rgba(240,237,232,.02); }
@@ -432,7 +513,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 .formula-eq-row { display: -webkit-box; display: flex; -webkit-box-align: baseline; align-items: baseline; margin-bottom: 10px; }
 .formula-eq-lhs { font-family:'DM Mono',monospace; font-size: 11px; color: rgba(240,237,232,.70); width: 130px; -webkit-flex-shrink: 0; flex-shrink: 0; }
 .formula-eq-rhs { font-family:'DM Mono',monospace; font-size: 11px; color: rgba(240,237,232,.42); -webkit-flex: 1; flex: 1; }
-.formula-eq-note { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 10px; color: rgba(240,237,232,.22); margin-left: 10px; font-style: italic; -webkit-flex-shrink: 0; flex-shrink: 0; }
+.formula-eq-note { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; color: rgba(240,237,232,.22); margin-left: 10px; font-style: italic; -webkit-flex-shrink: 0; flex-shrink: 0; }
 .formula-prose { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; line-height: 1.75; color: rgba(240,237,232,.35); }
 
 /* ── profile side panel ── */
@@ -447,7 +528,8 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   display: flex; flex-direction: column;
 }
 .profile-panel.open { transform: translateX(0); }
-.panel-header { flex-shrink: 0; padding: 16px 20px; border-bottom: 1px solid rgba(240,237,232,.05); display: flex; align-items: center; gap: 8px; }
+.panel-header { flex-shrink: 0; padding: 16px 20px; border-bottom: 1px solid rgba(240,237,232,.05); display: flex; align-items: center; }
+.panel-header > *:not(.panel-close) { margin-right: 8px; }
 .panel-close { background: transparent; border: none; color: rgba(240,237,232,.30); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; margin-left: auto; transition: color .2s; }
 .panel-close:hover { color: var(--fg); }
 .btn-panel-full { background: transparent; border: 1px solid rgba(240,237,232,.10); color: rgba(240,237,232,.30); font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px; cursor: pointer; border-radius: 6px; transition: all .2s; }
@@ -457,6 +539,21 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 /* profile button in top bar */
 .btn-profile { background: transparent; border: none; color: rgba(240,237,232,.25); cursor: pointer; padding: 4px; display: flex; align-items: center; transition: color .2s; margin-left: auto; }
 .btn-profile:hover { color: rgba(240,237,232,.65); }
+
+/* ── thinking bubble dots ── */
+@keyframes dotPulse {
+  0%,80%,100% { opacity:.15; transform:scale(.75); }
+  40%         { opacity:.90; transform:scale(1); }
+}
+.thinking-dots { display:flex; align-items:center; padding:2px 0; }
+.thinking-dots span { display:inline-block; width:5px; height:5px; border-radius:50%; background:rgba(240,237,232,.55); animation:dotPulse 1.4s ease-in-out infinite; margin-right:4px; }
+.thinking-dots span:last-child { margin-right:0; }
+.thinking-dots span:nth-child(2) { animation-delay:.2s; }
+.thinking-dots span:nth-child(3) { animation-delay:.4s; }
+
+/* ── upload image preview strip ── */
+.upload-preview { display:flex; flex-wrap:wrap; margin-top:8px; }
+.upload-preview img { width:46px; height:46px; object-fit:cover; border-radius:6px; opacity:.72; margin-right:6px; margin-bottom:6px; border:1px solid rgba(240,237,232,.10); }
 </style>
 </head>
 <body>
@@ -474,7 +571,6 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
     <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".9" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
     <circle cx="16" cy="16" r="1.4" fill="#F0EDE8" opacity=".85"/>
   </svg>
-  <div class="overlay-bar"></div>
   <p id="overlay-msg" class="overlay-msg">starting sensi...</p>
 </div>
 
@@ -486,18 +582,25 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 
   <!-- top bar -->
   <div class="top-bar">
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
-      <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
-      <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
-      <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
-      <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
-      <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
-      <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
-    </svg>
-    <span class="top-bar-label">sensi</span>
-    <!-- subtle step dots -->
-    <div id="quiz-dots" style="margin-left:auto;display:flex;gap:5px;align-items:center;"></div>
+    <div class="top-bar-pill">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+        <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+        <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+        <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+        <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+        <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+        <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+      </svg>
+      <span class="top-bar-label">sensi</span>
+      <span class="top-bar-sep">|</span>
+      <span class="top-bar-section">onboarding</span>
+      <span class="top-bar-sep">|</span>
+      <div class="top-bar-step">
+        <div class="top-bar-step-dot"></div>
+        <span class="top-bar-step-text" id="quiz-step-text">step 1 · welcome</span>
+      </div>
+    </div>
   </div>
 
   <!-- conversation thread -->
@@ -518,23 +621,43 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 
   <!-- top bar -->
   <div class="top-bar">
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
-      <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
-      <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
-      <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
-      <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
-      <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
-      <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
-    </svg>
-    <span id="inspire-top-label" class="top-bar-label">aesthetic · profile</span>
+    <div class="top-bar-pill">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+        <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+        <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+        <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+        <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+        <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+        <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+      </svg>
+      <span class="top-bar-label">sensi</span>
+      <span class="top-bar-sep">|</span>
+      <span class="top-bar-section">onboarding</span>
+      <span class="top-bar-sep">|</span>
+      <div class="top-bar-step">
+        <div class="top-bar-step-dot"></div>
+        <span class="top-bar-step-text" id="inspire-top-label">aesthetic profile</span>
+      </div>
+    </div>
   </div>
 
   <!-- question stage -->
   <div id="ins-question" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
     <div class="thread" style="flex:1;">
       <div class="thread-inner" style="padding-top:24px;">
-        <p id="ins-q-text" class="bubble-s"></p>
+        <div class="bubble-wrap">
+          <svg class="sensi-avatar" width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+            <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+            <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+            <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+            <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+            <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+            <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+          </svg>
+          <p id="ins-q-text" class="bubble-s" style="margin-bottom:0;"></p>
+        </div>
       </div>
     </div>
     <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
@@ -543,6 +666,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
         <button class="btn-upload" onclick="window.bridge.openFilePicker()">+ add reference images</button>
         <span id="upload-names" class="upload-names">optional · up to 5</span>
       </div>
+      <div id="upload-preview" class="upload-preview"></div>
       <button class="btn-action" onclick="submitInspireQuestion()">build my moodboard →</button>
     </div>
   </div>
@@ -551,7 +675,18 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   <div id="ins-grid" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
     <div class="thread" style="flex:1;">
       <div class="thread-inner" style="padding-top:16px;">
-        <p class="bubble-s">which of these feel like you?</p>
+        <div class="bubble-wrap" style="margin-bottom:8px;">
+          <svg class="sensi-avatar" width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+            <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+            <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+            <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+            <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+            <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+            <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+          </svg>
+          <p class="bubble-s" style="margin-bottom:0;">which of these feel like you?</p>
+        </div>
         <p class="label" style="margin-top:4px;">click to select · pick what resonates</p>
         <div class="img-grid" id="inspire-img-grid"></div>
         <p id="inspire-sel-count" class="label" style="margin-top:8px;"></p>
@@ -566,8 +701,19 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
   <div id="ins-moodboard" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
     <div class="thread" style="flex:1;">
       <div class="thread-inner" style="padding-top:16px;">
-        <p class="bubble-s">here's your moodboard.</p>
-        <div class="img-grid" id="moodboard-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px;"></div>
+        <div class="bubble-wrap" style="margin-bottom:10px;">
+          <svg class="sensi-avatar" width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+            <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+            <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+            <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+            <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+            <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+            <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+          </svg>
+          <p class="bubble-s" style="margin-bottom:0;">here's your moodboard.</p>
+        </div>
+        <div class="img-grid" id="moodboard-grid" style="margin-top:10px;"></div>
       </div>
     </div>
     <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
@@ -587,16 +733,25 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 <div id="screen-persona" class="screen">
 
   <div class="top-bar">
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
-      <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
-      <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
-      <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
-      <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
-      <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
-      <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
-    </svg>
-    <span class="top-bar-label">your comfort profile</span>
+    <div class="top-bar-pill">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+        <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+        <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+        <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+        <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+        <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+        <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+      </svg>
+      <span class="top-bar-label">sensi</span>
+      <span class="top-bar-sep">|</span>
+      <span class="top-bar-section">onboarding</span>
+      <span class="top-bar-sep">|</span>
+      <div class="top-bar-step" style="background:rgba(212,185,106,.10);border-color:rgba(212,185,106,.22);">
+        <div class="top-bar-step-dot" style="background:#D4B96A;"></div>
+        <span class="top-bar-step-text" style="color:rgba(212,185,106,.90);">profile reveal</span>
+      </div>
+    </div>
   </div>
 
   <div class="thread" style="flex:1;">
@@ -696,25 +851,27 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 <div id="screen-chat" class="screen">
 
   <div class="top-bar">
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
-      <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
-      <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
-      <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
-      <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
-      <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
-      <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
-    </svg>
-    <span class="top-bar-label">sensi</span>
-    <span id="chat-layout-tag" style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.15em;color:rgba(240,237,232,.16);margin-left:12px;"></span>
-    <button class="btn-profile" id="btn-profile-chat" onclick="openProfilePanel()" title="your comfort profile" style="display:none;">
-      <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="16" r="14.5" stroke="currentColor" stroke-width=".9"/>
-        <circle cx="16" cy="16" r="9.5"  stroke="currentColor" stroke-width=".9"/>
-        <circle cx="16" cy="16" r="4.5"  stroke="currentColor" stroke-width=".9"/>
-        <circle cx="16" cy="16" r="1.4" fill="currentColor"/>
+    <div class="top-bar-pill top-bar-pill--wide">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+        <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+        <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+        <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+        <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+        <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+        <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
       </svg>
-    </button>
+      <span class="top-bar-label">sensi</span>
+      <span id="chat-layout-tag" class="top-bar-section" style="margin-left:4px;"></span>
+      <button class="btn-profile" id="btn-profile-chat" onclick="openProfilePanel()" title="your comfort profile" style="display:none;margin-left:auto;">
+        <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="14.5" stroke="currentColor" stroke-width=".9"/>
+          <circle cx="16" cy="16" r="9.5"  stroke="currentColor" stroke-width=".9"/>
+          <circle cx="16" cy="16" r="4.5"  stroke="currentColor" stroke-width=".9"/>
+          <circle cx="16" cy="16" r="1.4" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <div class="thread" id="chat-thread">
@@ -723,10 +880,10 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; padding-top
 
   <div class="input-area" style="max-width:560px;margin:0 auto;width:100%;">
     <div class="send-row">
-      <textarea id="chat-input" class="sensi-input" style="height:36px;max-height:100px;overflow-y:auto;"
+      <textarea id="chat-input" class="sensi-input"
                 placeholder="ask sensi about your layout…"
                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
-      <button class="btn-send" onclick="sendChat()">send →</button>
+      <button class="btn-send" onclick="sendChat()">→</button>
     </div>
   </div>
 
@@ -767,6 +924,7 @@ const S = {
   inspireRound: 1,
   inspireUrlsPerRound:     [[], [], []],
   inspireSelectedPerRound: [{}, {}, {}],
+  inspireSensesPerRound:   [[], [], []],
   uploadedB64s: [],
 };
 
@@ -777,6 +935,7 @@ const SC = {
 const SI = { thermal:"△", visual:"○", acoustic:"∿", spatial:"□", olfactory:"≈", tactile:"∶" };
 const SENSES = ["thermal","visual","acoustic","spatial","olfactory","tactile"];
 const STEPS  = ["hello","role","space","senses","life","feel"];
+const STEP_LABELS = { hello:"welcome", role:"your role", space:"your space", senses:"senses", life:"lifestyle", feel:"how you feel" };
 
 // ── Screen router ─────────────────────────────────────────
 function showScreen(name) {
@@ -785,65 +944,78 @@ function showScreen(name) {
   if (el) el.classList.add("active");
 }
 
-// ── Overlay ───────────────────────────────────────────────
-const _PROGRESS_PCT = {
-  "reading your aesthetic...":  25,
-  "building search queries...": 55,
-  "gathering images...":        80,
-  "finding more images...":     80,
-  "building your comfort profile...": 90,
+// ── Overlay — full screen (long pipeline processes only) ──
+const _OVERLAY_PHRASES = {
+  "reading your aesthetic...":        ["reading your aesthetic...", "feeling into your world...", "translating your sense of space..."],
+  "gathering images...":              ["gathering images...", "curating your visual world...", "finding what feels right..."],
+  "finding more images...":           ["refining the picture...", "going deeper...", "finding more..."],
+  "building your comfort profile...": ["building your comfort profile...", "mapping your sensory world...", "putting it all together..."],
+  "starting sensi...":                ["starting sensi...", "waking up..."],
 };
-
-function _setBarPct(pct) {
-  const bar = document.querySelector(".overlay-bar");
-  if (!bar) return;
-  if (pct == null) {
-    // No known progress — hide bar entirely, no looping animation
-    bar.style.animation = "none";
-    bar.style.opacity = "0";
-    bar.style.transform = "scaleX(0)";
-    bar.style.transition = "none";
-  } else {
-    // Known progress — show bar at exact percentage
-    bar.style.animation = "none";
-    bar.style.opacity = ".85";
-    bar.style.transform = `scaleX(${pct / 100})`;
-    bar.style.transition = "transform .5s ease, opacity .2s ease";
-  }
-}
+let _overlayInterval = null;
 
 function showOverlay(msg) {
-  document.getElementById("overlay-msg").textContent = msg || "thinking...";
+  const phrases = _OVERLAY_PHRASES[msg] || [msg];
+  let idx = 0;
+  document.getElementById("overlay-msg").textContent = phrases[0];
   document.getElementById("overlay").classList.add("visible");
-  _setBarPct(null); // hide bar — no looping, bar appears only when progress is known
-}
-function hideOverlay() {
-  const bar = document.querySelector(".overlay-bar");
-  if (bar && bar.style.opacity === ".85") {
-    // Bar was showing real progress — snap to 100% then hide
-    bar.style.transform = "scaleX(1)";
-    bar.style.transition = "transform .3s ease";
-    setTimeout(() => {
-      document.getElementById("overlay").classList.remove("visible");
-      _setBarPct(null);
-    }, 380);
-  } else {
-    // No bar was shown — hide immediately
-    document.getElementById("overlay").classList.remove("visible");
-    _setBarPct(null);
+  clearInterval(_overlayInterval);
+  if (phrases.length > 1) {
+    _overlayInterval = setInterval(() => {
+      idx = (idx + 1) % phrases.length;
+      document.getElementById("overlay-msg").textContent = phrases[idx];
+    }, 2600);
   }
 }
+function hideOverlay() {
+  clearInterval(_overlayInterval);
+  document.getElementById("overlay").classList.remove("visible");
+}
 
-// ── Step dots + top bar label ─────────────────────────────
+// ── Thinking bubble — inline (simple sensi replies) ───────
+const _THINKING_HTML = `<div class="bubble-wrap" id="thinking-bubble">
+  <svg class="sensi-avatar" width="28" height="28" viewBox="0 0 32 32" fill="none">
+    <circle cx="16" cy="16" r="14.5" stroke="#E8836A" stroke-width=".8" style="animation:srg0 3s ease-in-out infinite"/>
+    <circle cx="16" cy="16" r="12"   stroke="#D4B96A" stroke-width=".8" style="animation:srg1 3s ease-in-out infinite;animation-delay:.5s"/>
+    <circle cx="16" cy="16" r="9.5"  stroke="#9B8FD4" stroke-width=".8" style="animation:srg2 3s ease-in-out infinite;animation-delay:1s"/>
+    <circle cx="16" cy="16" r="7"    stroke="#6AB8C8" stroke-width=".8" style="animation:srg3 3s ease-in-out infinite;animation-delay:1.5s"/>
+    <circle cx="16" cy="16" r="4.5"  stroke="#8BB88A" stroke-width=".8" style="animation:srg4 3s ease-in-out infinite;animation-delay:2s"/>
+    <circle cx="16" cy="16" r="2"    stroke="#C4A882" stroke-width=".8" style="animation:srg5 3s ease-in-out infinite;animation-delay:2.5s"/>
+    <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
+  </svg>
+  <div class="bubble-s" style="margin-bottom:0;padding:12px 16px;">
+    <span class="thinking-dots"><span></span><span></span><span></span></span>
+  </div>
+</div>`;
+
+function showThinking(threadInnerId) {
+  const inner = document.getElementById(threadInnerId);
+  if (!inner || inner.querySelector("#thinking-bubble")) return;
+  // Demote existing animated avatars to static dots
+  inner.querySelectorAll(".sensi-avatar").forEach(av => {
+    const dot = document.createElement("div");
+    dot.className = "sensi-avatar-static";
+    av.parentNode.replaceChild(dot, av);
+  });
+  const tmp = document.createElement("div");
+  tmp.innerHTML = _THINKING_HTML;
+  inner.appendChild(tmp.firstElementChild);
+  const thread = inner.closest(".thread") || inner.parentElement;
+  setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
+}
+function hideThinking() {
+  ["quiz-thread-inner","chat-thread-inner"].forEach(id => {
+    const inner = document.getElementById(id);
+    if (inner) { const b = inner.querySelector("#thinking-bubble"); if (b) b.remove(); }
+  });
+}
+
+// ── Step badge update ─────────────────────────────────────
 function renderDots(step) {
-  document.getElementById("quiz-dots").innerHTML = STEPS.map((_, i) => {
-    const op = i < step ? ".45" : i === step ? "1" : ".14";
-    const sz = i === step ? "5" : "4";
-    return `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:rgba(240,237,232,${op});transition:all .3s;"></div>`;
-  }).join("");
-  // update top-bar label to show progress
-  const lbl = document.querySelector("#screen-quiz .top-bar-label");
-  if (lbl) lbl.textContent = `step ${Math.min(step + 1, STEPS.length)} of ${STEPS.length}`;
+  const idx = Math.min(step, STEPS.length - 1);
+  const label = STEP_LABELS[STEPS[idx]] || STEPS[idx];
+  const el = document.getElementById("quiz-step-text");
+  if (el) el.textContent = `${idx + 1} of ${STEPS.length} · ${label}`;
 }
 
 // ── Sensi avatar SVG (mini, reused in bubbles) ───────────
@@ -1029,7 +1201,7 @@ function submitStep(step) {
   addBubble("u", text);
   // Clear input area while waiting
   document.getElementById("quiz-input-area").innerHTML = "";
-  showOverlay("thinking...");
+  showThinking("quiz-thread-inner");
   window.bridge.sendMessage(text);
 }
 
@@ -1051,22 +1223,60 @@ function submitInspireQuestion() {
   window.bridge.prepareInspire(text, JSON.stringify(S.uploadedB64s), 1);
 }
 
-function renderInspireGrid(urls, round) {
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `${r},${g},${b}`;
+}
+
+function makeGradient(senses) {
+  if (!senses || senses.length === 0) return "rgba(240,237,232,.10)";
+  const c1 = SC[senses[0]] || "#E8836A";
+  if (senses.length === 1) {
+    const rgb = hexToRgb(c1);
+    return `linear-gradient(270deg, ${c1}, rgba(${rgb},.28), rgba(${rgb},.55), ${c1})`;
+  }
+  const c2 = SC[senses[1]] || c1;
+  return `linear-gradient(270deg, ${c1}, rgba(${hexToRgb(c2)},.70), ${c2}, rgba(${hexToRgb(c1)},.70), ${c1})`;
+}
+
+function renderInspireGrid(urls, senses, round) {
   const grid = document.getElementById("inspire-img-grid");
   grid.innerHTML = "";
   S.inspireUrlsPerRound[round - 1]     = urls;
   S.inspireSelectedPerRound[round - 1] = {};
+  S.inspireSensesPerRound[round - 1]   = senses || [];
 
   urls.forEach((url, i) => {
+    const cellSenses = (senses && senses[i]) ? senses[i] : [];
+
+    // Sense badge: colored dots + symbol glyphs
+    const dots = cellSenses.map(s =>
+      `<span class="sense-dot" style="background:${SC[s]||'#888'}"></span>`
+    ).join("");
+    const syms = cellSenses.map(s => SI[s] || "").join(" ");
+    const badge = `<div class="sense-badge">${dots}<span class="sense-sym">${syms}</span></div>`;
+
     const cell = document.createElement("div");
     cell.className = "img-cell";
-    cell.innerHTML = `<img src="${url}" loading="lazy">`;
+    cell.innerHTML = `<img src="${url}" loading="lazy">${badge}`;
+
     cell.addEventListener("click", () => {
-      cell.classList.toggle("selected");
+      const isSelected = cell.classList.toggle("selected");
       const sel = S.inspireSelectedPerRound[round - 1];
-      cell.classList.contains("selected") ? (sel[i] = true) : delete sel[i];
+      if (isSelected) {
+        cell.style.background = makeGradient(cellSenses);
+        cell.classList.add("sg-anim");
+        sel[i] = true;
+      } else {
+        cell.style.background = "";
+        cell.classList.remove("sg-anim");
+        delete sel[i];
+      }
       updateInspireCount(round);
     });
+
     grid.appendChild(cell);
   });
 
@@ -1333,9 +1543,9 @@ function sendChat() {
   const txt = ta.value.trim();
   if (!txt) return;
   ta.value = "";
-  ta.style.height = "36px";
+  ta.style.height = "50px";
   addChatBubble("u", txt);
-  showOverlay("thinking...");
+  showThinking("chat-thread-inner");
   window.bridge.sendMessage(txt);
 }
 
@@ -1343,8 +1553,8 @@ function sendChat() {
 document.addEventListener("DOMContentLoaded", () => {
   const ta = document.getElementById("chat-input");
   if (ta) ta.addEventListener("input", () => {
-    ta.style.height = "36px";
-    ta.style.height = Math.min(ta.scrollHeight, 100) + "px";
+    ta.style.height = "50px";
+    ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
   });
 });
 
@@ -1359,7 +1569,7 @@ document.addEventListener("keydown", e => {
 // ── Bridge callbacks ──────────────────────────────────────
 
 window.receiveInit = function(data) {
-  hideOverlay();
+  hideOverlay(); hideThinking();
   if (data.screen === "chat") {
     // Returning user — persona already loaded
     if (data.persona) {
@@ -1377,7 +1587,7 @@ window.receiveInit = function(data) {
 };
 
 window.receiveResponse = function(data) {
-  hideOverlay();
+  hideOverlay(); hideThinking();
   if (data.screen === "quiz") {
     showScreen("quiz");
     addBubble("s", data.message);
@@ -1400,7 +1610,7 @@ window.receiveImages = function(data) {
     buildMoodboardDisplay();
     return;
   }
-  renderInspireGrid(data.urls, data.round);
+  renderInspireGrid(data.urls, data.senses || [], data.round);
 };
 
 window.receivePersona = function(data) {
@@ -1420,9 +1630,8 @@ window.receivePersona = function(data) {
 };
 
 window.receiveProgress = function(msg) {
-  document.getElementById("overlay-msg").textContent = msg;
-  const pct = _PROGRESS_PCT[msg];
-  if (pct != null) _setBarPct(pct);
+  // Kick off a new phrase-cycling overlay for this pipeline stage
+  showOverlay(msg);
 };
 
 window.receiveFiles = function(b64s) {
@@ -1430,6 +1639,13 @@ window.receiveFiles = function(b64s) {
   const n = S.uploadedB64s.length;
   document.getElementById("upload-names").textContent =
     n ? `${n} image${n > 1 ? "s" : ""} selected` : "optional · up to 5";
+  // Show thumbnails
+  const preview = document.getElementById("upload-preview");
+  if (preview) {
+    preview.innerHTML = S.uploadedB64s.map(b64 =>
+      `<img src="data:image/jpeg;base64,${b64}" alt="">`
+    ).join("");
+  }
 };
 
 window.receiveError = function(msg) {

@@ -20,11 +20,24 @@ import re
 import os
 from pathlib import Path
 
-from PyQt5.QtWidgets import QApplication, QMainWindow
+# ── DevTools: open http://localhost:19222 in Chrome while the app is running ──
+os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "19222"
+
+# ── HiDPI: must be set at module level, BEFORE QtWebEngineWidgets is imported ──
+# Importing QtWebEngineWidgets initialises Chromium — too late to set DPI after that.
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import Qt
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
+from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QThread, QUrl
 from PyQt5.QtGui import QColor
+from PyQt5.QtWebEngineWidgets import QWebEnginePage
+from PyQt5.QtWidgets import QShortcut
+from PyQt5.QtGui import QKeySequence
 
 # Add the python/ directory to path so _runtime and graph are importable
 sys.path.insert(0, str(Path(__file__).parent))
@@ -90,25 +103,24 @@ class InspireWorker(QThread):
                 or _vlm_analyze(llm, self.b64s, self.text)
             )
 
-            # Step 2 — Unsplash query generation
+            # Step 2 — Sense-tagged query generation (2 queries per sense = 12 for 3×4 grid)
             self.progress.emit("building search queries...")
-            n_map = {1: (4, 3), 2: (3, 3), 3: (2, 3)}
-            n_queries, per_q = n_map.get(self.round_num, (3, 3))
-            queries = _gen_queries(
+            queries_sensed = _gen_queries_sensed(
                 llm, analysis,
                 prev_desc=self.refine_desc,
-                n=n_queries,
+                n_per_sense=2,
             )
 
-            # Step 3 — Fetch images
+            # Step 3 — Fetch images, tagged by sense
             self.progress.emit("gathering images...")
-            urls, descs = _fetch_unsplash(queries, per_query=per_q)
+            urls, descs, senses = _fetch_unsplash_sensed(queries_sensed, per_query=1)
 
             self.finished.emit(json.dumps({
                 "ok":       True,
                 "round":    self.round_num,
                 "urls":     urls,
                 "descs":    descs,
+                "senses":   senses,
                 "analysis": analysis,
             }))
         except Exception as exc:
@@ -179,6 +191,98 @@ def _gen_queries(llm, analysis: str, prev_desc: str = "", n: int = 4) -> list:
     except Exception:
         pass
     return defaults[:n]
+
+
+_SENSE_DESCRIPTORS = {
+    "thermal":   "warmth, temperature, sun exposure, radiant heat, cozy warmth, fireplace",
+    "visual":    "light quality, color palette, brightness, shadow play, visual texture",
+    "acoustic":  "sound absorption, quiet atmosphere, soft materials, echo, acoustic quality",
+    "spatial":   "spatial volume, ceiling height, openness, layout, proportion, flow",
+    "olfactory": "natural materials, plants, wood, earthy quality, fresh air, greenery",
+    "tactile":   "material texture, roughness, softness, tactile surfaces, woven fabric",
+}
+_SENSE_ORDER = ["thermal", "visual", "acoustic", "spatial", "olfactory", "tactile"]
+
+
+def _gen_queries_sensed(llm, analysis: str, prev_desc: str = "", n_per_sense: int = 2) -> list:
+    """
+    Returns a list of (query_str, sense_str) tuples — n_per_sense per sense.
+    6 senses × 2 = 12 sense-tagged queries for a full 3×4 grid.
+    """
+    from langchain_core.messages import HumanMessage
+    extra  = f"\n\nThe user particularly liked: {prev_desc}" if prev_desc else ""
+    sense_lines = "\n".join(
+        f'  - {s}: focus on {d}' for s, d in _SENSE_DESCRIPTORS.items()
+    )
+    example_obj = (
+        '{"thermal":["q1","q2"],"visual":["q3","q4"],"acoustic":["q5","q6"],'
+        '"spatial":["q7","q8"],"olfactory":["q9","q10"],"tactile":["q11","q12"]}'
+    )
+    prompt = (
+        f"Aesthetic analysis:\n{analysis}{extra}\n\n"
+        f"Generate {n_per_sense} Unsplash search queries per sensory category to find interior "
+        f"architectural spaces matching this aesthetic.\n"
+        f"RULES: Every query MUST describe an interior room, residential space, or architectural scene. "
+        f"No people, no landscapes, no food, no fashion, no abstract imagery.\n"
+        f"Each query = 3–5 words.\n\n"
+        f"Sensory categories:\n{sense_lines}\n\n"
+        f"Return ONLY a JSON object matching this shape exactly:\n{example_obj}"
+    )
+    defaults = {
+        "thermal":   ["warm sunlit interior cozy", "fireplace living room warmth"],
+        "visual":    ["diffuse natural light minimal interior", "bright airy architectural space"],
+        "acoustic":  ["quiet library soft materials interior", "calm reading nook absorptive"],
+        "spatial":   ["open plan high ceiling loft", "intimate courtyard spatial volume"],
+        "olfactory": ["indoor plants greenery natural material", "wood stone earthy interior"],
+        "tactile":   ["rough concrete tactile texture interior", "woven fabric soft surface room"],
+    }
+    try:
+        resp = llm.invoke([HumanMessage(content=prompt)])
+        m = re.search(r"\{.*\}", resp.content, re.DOTALL)
+        if m:
+            parsed = json.loads(m.group())
+            if isinstance(parsed, dict):
+                result = []
+                for sense in _SENSE_ORDER:
+                    qs = parsed.get(sense, defaults[sense])
+                    for q in (qs or defaults[sense])[:n_per_sense]:
+                        result.append((str(q), sense))
+                return result
+    except Exception:
+        pass
+    result = []
+    for sense in _SENSE_ORDER:
+        for q in defaults[sense][:n_per_sense]:
+            result.append((q, sense))
+    return result
+
+
+def _fetch_unsplash_sensed(queries_with_senses: list, per_query: int = 1) -> tuple:
+    """
+    queries_with_senses: list of (query_str, sense_str)
+    Returns (urls, descs, senses) where senses is a list of [sense] lists.
+    """
+    import httpx
+    key = os.getenv("UNSPLASH_ACCESS_KEY", "")
+    if not key:
+        return [], [], []
+    urls, descs, senses = [], [], []
+    for q, sense in queries_with_senses:
+        try:
+            resp = httpx.get(
+                "https://api.unsplash.com/search/photos",
+                params={"query": q, "per_page": per_query, "orientation": "landscape"},
+                headers={"Authorization": f"Client-ID {key}"},
+                timeout=10.0,
+            )
+            if resp.status_code == 200:
+                for r in resp.json().get("results", []):
+                    urls.append(r["urls"]["small"])
+                    descs.append(r.get("alt_description") or q)
+                    senses.append([sense])
+        except Exception:
+            pass
+    return urls, descs, senses
 
 
 def _fetch_unsplash(queries: list, per_query: int = 3) -> tuple:
@@ -419,9 +523,10 @@ class SensiBridge(QObject):
         if result.get("ok"):
             self._inspire["analysis"] = result.get("analysis", self._inspire["analysis"])
             self._js("receiveImages", {
-                "round": result["round"],
-                "urls":  result["urls"],
-                "descs": result["descs"],
+                "round":  result["round"],
+                "urls":   result["urls"],
+                "descs":  result["descs"],
+                "senses": result.get("senses", []),
             })
         else:
             self._js("receiveError", result.get("error", "inspire fetch failed"))
@@ -515,6 +620,13 @@ class SensiWindow(QMainWindow):
         self.bridge  = SensiBridge(self.view, ctx)
         self.channel.registerObject("bridge", self.bridge)
         self.view.page().setWebChannel(self.channel)
+
+        # Hard reload shortcut — Ctrl+Shift+R bypasses cache completely
+        # Use this instead of F5 after making CSS/HTML changes
+        _reload = QShortcut(QKeySequence("Ctrl+Shift+R"), self)
+        _reload.activated.connect(
+            lambda: self.view.page().triggerAction(QWebEnginePage.ReloadAndBypassCache)
+        )
 
         # Load UI
         self.view.load(QUrl.fromLocalFile(str(_UI_PATH)))
