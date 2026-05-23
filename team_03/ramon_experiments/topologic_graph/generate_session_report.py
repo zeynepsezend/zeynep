@@ -316,7 +316,7 @@ def build_pdf(graph_img, voronoi_img, serialized_text, counts):
     pdf.cell(0, 15, "Session Report", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 16)
     pdf.set_text_color(100, 100, 100)
-    pdf.cell(0, 10, "Spatial Graph & Collision System Updates", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 10, "Spatial Graph, Collision & Interactive Visualizer", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(10)
     pdf.set_draw_color(83, 168, 226)
     pdf.line(60, pdf.get_y(), 150, pdf.get_y())
@@ -329,21 +329,31 @@ def build_pdf(graph_img, voronoi_img, serialized_text, counts):
     pdf.ln(15)
     pdf.set_font("Helvetica", "I", 10)
     pdf.set_text_color(120, 120, 120)
-    pdf.cell(0, 8, "Files modified: collision.py, spatial_graph.py", align="C", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, "Files updated: MASTER_CLAUDE_V2.md", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, "Files created: spatial_graph.py, test_spatial_graph.py, visualize_interactive.py", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, "Files modified: collision.py, graph.py, reason.py, prompts.py, add_objects.py", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, "New directory: python/view_graph/ (HTML output + local vis.js)", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, "Docs: CLAUDE.md, session report PDF", align="C", new_x="LMARGIN", new_y="NEXT")
 
     # ── Section 1: Summary ──
     pdf.add_page()
     pdf.section_title("1", "Session Summary")
     pdf.body_text(
-        "Two improvements were made to the spatial analysis pipeline on this session:\n\n"
-        "1. Fixed the collision clearance computation (collision.py) so that min_clearance_m "
-        "reports the real gap between each object and its nearest neighbor, instead of a "
-        "constant 0.1m (1 grid cell) for every object.\n\n"
-        "2. Added walls (structure) and windows as first-class nodes in the spatial graph "
-        "(spatial_graph.py), with near_wall and near_window proximity edges to furniture.\n\n"
-        "3. Fixed clearance_ok evaluation in spatial_graph.py to use deficit_m > 0 instead "
-        "of just checking for the presence of a clearance_violation dict."
+        "The spatial graph layer was implemented and integrated into the LangGraph pipeline. "
+        "Key changes:\n\n"
+        "1. Created spatial_graph.py - a pure NetworkX module that builds a MultiGraph from "
+        "layout JSON (rooms, doors, walls, windows, furniture, mep) with typed nodes and edges "
+        "(contained_in, door_connects, adjacent, near, near_wall, near_window).\n\n"
+        "2. Integrated the graph into the agent pipeline: AgentState fields, enrich_graph_node "
+        "(runs after all 5 analysis tools), correction message injection for LLM auto-fix, "
+        "graph rebuild after each placement.\n\n"
+        "3. Fixed collision clearance (collision.py): Voronoi boundary method computes real "
+        "surface-to-surface gaps instead of constant 0.1m.\n\n"
+        "4. Added walls and windows as graph nodes with near_wall/near_window proximity edges. "
+        "Walls filtered from FINDINGS (structural, not movable).\n\n"
+        "5. Fixed clearance_ok to use deficit_m <= 0 instead of checking dict presence.\n\n"
+        "6. Created test_spatial_graph.py standalone visualizer with edge descriptions in legend.\n\n"
+        "7. Injected spatial_graph_text into LLM context (reason.py) and added SPATIAL GRAPH "
+        "section to SYSTEM_PROMPT (prompts.py)."
     )
 
     # ── Section 2: Collision Fix ──
@@ -511,15 +521,62 @@ def build_pdf(graph_img, voronoi_img, serialized_text, counts):
     if serialized_text:
         pdf.code_block(serialized_text)
 
-    # ── Section 6: clearance_ok fix ──
+    # ── Section 6: Pipeline Integration ──
     pdf.add_page()
-    pdf.section_title("6", "clearance_ok Evaluation Fix")
+    pdf.section_title("6", "Pipeline Integration (graph.py, reason.py, prompts.py, add_objects.py)")
+
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(83, 168, 226)
+    pdf.cell(0, 8, "graph.py - AgentState + enrich_graph_node", new_x="LMARGIN", new_y="NEXT")
     pdf.body_text(
-        "In spatial_graph.py, the enrich_graph_from_analysis() function previously set "
-        "clearance_ok = False whenever a clearance_violation dict existed for an object, "
-        "regardless of the deficit value. With the Voronoi fix, some objects may have a "
-        "clearance_violation entry (for heatmap data) but with deficit_m = 0 (sufficient gap).\n\n"
-        "Fix: clearance_ok is now based on deficit_m <= 0:"
+        "Two new fields added to AgentState: spatial_graph (dict, node-link format) and "
+        "spatial_graph_text (str, compact LLM serialization). Both use _keep_last reducer "
+        "for parallel branch safety.\n\n"
+        "enrich_graph_node runs after reachability and before the group2 routing decision. It:\n"
+        "1. Deserializes the graph from state\n"
+        "2. Calls enrich_graph_from_analysis() with all 5 analysis results\n"
+        "3. Prints ANSI-colored FINDINGS (red=clearance, yellow=unreachable/facing)\n"
+        "4. Walls filtered from FINDINGS (_skip_ntypes = {'wall'})\n"
+        "5. If findings + objects placed: builds correction message with exact move vectors\n"
+        "6. Returns updated spatial_graph + spatial_graph_text\n\n"
+        "Wiring: reachability -> enrich_graph -> _route_after_group2 -> {reason, scoring}"
+    )
+
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(83, 168, 226)
+    pdf.cell(0, 8, "reason.py - Context injection", new_x="LMARGIN", new_y="NEXT")
+    pdf.body_text(
+        "spatial_graph_text is injected into the LLM context before each call, alongside "
+        "space_config and profile_config. The LLM sees the full graph topology and any "
+        "issues with exact move vectors."
+    )
+
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(83, 168, 226)
+    pdf.cell(0, 8, "prompts.py - SPATIAL GRAPH section", new_x="LMARGIN", new_y="NEXT")
+    pdf.body_text(
+        "Added a SPATIAL GRAPH section to SYSTEM_PROMPT instructing the LLM to check the "
+        "ISSUES section for violations with exact move vectors, and to use move_object with "
+        "those vectors instead of guessing new positions."
+    )
+
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(83, 168, 226)
+    pdf.cell(0, 8, "add_objects.py - Graph rebuild after placement", new_x="LMARGIN", new_y="NEXT")
+    pdf.body_text(
+        "After both the MCP path and the fallback manual path, the spatial graph is rebuilt "
+        "from scratch (base edges only, no analysis enrichment). Previous analysis edges "
+        "no longer apply when positions change. Wrapped in try/except so graph failure "
+        "doesn't break the placement pipeline."
+    )
+
+    # ── Section 7: clearance_ok + wall filtering ──
+    pdf.add_page()
+    pdf.section_title("7", "clearance_ok Fix + Wall Filtering")
+    pdf.body_text(
+        "Two related fixes ensure walls don't pollute the FINDINGS output:\n\n"
+        "1. clearance_ok evaluation: Previously set to False whenever a clearance_violation "
+        "dict existed, regardless of deficit value. Fixed to check deficit_m <= 0."
     )
     pdf.code_block(
         "# BEFORE:\n"
@@ -530,31 +587,153 @@ def build_pdf(graph_img, voronoi_img, serialized_text, counts):
         "    deficit = cv.get('deficit_m', 0)\n"
         "    G.nodes[oid]['clearance_ok'] = deficit <= 0  # OK if no real deficit"
     )
+    pdf.body_text(
+        "2. Wall filtering: After adding wall nodes to the graph, collision enrichment "
+        "started setting clearance attributes on walls (because wall IDs now exist in G). "
+        "Walls show 0.2m clearance (= wall thickness at Voronoi boundary), which is not "
+        "actionable. Fixed with _skip_ntypes = {'wall'} in three locations:\n"
+    )
+    pdf.bullet("enrich_graph_from_analysis() in spatial_graph.py - skips collision enrichment for walls")
+    pdf.bullet("enrich_graph_node FINDINGS loop in graph.py - excludes walls from terminal output")
+    pdf.bullet("serialize_for_llm() ISSUES section - already filtered to furniture/mep only")
 
-    # ── Section 7: Files changed ──
+    # ── Section 8: Edge Descriptions ──
+    pdf.section_title("8", "Edge Descriptions in Graph Visualization")
+    pdf.body_text(
+        "The test_spatial_graph.py legend now shows a short description for each edge type, "
+        "making the visualization self-documenting:"
+    )
+    pdf.code_block(
+        "EDGE_DESCRIPTIONS = {\n"
+        "    'contained_in':  'element belongs to room',\n"
+        "    'door_connects': 'door links to room',\n"
+        "    'adjacent':      'rooms share a door',\n"
+        "    'near':          'furniture < 3m apart',\n"
+        "    'near_wall':     'furniture < 3m from wall',\n"
+        "    'near_window':   'furniture < 3m from window',\n"
+        "    'blocks':        'object blocks access to another',\n"
+        "    'sightline':     'direct line of sight between objects',\n"
+        "    'path':          'navigable route with distance',\n"
+        "}"
+    )
+    pdf.body_text(
+        "Legend format: 'edge_type (count) - description'. "
+        "Example: 'near_wall (12) - furniture < 3m from wall'."
+    )
+
+    # ── Section 9: Interactive Graph Visualizer ──
     pdf.add_page()
-    pdf.section_title("7", "Files Modified")
+    pdf.section_title("9", "Interactive Graph Visualizer (visualize_interactive.py)")
+
+    pdf.body_text(
+        "A complete rewrite of the graph visualizer using raw HTML + vis.js 9.1.2 (dropped pyvis). "
+        "Apple-minimalist aesthetic with muted colors, glass-morphism panels, and fixed architectural "
+        "node positions reflecting the actual floor plan layout."
+    )
+
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(83, 168, 226)
+    pdf.cell(0, 8, "Core Features", new_x="LMARGIN", new_y="NEXT")
+    pdf.bullet("Architectural positions: nodes placed at real layout coordinates (flipped Y), "
+               "physics disabled, fixed:true - no force-directed bouncing")
+    pdf.bullet("Dark/Light theme toggle with localStorage persistence and CSS custom properties")
+    pdf.bullet("Legend filtering: click to filter by type, shift-click for multi-select, "
+               "non-matching elements fade to 8% opacity")
+    pdf.bullet("Detail panel: click any node to open right-side panel with metadata, "
+               "type description, and clickable connected neighbors")
+    pdf.bullet("Drag snap-back: nodes draggable but spring back to original position on release "
+               "(550ms ease-out cubic animation via requestAnimationFrame)")
+    pdf.bullet("New element highlights: blue #007AFF border that fades after 4s, 'new' badge")
+
+    pdf.ln(3)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(83, 168, 226)
+    pdf.cell(0, 8, "Live Refresh System", new_x="LMARGIN", new_y="NEXT")
+    pdf.body_text(
+        "The visualizer auto-refreshes when the pipeline regenerates the HTML file. "
+        "A background HTTP server daemon (port 7477) with CORS headers serves the file. "
+        "Two detection modes:\n\n"
+        "1. HTTP smart detection: fetch() compares PAGE_TS millisecond timestamp embedded in HTML. "
+        "Only reloads when the timestamp changes.\n\n"
+        "2. Blind reload fallback: for file:// origins where fetch() is blocked by same-origin "
+        "policy. Uses location.reload() with adaptive backoff (2-10s) via sessionStorage. "
+        "Preserves viewport (zoom/pan) across reloads via network.moveTo()."
+    )
+
+    pdf.ln(3)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(83, 168, 226)
+    pdf.cell(0, 8, "Pipeline Integration", new_x="LMARGIN", new_y="NEXT")
+    pdf.body_text(
+        "The graph auto-updates at three pipeline points:\n\n"
+        "1. Startup (_build_initial_state in graph.py): generates initial HTML from base layout\n\n"
+        "2. After placement (add_objects.py): rebuilds graph, highlights new/moved furniture "
+        "via viz_highlight_ids state field\n\n"
+        "3. After enrichment (enrich_graph_node in graph.py): marks enrichment edges as new, "
+        "merges carry-over highlights from viz_highlight_ids\n\n"
+        "viz_highlight_ids is an Annotated[list[str] | None, _keep_last] field in AgentState "
+        "that carries furniture IDs highlighted by add_objects into enrich_graph_node."
+    )
+
+    pdf.ln(3)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_text_color(83, 168, 226)
+    pdf.cell(0, 8, "File Structure", new_x="LMARGIN", new_y="NEXT")
+    pdf.code_block(
+        "python/\n"
+        "  visualize_interactive.py          # Main visualizer module (~1190 lines)\n"
+        "  view_graph/\n"
+        "    spatial_graph_interactive.html   # Generated HTML (auto-updated)\n"
+        "    lib/vis-9.1.2/                   # Local vis.js 9.1.2\n"
+        "    lib/bindings/                    # vis.js bindings\n"
+        "    lib/tom-select/                  # Tom Select library"
+    )
+
+    # ── Section 10: Files changed ──
+    pdf.add_page()
+    pdf.section_title("10", "All Files Modified")
 
     files = [
-        ("nodes/collision.py", "Voronoi boundary scan",
-         "Added ~35 lines after the violation cell loop. Scans all free cells for Voronoi "
-         "boundaries (adjacent cells with different nearest-obstacle attribution). Computes "
-         "real surface-to-surface gap. Overwrites min_clearance_m in obj_violation_data. "
-         "Objects with no boundary (touching another obstacle) get min_clearance_m = 0.0."),
-        ("spatial_graph.py", "Walls, windows, clearance_ok fix",
-         "Added _point_to_segment_distance() helper. Added wall and window node construction "
-         "in build_graph_from_layout(). Added near_wall and near_window edge computation. "
-         "Added STRUCTURE and WINDOWS sections to serialize_for_llm(). Fixed clearance_ok "
-         "to use deficit_m <= 0. Increased MAX_SERIALIZE_LINES to 80."),
-        ("MASTER_CLAUDE_V2.md", "Documentation update",
-         "Updated spatial graph node/edge tables, collision.py description, spatial_graph.py "
-         "description, terminal output example, and added changelog section for 2026-05-22."),
+        ("spatial_graph.py", "NEW - Spatial graph module",
+         "Pure NetworkX module (~570 lines). build_graph_from_layout(), "
+         "enrich_graph_from_analysis(), serialize_for_llm(), graph_to_dict(), "
+         "dict_to_graph(). Point-to-segment distance for wall/window proximity. "
+         "Walls skipped in collision enrichment. clearance_ok based on deficit_m <= 0."),
+        ("test_spatial_graph.py", "NEW - Standalone visualizer",
+         "Matplotlib dark theme, nodes colored by type, edges styled by type. "
+         "Legend with edge descriptions. Modes: --session, layout name, --all."),
+        ("graph.py", "Spatial graph integration",
+         "AgentState: +2 fields (spatial_graph, spatial_graph_text). "
+         "enrich_graph_node inline. _build_correction_message(). "
+         "Rewired reachability -> enrich_graph -> group2 routing. "
+         "Initial graph built at startup. Walls filtered from FINDINGS."),
+        ("nodes/collision.py", "Voronoi boundary method",
+         "Added ~35 lines after the violation cell loop. Scans Voronoi boundaries "
+         "(adjacent free cells with different nearest-obstacle attribution). "
+         "Real surface-to-surface gap. Overwrites min_clearance_m in obj_violation_data."),
+        ("nodes/reason.py", "Context injection",
+         "Injects spatial_graph_text into LLM context before each call."),
+        ("prompts.py", "SYSTEM_PROMPT update",
+         "Added SPATIAL GRAPH section instructing LLM to use move vectors from ISSUES."),
+        ("nodes/add_objects.py", "Graph rebuild",
+         "Rebuilds spatial graph after both MCP and fallback placement paths. "
+         "Base edges only (no analysis enrichment). try/except for graceful degradation."),
+        ("MASTER_CLAUDE_V2.md", "Documentation",
+         "Updated architecture, spatial graph layer docs, component descriptions, "
+         "changelog with all changes from this session."),
+        ("visualize_interactive.py", "NEW - Interactive graph visualizer",
+         "Apple-minimalist HTML + vis.js 9.1.2 (~1190 lines). Fixed architectural positions, "
+         "dark/light toggle, legend filtering, detail panel, drag snap-back, live auto-refresh "
+         "via HTTP server (port 7477) with smart change detection and adaptive backoff fallback. "
+         "Output: view_graph/spatial_graph_interactive.html."),
+        ("generate_session_report.py", "This report",
+         "PDF report generator with diagrams and comprehensive change documentation."),
     ]
 
     for fname, change, desc in files:
         pdf.set_font("Helvetica", "B", 11)
         pdf.set_text_color(78, 204, 163)
-        pdf.cell(0, 7, f"{fname}  --  {change}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 7, _s(f"{fname}  --  {change}"), new_x="LMARGIN", new_y="NEXT")
         pdf.body_text(desc)
         pdf.ln(1)
 

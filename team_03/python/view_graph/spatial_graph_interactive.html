@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spatial Graph — Session Active  —  46 nodes  ·  44 edges</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+<style>
+/* ── Custom properties ────────────────────────────────────────── */
+:root[data-theme="dark"] {
+  --bg:          #0a0a0a;
+  --panel-bg:    rgba(255,255,255,0.05);
+  --panel-bd:    rgba(255,255,255,0.09);
+  --text:        #e0e0e0;
+  --muted:       #606060;
+  --accent:      #007AFF;
+  --accent-dim:  rgba(0,122,255,0.13);
+  --ok:          #34C759;
+  --fail:        #FF453A;
+  --warn:        #FF9F0A;
+}
+:root[data-theme="light"] {
+  --bg:          #f5f5f7;
+  --panel-bg:    rgba(255,255,255,0.78);
+  --panel-bd:    rgba(0,0,0,0.07);
+  --text:        #1d1d1f;
+  --muted:       #ababab;
+  --accent:      #007AFF;
+  --accent-dim:  rgba(0,122,255,0.10);
+  --ok:          #28a745;
+  --fail:        #dc3545;
+  --warn:        #fd7e14;
+}
+
+/* ── Reset ────────────────────────────────────────────────────── */
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body {
+  width:100%; height:100%; overflow:hidden;
+  font-family: -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background .35s ease, color .35s ease;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+#graph-container { position:fixed; inset:0; }
+
+/* ── Glass panel base ─────────────────────────────────────────── */
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-bd);
+  border-radius: 10px;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  transition: background .35s, border-color .35s;
+}
+
+/* ── Title bar ────────────────────────────────────────────────── */
+.title-bar {
+  position:fixed; top:16px; left:16px; z-index:200;
+  padding:6px 14px;
+  font-size:11px; font-weight:500; letter-spacing:.015em;
+  color:var(--muted);
+  pointer-events:none;
+}
+
+/* ── Controls top-right ───────────────────────────────────────── */
+.controls {
+  position:fixed; top:16px; right:16px; z-index:200;
+  display:flex; gap:7px; align-items:center;
+}
+.ctrl-btn {
+  padding:6px 12px;
+  font-size:11px; font-weight:500; letter-spacing:.01em;
+  color:var(--text);
+  background:var(--panel-bg);
+  border:1px solid var(--panel-bd);
+  border-radius:8px;
+  cursor:pointer;
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  transition:background .2s, border-color .2s, color .2s;
+  white-space:nowrap;
+}
+.ctrl-btn:hover { background:var(--panel-bd); }
+.ctrl-btn.live-on {
+  color:#34C759;
+  border-color:rgba(52,199,89,.35);
+  background:rgba(52,199,89,.07);
+}
+
+/* ── Legend ───────────────────────────────────────────────────── */
+.legend {
+  position:fixed; top:50%; left:16px; z-index:200;
+  transform:translateY(-50%);
+  width:148px; max-height:82vh;
+  overflow-y:auto; padding:8px 0;
+  scrollbar-width:none;
+}
+.legend::-webkit-scrollbar { display:none; }
+
+.leg-section {
+  padding:5px 13px 3px;
+  font-size:9px; font-weight:600; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--muted);
+}
+.leg-sep {
+  margin-top:4px; padding-top:9px;
+  border-top:1px solid var(--panel-bd);
+}
+.leg-item {
+  display:flex; align-items:center; gap:7px;
+  padding:4px 13px;
+  font-size:10.5px; color:var(--text);
+  cursor:pointer; user-select:none;
+  transition:background .15s, opacity .2s;
+}
+.leg-item:hover { background:var(--panel-bd); }
+.leg-item.leg-on  { background:var(--accent-dim); }
+.leg-item.leg-dim { opacity:.25; }
+.leg-dot  { width:7px; height:7px; border-radius:50%; flex-shrink:0; opacity:.9; }
+.leg-line { width:14px; height:1.5px; border-radius:1px; flex-shrink:0; opacity:.7; }
+.leg-label { flex:1; }
+.leg-count { font-size:9px; color:var(--muted); font-variant-numeric:tabular-nums; }
+
+/* ── Detail panel (right side, click-to-open) ─────────────────── */
+.detail-panel {
+  position:fixed; right:16px; top:50%; z-index:200;
+  transform:translateY(-50%);
+  width:248px; max-height:80vh;
+  overflow:hidden;
+  display:none;
+}
+.dp-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px 9px;
+  border-bottom:1px solid var(--panel-bd);
+  position:sticky; top:0;
+  background:var(--panel-bg);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+}
+.dp-type-chip {
+  font-size:9px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  padding:2px 7px; border-radius:5px; margin-right:6px;
+}
+.dp-title-row { display:flex; align-items:center; flex:1; min-width:0; }
+.dp-name { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dp-close {
+  background:none; border:none; cursor:pointer;
+  color:var(--muted); font-size:13px; line-height:1;
+  padding:3px 6px; border-radius:5px;
+  transition:background .15s, color .15s;
+  flex-shrink:0;
+}
+.dp-close:hover { background:var(--panel-bd); color:var(--text); }
+
+.dp-scroll { overflow-y:auto; max-height:calc(80vh - 48px); padding:10px 14px 14px; scrollbar-width:thin; scrollbar-color:var(--panel-bd) transparent; }
+
+.dp-desc { font-size:10px; color:var(--muted); line-height:1.55; margin-bottom:10px; }
+.dp-section {
+  font-size:9px; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--muted); margin:10px 0 5px;
+}
+.dp-section:first-child { margin-top:0; }
+.dp-row { display:flex; gap:6px; align-items:baseline; margin-bottom:3px; }
+.dp-lbl { font-size:9.5px; color:var(--muted); min-width:88px; flex-shrink:0; letter-spacing:.01em; }
+.dp-val { font-size:10.5px; word-break:break-word; }
+.dp-val.ok   { color:var(--ok);   font-weight:500; }
+.dp-val.fail { color:var(--fail); font-weight:500; }
+.dp-val.warn { color:var(--warn); font-weight:500; }
+.dp-val.accent { color:var(--accent); }
+.dp-divider { height:1px; background:var(--panel-bd); margin:8px 0; }
+
+.dp-neighbor {
+  display:flex; align-items:center; gap:8px;
+  padding:4px 0;
+  border-bottom:1px solid var(--panel-bd);
+  cursor:pointer;
+  transition:background .1s;
+}
+.dp-neighbor:last-child { border-bottom:none; }
+.dp-neighbor:hover { background:var(--panel-bd); margin:0 -4px; padding:4px 4px; border-radius:5px; }
+.dp-ndot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.dp-nname { flex:1; font-size:10px; }
+.dp-etype { font-size:9px; color:var(--muted); }
+
+/* ── Status bars ──────────────────────────────────────────────── */
+.stats-bar, .updated-bar {
+  position:fixed; bottom:16px; z-index:200;
+  padding:5px 12px;
+  font-size:10px; letter-spacing:.01em;
+  color:var(--muted);
+  pointer-events:none;
+}
+.stats-bar   { left:16px; }
+.updated-bar { right:16px; }
+
+/* ── vis.js tooltip override ─────────────────────────────────── */
+.vis-tooltip {
+  background:var(--panel-bg) !important;
+  border:1px solid var(--panel-bd) !important;
+  border-radius:10px !important;
+  color:var(--text) !important;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif !important;
+  font-size:11px !important; line-height:1.55 !important;
+  padding:0 !important;
+  box-shadow:0 10px 40px rgba(0,0,0,.4) !important;
+  backdrop-filter:blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(180%) !important;
+  max-width:230px; overflow:hidden;
+}
+.tt-box  { padding:10px 12px; }
+.tt-name { font-weight:600; font-size:12px; margin-bottom:5px; }
+.tt-row  { display:flex; gap:6px; align-items:baseline; margin-bottom:2px; }
+.tt-ind  { padding-left:10px; }
+.tt-lbl  { font-size:9.5px; color:var(--muted); min-width:52px; letter-spacing:.01em; flex-shrink:0; }
+.tt-val  { font-size:10.5px; }
+.tt-muted  { color:var(--muted); font-size:10px; }
+.tt-ok     { color:var(--ok);   font-weight:500; }
+.tt-fail   { color:var(--fail); font-weight:500; }
+.tt-warn   { color:var(--warn); font-weight:500; }
+.tt-accent { color:var(--accent); font-weight:500; }
+.tt-divider { height:1px; background:var(--panel-bd); margin:5px 0; }
+
+/* ── New-element badge ────────────────────────────────────────── */
+.new-badge {
+  position:fixed; z-index:300;
+  background:var(--accent); color:#fff;
+  font-size:7px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  padding:1px 4px; border-radius:4px;
+  pointer-events:none;
+  opacity:1; transition:opacity 2.5s ease 1.5s;
+}
+.new-badge.fade { opacity:0; }
+</style>
+</head>
+<body>
+
+<div class="title-bar panel">Spatial Graph — Session Active  —  46 nodes  ·  44 edges</div>
+
+<div class="controls">
+  <button class="ctrl-btn live-on" id="liveBtn">Live &#x25cf;</button>
+  <button class="ctrl-btn" id="themeBtn">Light</button>
+</div>
+
+<div class="legend panel" id="legend">
+<div class="leg-section">Nodes</div>
+<div class="leg-item" data-ft="room" data-fc="nodes"><span class="leg-dot" style="background:#6B9BD2"></span><span class="leg-label">room</span><span class="leg-count">2</span></div>
+<div class="leg-item" data-ft="door" data-fc="nodes"><span class="leg-dot" style="background:#D4A574"></span><span class="leg-label">door</span><span class="leg-count">3</span></div>
+<div class="leg-item" data-ft="wall" data-fc="nodes"><span class="leg-dot" style="background:#8B9DAF"></span><span class="leg-label">wall</span><span class="leg-count">6</span></div>
+<div class="leg-item" data-ft="window" data-fc="nodes"><span class="leg-dot" style="background:#7BC4C4"></span><span class="leg-label">window</span><span class="leg-count">16</span></div>
+<div class="leg-item" data-ft="furniture" data-fc="nodes"><span class="leg-dot" style="background:#7DB87D"></span><span class="leg-label">furniture</span><span class="leg-count">15</span></div>
+<div class="leg-item" data-ft="mep" data-fc="nodes"><span class="leg-dot" style="background:#C47070"></span><span class="leg-label">mep</span><span class="leg-count">4</span></div>
+<div class="leg-section leg-sep">Edges</div>
+<div class="leg-item" data-ft="contained_in" data-fc="edges" title="element belongs to room"><span class="leg-line" style="background:#8B9DAF"></span><span class="leg-label">contained_in</span><span class="leg-count">31</span></div>
+<div class="leg-item" data-ft="door_connects" data-fc="edges" title="door links to room"><span class="leg-line" style="background:#D4A574"></span><span class="leg-label">door_connects</span><span class="leg-count">4</span></div>
+<div class="leg-item" data-ft="adjacent" data-fc="edges" title="rooms share a door"><span class="leg-line" style="background:#6B9BD2"></span><span class="leg-label">adjacent</span><span class="leg-count">1</span></div>
+<div class="leg-item" data-ft="near" data-fc="edges" title="furniture < 3m apart"><span class="leg-line" style="background:#7DB87D"></span><span class="leg-label">near</span><span class="leg-count">2</span></div>
+<div class="leg-item" data-ft="near_wall" data-fc="edges" title="furniture < 3m from wall"><span class="leg-line" style="background:#C47070"></span><span class="leg-label">near_wall</span><span class="leg-count">5</span></div>
+<div class="leg-item" data-ft="near_window" data-fc="edges" title="furniture < 3m from window"><span class="leg-line" style="background:#7BC4C4"></span><span class="leg-label">near_window</span><span class="leg-count">1</span></div>
+</div>
+
+<!-- Detail panel: opens on node click -->
+<div class="detail-panel panel" id="detailPanel">
+  <div class="dp-header">
+    <div class="dp-title-row">
+      <span class="dp-type-chip" id="dpChip"></span>
+      <span class="dp-name" id="dpName"></span>
+    </div>
+    <button class="dp-close" id="dpClose">&#x2715;</button>
+  </div>
+  <div class="dp-scroll" id="dpScroll"></div>
+</div>
+
+<div class="stats-bar panel">door: 3  ·  furniture: 15  ·  mep: 4  ·  room: 2  ·  wall: 6  ·  window: 16</div>
+<div class="updated-bar panel" id="updBar">Updated 23:42:51</div>
+
+<div id="graph-container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+const NODES_RAW  = [{"id": "room-1", "label": "Bathroom", "title": "<div class='tt-box'><div class='tt-name'>Bathroom</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>room</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>room-1</span></div><div class='tt-row'><span class='tt-lbl'>area</span><span class='tt-val'>45.5 m²</span></div></div>", "ntype": "room", "x": 1103.1, "y": -290.8, "size": 14, "_new": false, "_meta": {"id": "room-1", "area": 45.5}}, {"id": "room-2", "label": "Clean Room", "title": "<div class='tt-box'><div class='tt-name'>Clean Room</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>room</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>room-2</span></div><div class='tt-row'><span class='tt-lbl'>area</span><span class='tt-val'>812.5 m²</span></div></div>", "ntype": "room", "x": 639.6, "y": -174.7, "size": 14, "_new": false, "_meta": {"id": "room-2", "area": 812.5}}, {"id": "door-1", "label": "Bathroom Door", "title": "<div class='tt-box'><div class='tt-name'>Bathroom Door</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>door</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>door-1</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>0.9m</span></div></div>", "ntype": "door", "x": -200.0, "y": 300.0, "size": 9, "_new": false, "_meta": {"id": "door-1", "width": 0.9}}, {"id": "door-2", "label": "Main Entrance", "title": "<div class='tt-box'><div class='tt-name'>Main Entrance</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>door</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>door-2</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>2.0m</span></div></div>", "ntype": "door", "x": -110.0, "y": 300.0, "size": 9, "_new": false, "_meta": {"id": "door-2", "width": 2.0}}, {"id": "door-3", "label": "Loading Dock", "title": "<div class='tt-box'><div class='tt-name'>Loading Dock</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>door</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>door-3</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>3.5m</span></div></div>", "ntype": "door", "x": -20.0, "y": 300.0, "size": 9, "_new": false, "_meta": {"id": "door-3", "width": 3.5}}, {"id": "furn-1", "label": "Toilet", "title": "<div class='tt-box'><div class='tt-name'>Toilet</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-1</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(45.5, 10.6)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>0.4 × 0.65m</span></div></div>", "ntype": "furniture", "x": 1049.1, "y": -243.7, "size": 11, "_new": false, "_meta": {"id": "furn-1", "roomId": "room-1", "bbox_w": 0.4, "bbox_d": 0.65}}, {"id": "furn-2", "label": "Sink", "title": "<div class='tt-box'><div class='tt-name'>Sink</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-2</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(46.3, 10.5)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>0.6 × 0.45m</span></div></div>", "ntype": "furniture", "x": 1069.4, "y": -241.8, "size": 11, "_new": false, "_meta": {"id": "furn-2", "roomId": "room-1", "bbox_w": 0.6, "bbox_d": 0.45}}, {"id": "furn-3", "label": "Assembly Stati…", "title": "<div class='tt-box'><div class='tt-name'>Assembly Station 1</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-3</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(7.1, 10.5)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>2.0 × 1.5m</span></div></div>", "ntype": "furniture", "x": 163.4, "y": -241.8, "size": 11, "_new": false, "_meta": {"id": "furn-3", "roomId": "room-2", "bbox_w": 2.0, "bbox_d": 1.5}}, {"id": "furn-4", "label": "Packaging Stat…", "title": "<div class='tt-box'><div class='tt-name'>Packaging Station 2</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-4</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(31.9, 10.6)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>2.5 × 1.5m</span></div></div>", "ntype": "furniture", "x": 736.6, "y": -245.5, "size": 11, "_new": false, "_meta": {"id": "furn-4", "roomId": "room-2", "bbox_w": 2.5, "bbox_d": 1.5}}, {"id": "furn-5", "label": "Packaging Stat…", "title": "<div class='tt-box'><div class='tt-name'>Packaging Station 3</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-5</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(14.3, 5.5)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>2.5 × 1.5m</span></div></div>", "ntype": "furniture", "x": 331.2, "y": -128.1, "size": 11, "_new": false, "_meta": {"id": "furn-5", "roomId": "room-2", "bbox_w": 2.5, "bbox_d": 1.5}}, {"id": "furn-6", "label": "Packaging Stat…", "title": "<div class='tt-box'><div class='tt-name'>Packaging Station 4</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-6</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(6.7, 7.4)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>2.5 × 1.5m</span></div></div>", "ntype": "furniture", "x": 154.8, "y": -170.8, "size": 11, "_new": false, "_meta": {"id": "furn-6", "roomId": "room-2", "bbox_w": 2.5, "bbox_d": 1.5}}, {"id": "furn-7", "label": "Conveyor Secti…", "title": "<div class='tt-box'><div class='tt-name'>Conveyor Section 5</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-7</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(29.7, 4.5)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>6.0 × 0.8m</span></div></div>", "ntype": "furniture", "x": 684.9, "y": -103.6, "size": 11, "_new": false, "_meta": {"id": "furn-7", "roomId": "room-2", "bbox_w": 6.0, "bbox_d": 0.8}}, {"id": "furn-8", "label": "Labeling Stati…", "title": "<div class='tt-box'><div class='tt-name'>Labeling Station 6</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-8</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(25.8, 3.1)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>1.5 × 0.8m</span></div></div>", "ntype": "furniture", "x": 596.1, "y": -70.8, "size": 11, "_new": false, "_meta": {"id": "furn-8", "roomId": "room-2", "bbox_w": 1.5, "bbox_d": 0.8}}, {"id": "furn-9", "label": "Parts Bin Rack 7", "title": "<div class='tt-box'><div class='tt-name'>Parts Bin Rack 7</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-9</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(9.0, 5.3)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>1.5 × 0.8m</span></div></div>", "ntype": "furniture", "x": 207.0, "y": -122.8, "size": 11, "_new": false, "_meta": {"id": "furn-9", "roomId": "room-2", "bbox_w": 1.5, "bbox_d": 0.8}}, {"id": "furn-10", "label": "Conveyor Secti…", "title": "<div class='tt-box'><div class='tt-name'>Conveyor Section 8</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-10</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(18.8, 12.8)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>6.0 × 0.8m</span></div></div>", "ntype": "furniture", "x": 434.1, "y": -296.1, "size": 11, "_new": false, "_meta": {"id": "furn-10", "roomId": "room-2", "bbox_w": 6.0, "bbox_d": 0.8}}, {"id": "furn-11", "label": "Parts Bin Rack 9", "title": "<div class='tt-box'><div class='tt-name'>Parts Bin Rack 9</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-11</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(19.0, 2.5)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>1.5 × 0.8m</span></div></div>", "ntype": "furniture", "x": 437.8, "y": -57.7, "size": 11, "_new": false, "_meta": {"id": "furn-11", "roomId": "room-2", "bbox_w": 1.5, "bbox_d": 0.8}}, {"id": "furn-12", "label": "Conveyor Secti…", "title": "<div class='tt-box'><div class='tt-name'>Conveyor Section 10</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-12</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(39.0, 12.3)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>6.0 × 0.8m</span></div></div>", "ntype": "furniture", "x": 899.5, "y": -285.0, "size": 11, "_new": false, "_meta": {"id": "furn-12", "roomId": "room-2", "bbox_w": 6.0, "bbox_d": 0.8}}, {"id": "furn-13", "label": "Parts Bin Rack…", "title": "<div class='tt-box'><div class='tt-name'>Parts Bin Rack 11</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-13</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(28.5, 9.5)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>1.5 × 0.8m</span></div></div>", "ntype": "furniture", "x": 656.8, "y": -219.7, "size": 11, "_new": false, "_meta": {"id": "furn-13", "roomId": "room-2", "bbox_w": 1.5, "bbox_d": 0.8}}, {"id": "furn-14", "label": "QC Table 12", "title": "<div class='tt-box'><div class='tt-name'>QC Table 12</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-14</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(37.1, 10.3)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>2.0 × 1.0m</span></div></div>", "ntype": "furniture", "x": 855.2, "y": -237.5, "size": 11, "_new": false, "_meta": {"id": "furn-14", "roomId": "room-2", "bbox_w": 2.0, "bbox_d": 1.0}}, {"id": "furn-15", "label": "cnc_machine", "title": "<div class='tt-box'><div class='tt-name'>cnc_machine</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>furniture</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>furn-15</span></div><div class='tt-row'><span class='tt-lbl'>pos</span><span class='tt-val'>(23.8, 10.6)</span></div><div class='tt-row'><span class='tt-lbl'>bbox</span><span class='tt-val'>2.0 × 1.5m</span></div></div>", "ntype": "furniture", "x": 549.2, "y": -244.6, "size": 11, "_new": false, "_meta": {"id": "furn-15", "roomId": "room-2", "bbox_w": 2.0, "bbox_d": 1.5}}, {"id": "mep-1", "label": "HVAC Unit 1", "title": "<div class='tt-box'><div class='tt-name'>HVAC Unit 1</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>mep</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>mep-1</span></div><div class='tt-row'><span class='tt-lbl'>system</span><span class='tt-val'>hvac</span></div></div>", "ntype": "mep", "x": 53.5, "y": -371.5, "size": 10, "_new": false, "_meta": {"id": "mep-1", "system": "hvac", "roomId": ""}}, {"id": "mep-2", "label": "HVAC Unit 2", "title": "<div class='tt-box'><div class='tt-name'>HVAC Unit 2</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>mep</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>mep-2</span></div><div class='tt-row'><span class='tt-lbl'>system</span><span class='tt-val'>hvac</span></div></div>", "ntype": "mep", "x": 667.4, "y": -8.1, "size": 10, "_new": false, "_meta": {"id": "mep-2", "system": "hvac", "roomId": ""}}, {"id": "mep-3", "label": "Main Electrica…", "title": "<div class='tt-box'><div class='tt-name'>Main Electrical Panel</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>mep</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>mep-3</span></div><div class='tt-row'><span class='tt-lbl'>system</span><span class='tt-val'>electrical</span></div></div>", "ntype": "mep", "x": 17.1, "y": -7.4, "size": 10, "_new": false, "_meta": {"id": "mep-3", "system": "electrical", "roomId": ""}}, {"id": "mep-4", "label": "Plumbing Riser", "title": "<div class='tt-box'><div class='tt-name'>Plumbing Riser</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>mep</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>mep-4</span></div><div class='tt-row'><span class='tt-lbl'>system</span><span class='tt-val'>plumbing</span></div></div>", "ntype": "mep", "x": 1188.5, "y": -240.0, "size": 10, "_new": false, "_meta": {"id": "mep-4", "system": "plumbing", "roomId": ""}}, {"id": "wall-1", "label": "South Exterior…", "title": "<div class='tt-box'><div class='tt-name'>South Exterior Wall</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>wall</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>wall-1</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>load-bearing</span></div><div class='tt-row'><span class='tt-lbl'>length</span><span class='tt-val'>52.0m</span></div></div>", "ntype": "wall", "x": 600.0, "y": -0.0, "size": 8, "_new": false, "_meta": {"id": "wall-1", "wall_type": "load-bearing", "material": "concrete", "length": 52.0}}, {"id": "wall-2", "label": "East Exterior …", "title": "<div class='tt-box'><div class='tt-name'>East Exterior Wall</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>wall</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>wall-2</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>load-bearing</span></div><div class='tt-row'><span class='tt-lbl'>length</span><span class='tt-val'>16.5m</span></div></div>", "ntype": "wall", "x": 1200.0, "y": -190.4, "size": 8, "_new": false, "_meta": {"id": "wall-2", "wall_type": "load-bearing", "material": "concrete", "length": 16.5}}, {"id": "wall-3", "label": "North Exterior…", "title": "<div class='tt-box'><div class='tt-name'>North Exterior Wall</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>wall</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>wall-3</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>load-bearing</span></div><div class='tt-row'><span class='tt-lbl'>length</span><span class='tt-val'>52.0m</span></div></div>", "ntype": "wall", "x": 600.0, "y": -380.8, "size": 8, "_new": false, "_meta": {"id": "wall-3", "wall_type": "load-bearing", "material": "concrete", "length": 52.0}}, {"id": "wall-4", "label": "West Exterior …", "title": "<div class='tt-box'><div class='tt-name'>West Exterior Wall</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>wall</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>wall-4</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>load-bearing</span></div><div class='tt-row'><span class='tt-lbl'>length</span><span class='tt-val'>16.5m</span></div></div>", "ntype": "wall", "x": 0.0, "y": -190.4, "size": 8, "_new": false, "_meta": {"id": "wall-4", "wall_type": "load-bearing", "material": "concrete", "length": 16.5}}, {"id": "wall-5", "label": "Interior Wall 5", "title": "<div class='tt-box'><div class='tt-name'>Interior Wall 5</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>wall</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>wall-5</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>partition</span></div><div class='tt-row'><span class='tt-lbl'>length</span><span class='tt-val'>6.5m</span></div></div>", "ntype": "wall", "x": 1038.5, "y": -305.8, "size": 8, "_new": false, "_meta": {"id": "wall-5", "wall_type": "partition", "material": "drywall", "length": 6.5}}, {"id": "wall-6", "label": "Interior Wall 6", "title": "<div class='tt-box'><div class='tt-name'>Interior Wall 6</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>wall</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>wall-6</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>partition</span></div><div class='tt-row'><span class='tt-lbl'>length</span><span class='tt-val'>7.0m</span></div></div>", "ntype": "wall", "x": 1119.2, "y": -230.8, "size": 8, "_new": false, "_meta": {"id": "wall-6", "wall_type": "partition", "material": "drywall", "length": 7.0}}, {"id": "window-1", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 1</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-1</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>awning</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 126.9, "y": -0.0, "size": 8, "_new": false, "_meta": {"id": "window-1", "window_type": "awning", "roomId": "room-2", "width": 1.0}}, {"id": "window-2", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 2</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-2</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>sliding</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 242.3, "y": -0.0, "size": 8, "_new": false, "_meta": {"id": "window-2", "window_type": "sliding", "roomId": "room-2", "width": 1.0}}, {"id": "window-3", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 3</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-3</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>fixed</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 357.7, "y": -0.0, "size": 8, "_new": false, "_meta": {"id": "window-3", "window_type": "fixed", "roomId": "room-2", "width": 1.0}}, {"id": "window-4", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 4</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-4</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>sliding</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 473.1, "y": -0.0, "size": 8, "_new": false, "_meta": {"id": "window-4", "window_type": "sliding", "roomId": "room-2", "width": 1.0}}, {"id": "window-5", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 5</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-5</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>awning</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 588.5, "y": -0.0, "size": 8, "_new": false, "_meta": {"id": "window-5", "window_type": "awning", "roomId": "room-2", "width": 1.0}}, {"id": "window-6", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 6</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-6</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>sliding</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 703.8, "y": -0.0, "size": 8, "_new": false, "_meta": {"id": "window-6", "window_type": "sliding", "roomId": "room-2", "width": 1.0}}, {"id": "window-7", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 7</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-7</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>sliding</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 819.2, "y": -0.0, "size": 8, "_new": false, "_meta": {"id": "window-7", "window_type": "sliding", "roomId": "room-2", "width": 1.0}}, {"id": "window-8", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 8</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-8</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>awning</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 934.6, "y": -0.0, "size": 8, "_new": false, "_meta": {"id": "window-8", "window_type": "awning", "roomId": "room-2", "width": 1.0}}, {"id": "window-9", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 9</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-9</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>fixed</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 126.9, "y": -380.8, "size": 8, "_new": false, "_meta": {"id": "window-9", "window_type": "fixed", "roomId": "room-2", "width": 1.0}}, {"id": "window-10", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 10</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-10</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>sliding</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 242.3, "y": -380.8, "size": 8, "_new": false, "_meta": {"id": "window-10", "window_type": "sliding", "roomId": "room-2", "width": 1.0}}, {"id": "window-11", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 11</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-11</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>sliding</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 357.7, "y": -380.8, "size": 8, "_new": false, "_meta": {"id": "window-11", "window_type": "sliding", "roomId": "room-2", "width": 1.0}}, {"id": "window-12", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 12</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-12</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>sliding</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 473.1, "y": -380.8, "size": 8, "_new": false, "_meta": {"id": "window-12", "window_type": "sliding", "roomId": "room-2", "width": 1.0}}, {"id": "window-13", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 13</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-13</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>awning</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 588.5, "y": -380.8, "size": 8, "_new": false, "_meta": {"id": "window-13", "window_type": "awning", "roomId": "room-2", "width": 1.0}}, {"id": "window-14", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 14</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-14</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>fixed</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 703.8, "y": -380.8, "size": 8, "_new": false, "_meta": {"id": "window-14", "window_type": "fixed", "roomId": "room-2", "width": 1.0}}, {"id": "window-15", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 15</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-15</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>awning</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 819.2, "y": -380.8, "size": 8, "_new": false, "_meta": {"id": "window-15", "window_type": "awning", "roomId": "room-2", "width": 1.0}}, {"id": "window-16", "label": "Warehouse Wind…", "title": "<div class='tt-box'><div class='tt-name'>Warehouse Window 16</div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>window</span></div><div class='tt-row'><span class='tt-lbl'>id</span><span class='tt-val tt-muted'>window-16</span></div><div class='tt-row'><span class='tt-lbl'>type</span><span class='tt-val'>sliding</span></div><div class='tt-row'><span class='tt-lbl'>width</span><span class='tt-val'>1.0m</span></div></div>", "ntype": "window", "x": 934.6, "y": -380.8, "size": 8, "_new": false, "_meta": {"id": "window-16", "window_type": "sliding", "roomId": "room-2", "width": 1.0}}];
+const EDGES_RAW  = [{"id": "room-1__door-1__door_connects__0", "from": "room-1", "to": "door-1", "etype": "door_connects", "title": "<div class='tt-box'><div class='tt-name'>door_connects</div><div class='tt-row tt-muted' style='margin-bottom:4px'>door links to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Bathroom</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Bathroom Door</span></div></div>", "dashes": false, "_new": false}, {"id": "room-1__room-2__adjacent__0", "from": "room-1", "to": "room-2", "etype": "adjacent", "title": "<div class='tt-box'><div class='tt-name'>adjacent</div><div class='tt-row tt-muted' style='margin-bottom:4px'>rooms share a door</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Bathroom</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>door width</span><span class='tt-val'>0.9m</span></div></div>", "dashes": false, "_new": false}, {"id": "room-1__furn-1__contained_in__0", "from": "room-1", "to": "furn-1", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Bathroom</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Toilet</span></div></div>", "dashes": true, "_new": false}, {"id": "room-1__furn-2__contained_in__0", "from": "room-1", "to": "furn-2", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Bathroom</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Sink</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__door-1__door_connects__0", "from": "room-2", "to": "door-1", "etype": "door_connects", "title": "<div class='tt-box'><div class='tt-name'>door_connects</div><div class='tt-row tt-muted' style='margin-bottom:4px'>door links to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Bathroom Door</span></div></div>", "dashes": false, "_new": false}, {"id": "room-2__door-2__door_connects__0", "from": "room-2", "to": "door-2", "etype": "door_connects", "title": "<div class='tt-box'><div class='tt-name'>door_connects</div><div class='tt-row tt-muted' style='margin-bottom:4px'>door links to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Main Entrance</span></div></div>", "dashes": false, "_new": false}, {"id": "room-2__door-3__door_connects__0", "from": "room-2", "to": "door-3", "etype": "door_connects", "title": "<div class='tt-box'><div class='tt-name'>door_connects</div><div class='tt-row tt-muted' style='margin-bottom:4px'>door links to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Loading Dock</span></div></div>", "dashes": false, "_new": false}, {"id": "room-2__furn-3__contained_in__0", "from": "room-2", "to": "furn-3", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Assembly Station 1</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-4__contained_in__0", "from": "room-2", "to": "furn-4", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Packaging Station 2</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-5__contained_in__0", "from": "room-2", "to": "furn-5", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Packaging Station 3</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-6__contained_in__0", "from": "room-2", "to": "furn-6", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Packaging Station 4</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-7__contained_in__0", "from": "room-2", "to": "furn-7", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Conveyor Section 5</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-8__contained_in__0", "from": "room-2", "to": "furn-8", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Labeling Station 6</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-9__contained_in__0", "from": "room-2", "to": "furn-9", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Parts Bin Rack 7</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-10__contained_in__0", "from": "room-2", "to": "furn-10", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Conveyor Section 8</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-11__contained_in__0", "from": "room-2", "to": "furn-11", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Parts Bin Rack 9</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-12__contained_in__0", "from": "room-2", "to": "furn-12", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Conveyor Section 10</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-13__contained_in__0", "from": "room-2", "to": "furn-13", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Parts Bin Rack 11</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-14__contained_in__0", "from": "room-2", "to": "furn-14", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>QC Table 12</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__furn-15__contained_in__0", "from": "room-2", "to": "furn-15", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>cnc_machine</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-1__contained_in__0", "from": "room-2", "to": "window-1", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 1</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-2__contained_in__0", "from": "room-2", "to": "window-2", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 2</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-3__contained_in__0", "from": "room-2", "to": "window-3", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 3</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-4__contained_in__0", "from": "room-2", "to": "window-4", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 4</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-5__contained_in__0", "from": "room-2", "to": "window-5", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 5</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-6__contained_in__0", "from": "room-2", "to": "window-6", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 6</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-7__contained_in__0", "from": "room-2", "to": "window-7", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 7</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-8__contained_in__0", "from": "room-2", "to": "window-8", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 8</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-9__contained_in__0", "from": "room-2", "to": "window-9", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 9</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-10__contained_in__0", "from": "room-2", "to": "window-10", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 10</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-11__contained_in__0", "from": "room-2", "to": "window-11", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 11</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-12__contained_in__0", "from": "room-2", "to": "window-12", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 12</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-13__contained_in__0", "from": "room-2", "to": "window-13", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 13</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-14__contained_in__0", "from": "room-2", "to": "window-14", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 14</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-15__contained_in__0", "from": "room-2", "to": "window-15", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 15</span></div></div>", "dashes": true, "_new": false}, {"id": "room-2__window-16__contained_in__0", "from": "room-2", "to": "window-16", "etype": "contained_in", "title": "<div class='tt-box'><div class='tt-name'>contained_in</div><div class='tt-row tt-muted' style='margin-bottom:4px'>element belongs to room</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Clean Room</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 16</span></div></div>", "dashes": true, "_new": false}, {"id": "furn-1__furn-2__near__0", "from": "furn-1", "to": "furn-2", "etype": "near", "title": "<div class='tt-box'><div class='tt-name'>near</div><div class='tt-row tt-muted' style='margin-bottom:4px'>furniture < 3m apart</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Toilet</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Sink</span></div><div class='tt-row'><span class='tt-lbl'>distance</span><span class='tt-val'>0.88m</span></div></div>", "dashes": true, "_new": false}, {"id": "furn-1__wall-5__near_wall__0", "from": "furn-1", "to": "wall-5", "etype": "near_wall", "title": "<div class='tt-box'><div class='tt-name'>near_wall</div><div class='tt-row tt-muted' style='margin-bottom:4px'>furniture < 3m from wall</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Toilet</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Interior Wall 5</span></div><div class='tt-row'><span class='tt-lbl'>distance</span><span class='tt-val'>0.46m</span></div></div>", "dashes": [6, 4, 2, 4], "_new": false}, {"id": "furn-1__wall-6__near_wall__0", "from": "furn-1", "to": "wall-6", "etype": "near_wall", "title": "<div class='tt-box'><div class='tt-name'>near_wall</div><div class='tt-row tt-muted' style='margin-bottom:4px'>furniture < 3m from wall</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Toilet</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Interior Wall 6</span></div><div class='tt-row'><span class='tt-lbl'>distance</span><span class='tt-val'>0.56m</span></div></div>", "dashes": [6, 4, 2, 4], "_new": false}, {"id": "furn-2__wall-5__near_wall__0", "from": "furn-2", "to": "wall-5", "etype": "near_wall", "title": "<div class='tt-box'><div class='tt-name'>near_wall</div><div class='tt-row tt-muted' style='margin-bottom:4px'>furniture < 3m from wall</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Sink</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Interior Wall 5</span></div><div class='tt-row'><span class='tt-lbl'>distance</span><span class='tt-val'>1.34m</span></div></div>", "dashes": [6, 4, 2, 4], "_new": false}, {"id": "furn-2__wall-6__near_wall__0", "from": "furn-2", "to": "wall-6", "etype": "near_wall", "title": "<div class='tt-box'><div class='tt-name'>near_wall</div><div class='tt-row tt-muted' style='margin-bottom:4px'>furniture < 3m from wall</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Sink</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Interior Wall 6</span></div><div class='tt-row'><span class='tt-lbl'>distance</span><span class='tt-val'>0.48m</span></div></div>", "dashes": [6, 4, 2, 4], "_new": false}, {"id": "furn-11__wall-1__near_wall__0", "from": "furn-11", "to": "wall-1", "etype": "near_wall", "title": "<div class='tt-box'><div class='tt-name'>near_wall</div><div class='tt-row tt-muted' style='margin-bottom:4px'>furniture < 3m from wall</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Parts Bin Rack 9</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>South Exterior Wall</span></div><div class='tt-row'><span class='tt-lbl'>distance</span><span class='tt-val'>2.5m</span></div></div>", "dashes": [6, 4, 2, 4], "_new": false}, {"id": "furn-11__window-4__near_window__0", "from": "furn-11", "to": "window-4", "etype": "near_window", "title": "<div class='tt-box'><div class='tt-name'>near_window</div><div class='tt-row tt-muted' style='margin-bottom:4px'>furniture < 3m from window</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Parts Bin Rack 9</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>Warehouse Window 4</span></div><div class='tt-row'><span class='tt-lbl'>distance</span><span class='tt-val'>2.7m</span></div></div>", "dashes": [6, 4, 2, 4], "_new": false}, {"id": "furn-12__furn-14__near__0", "from": "furn-12", "to": "furn-14", "etype": "near", "title": "<div class='tt-box'><div class='tt-name'>near</div><div class='tt-row tt-muted' style='margin-bottom:4px'>furniture < 3m apart</div><div class='tt-divider'></div><div class='tt-row'><span class='tt-lbl'>from</span><span class='tt-val'>Conveyor Section 10</span></div><div class='tt-row'><span class='tt-lbl'>to</span><span class='tt-val'>QC Table 12</span></div><div class='tt-row'><span class='tt-lbl'>distance</span><span class='tt-val'>2.82m</span></div></div>", "dashes": true, "_new": false}];
+const CLR_DARK   = {"room": "#6B9BD2", "door": "#D4A574", "wall": "#8B9DAF", "window": "#7BC4C4", "furniture": "#7DB87D", "mep": "#C47070"};
+const CLR_LIGHT  = {"room": "#4A7FB5", "door": "#B8865A", "wall": "#6B7D8F", "window": "#5AA8A8", "furniture": "#5A9B5A", "mep": "#A85050"};
+const ECLR_DARK  = {"contained_in": "#8B9DAF", "door_connects": "#D4A574", "adjacent": "#6B9BD2", "near": "#7DB87D", "near_wall": "#C47070", "near_window": "#7BC4C4", "blocks": "#E05252", "sightline": "#9B7BC4", "path": "#5ABEAE"};
+const NODE_DESCS = {"room": "A space enclosed by walls and accessible through doors. Rooms define the primary functional zones of the layout and contain placed furniture and MEP elements.", "door": "An opening element connecting two spaces. Doors define the circulation network, determine access paths, and set minimum clearance requirements at thresholds.", "wall": "A structural boundary element that encloses and separates spaces. Walls carry loads, define the room geometry, and host windows and doors.", "window": "An opening in a wall providing natural light and ventilation. Windows influence furniture placement through glare and sightline considerations.", "furniture": "A placed object occupying floor area. Each piece requires clearance zones on its working sides for ergonomic access and code compliance.", "mep": "Mechanical, Electrical, or Plumbing element. These carry service zones and access requirements that must remain unobstructed."};
+const EDGE_DESCS = {"contained_in": "element belongs to room", "door_connects": "door links to room", "adjacent": "rooms share a door", "near": "furniture < 3m apart", "near_wall": "furniture < 3m from wall", "near_window": "furniture < 3m from window", "blocks": "object blocks access to another", "sightline": "direct line of sight", "path": "navigable route with distance"};
+const PAGE_TS    = "1779514971572";  // ms-precision build timestamp — change detection anchor
+
+// ── Build lookup indexes ───────────────────────────────────────
+const NODE_IDX = {};
+NODES_RAW.forEach(n => NODE_IDX[n.id] = n);
+
+// EDGE_IDX[nodeId] = [{etype, neighborId}]
+const EDGE_IDX = {};
+EDGES_RAW.forEach(e => {
+  (EDGE_IDX[e.from] = EDGE_IDX[e.from] || []).push({ etype: e.etype, id: e.to });
+  (EDGE_IDX[e.to]   = EDGE_IDX[e.to]   || []).push({ etype: e.etype, id: e.from });
+});
+
+// ── Theme ──────────────────────────────────────────────────────
+const THEME_KEY = "sgTheme";
+let theme = localStorage.getItem(THEME_KEY) || "dark";
+setTheme(theme, false);
+
+function setTheme(t, updateNetwork) {
+  theme = t;
+  document.documentElement.setAttribute("data-theme", t);
+  localStorage.setItem(THEME_KEY, t);
+  document.getElementById("themeBtn").textContent = t === "dark" ? "Light" : "Dark";
+  if (updateNetwork && typeof nodesDS !== "undefined") {
+    nodesDS.update(nodesDS.get().map(n => ({
+      id: n.id,
+      color: nodeColor(n.ntype, false),
+      font: { ...n.font, color: fontColor() },
+    })));
+    edgesDS.update(edgesDS.get().map(e => ({
+      id: e.id,
+      color: edgeColor(e.etype, false),
+    })));
+  }
+}
+function fontColor() { return theme === "dark" ? "#b8b8b8" : "#505050"; }
+
+// ── Color builders ─────────────────────────────────────────────
+function nodeColor(ntype, isNew) {
+  const pal    = theme === "dark" ? CLR_DARK : CLR_LIGHT;
+  const fill   = pal[ntype]  || "#888";
+  const border = theme === "dark" ? "rgba(255,255,255,0.13)" : "rgba(0,0,0,0.09)";
+  const accent = "#007AFF";
+  if (isNew) return {
+    background: fill, border: accent,
+    highlight: { background: fill, border: accent },
+    hover:     { background: fill, border: accent },
+  };
+  return {
+    background: fill, border,
+    highlight: { background: fill, border: accent },
+    hover:     { background: fill, border },
+  };
+}
+function edgeColor(etype, isNew) {
+  const base = ECLR_DARK[etype] || "#666";
+  if (isNew) return { color: "#007AFF", highlight: "#007AFF", hover: "#007AFF", opacity: 0.9 };
+  return { color: base, highlight: base, hover: base, opacity: 0.4 };
+}
+
+// ── DataSets ───────────────────────────────────────────────────
+const FONT_FACE = '-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif';
+const nodesDS = new vis.DataSet(NODES_RAW.map(n => ({
+  id:    n.id,
+  label: n.label,
+  title: n.title,
+  ntype: n.ntype,
+  x: n.x, y: n.y,
+  _ox: n.x, _oy: n.y,   // original architectural position
+  fixed: false,          // allow dragging
+  size:  n.size,
+  shape: "dot",
+  color: nodeColor(n.ntype, n._new),
+  borderWidth:         n._new ? 2.0 : 0.9,
+  borderWidthSelected: 2.2,
+  shadow: { enabled: true, size: 5, x: 0, y: 2, color: "rgba(0,0,0,0.13)" },
+  font:  { size: 9, face: FONT_FACE, color: fontColor(), align: "center", vadjust: 2 },
+  _new: n._new,
+})));
+
+const edgesDS = new vis.DataSet(EDGES_RAW.map(e => ({
+  id:    e.id,
+  from:  e.from,
+  to:    e.to,
+  title: e.title,
+  etype: e.etype,
+  dashes: e.dashes,
+  color: edgeColor(e.etype, e._new),
+  width:          e._new ? 1.8 : 0.7,
+  selectionWidth: 2.0,
+  smooth: { type: "continuous", roundness: 0.3 },
+  _new: e._new,
+})));
+
+// ── Network ────────────────────────────────────────────────────
+const network = new vis.Network(
+  document.getElementById("graph-container"),
+  { nodes: nodesDS, edges: edgesDS },
+  {
+    physics: { enabled: false },
+    interaction: {
+      hover: true, tooltipDelay: 130,
+      dragNodes: true, dragView: true, zoomView: true,
+      multiselect: false,
+    },
+    nodes: { shape: "dot" },
+    edges: { smooth: { type: "continuous", roundness: 0.3 } },
+  }
+);
+
+// ── Reload state — detect actual content changes across reloads ─
+const _prevTS = sessionStorage.getItem("sg_ts");
+const _isNewContent = _prevTS !== PAGE_TS;
+sessionStorage.setItem("sg_ts", PAGE_TS);
+
+let _noChangeRuns = 0;
+if (_isNewContent) {
+  sessionStorage.setItem("sg_nc", "0");
+} else {
+  _noChangeRuns = parseInt(sessionStorage.getItem("sg_nc") || "0") + 1;
+  sessionStorage.setItem("sg_nc", String(_noChangeRuns));
+}
+
+// Fit viewport (no animation) — restore zoom/pan on no-change reloads
+network.once("afterDrawing", () => {
+  const sv = sessionStorage.getItem("sg_view");
+  if (sv && !_isNewContent) {
+    try {
+      const v = JSON.parse(sv);
+      network.moveTo({ position: v.pos, scale: v.scale, animation: false });
+    } catch(e) { network.fit({ animation: false }); }
+  } else {
+    network.fit({ animation: false });
+  }
+  if (_isNewContent) spawnBadges();
+});
+
+// ── Drag: spring snap-back to original architectural position ──
+network.on("dragEnd", params => {
+  if (!params.nodes.length) return;
+  params.nodes.forEach(nid => {
+    const n = nodesDS.get(nid);
+    if (!n) return;
+    const ox = n._ox, oy = n._oy;
+    const cur = network.getPositions([nid])[nid];
+    if (!cur) return;
+    const dur = 550;
+    let t0 = null;
+    const sx = cur.x, sy = cur.y;
+    function step(ts) {
+      if (!t0) t0 = ts;
+      const p = Math.min((ts - t0) / dur, 1);
+      const ease = 1 - Math.pow(1 - p, 3);   // ease-out cubic
+      network.moveNode(nid, sx + (ox - sx) * ease, sy + (oy - sy) * ease);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+});
+
+// ── Theme toggle ───────────────────────────────────────────────
+document.getElementById("themeBtn").addEventListener("click", () => {
+  setTheme(theme === "dark" ? "light" : "dark", true);
+});
+
+// ── Legend filtering ───────────────────────────────────────────
+const filters = { nodes: new Set(), edges: new Set() };
+
+document.querySelectorAll(".leg-item").forEach(el => {
+  el.addEventListener("click", ev => {
+    const type = el.dataset.ft;
+    const cat  = el.dataset.fc;
+    const set  = filters[cat];
+    if (ev.shiftKey) {
+      set.has(type) ? set.delete(type) : set.add(type);
+    } else {
+      if (set.size === 1 && set.has(type)) set.clear();
+      else { set.clear(); set.add(type); }
+    }
+    applyFilters();
+    syncLegend();
+  });
+});
+
+function applyFilters() {
+  const nf = filters.nodes.size > 0;
+  const ef = filters.edges.size > 0;
+  const any = nf || ef;
+
+  nodesDS.update(nodesDS.get().map(n => ({
+    id: n.id,
+    opacity: (!nf || filters.nodes.has(n.ntype)) ? 1.0 : 0.06,
+  })));
+
+  edgesDS.update(edgesDS.get().map(e => {
+    const fn = nodesDS.get(e.from);
+    const tn = nodesDS.get(e.to);
+    const nodeOk = !nf || (
+      (fn && filters.nodes.has(fn.ntype)) ||
+      (tn && filters.nodes.has(tn.ntype))
+    );
+    const edgeOk = !ef || filters.edges.has(e.etype);
+    const match = nodeOk && edgeOk;
+    return { id: e.id, opacity: match ? (any ? 0.85 : 0.4) : 0.04 };
+  }));
+}
+
+function syncLegend() {
+  document.querySelectorAll(".leg-item").forEach(el => {
+    const set = filters[el.dataset.fc];
+    el.classList.toggle("leg-on",  set.has(el.dataset.ft));
+    el.classList.toggle("leg-dim", set.size > 0 && !set.has(el.dataset.ft));
+  });
+}
+
+// ── Detail panel ───────────────────────────────────────────────
+function fmtVal(v) {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (Array.isArray(v)) return "[" + v.map(x => typeof x === "number" ? x.toFixed(2) : x).join(", ") + "]";
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(3);
+  return String(v);
+}
+
+function openPanel(nid) {
+  const raw = NODE_IDX[nid];
+  if (!raw) return;
+  const meta  = raw._meta || {};
+  const pal   = theme === "dark" ? CLR_DARK : CLR_LIGHT;
+  const color = pal[raw.ntype] || "#888";
+
+  // Header
+  const chip = document.getElementById("dpChip");
+  chip.textContent = raw.ntype;
+  chip.style.background = color + "22";
+  chip.style.color = color;
+  document.getElementById("dpName").textContent = raw.label;
+
+  // Body
+  let h = "";
+
+  // Description
+  const desc = NODE_DESCS[raw.ntype];
+  if (desc) h += `<div class="dp-desc">${desc}</div>`;
+
+  // Properties — all metadata from the JSON
+  const ANALYSIS_KEYS = new Set(["clearance_ok","reachable","facing_ok","min_clearance_m","required_clearance_m","move_direction","move_distance_m","angle_diff"]);
+  const SKIP_KEYS     = new Set(["id"]);
+  const propEntries   = Object.entries(meta).filter(([k]) => !ANALYSIS_KEYS.has(k) && !SKIP_KEYS.has(k));
+
+  if (propEntries.length) {
+    h += `<div class="dp-section">Properties</div>`;
+    propEntries.forEach(([k, v]) => {
+      h += `<div class="dp-row"><span class="dp-lbl">${k.replace(/_/g," ")}</span><span class="dp-val">${fmtVal(v)}</span></div>`;
+    });
+  }
+
+  // Analysis (if any enrichment attrs present)
+  const analysisEntries = Object.entries(meta).filter(([k]) => ANALYSIS_KEYS.has(k));
+  if (analysisEntries.length) {
+    h += `<div class="dp-divider"></div>`;
+    h += `<div class="dp-section">Analysis</div>`;
+
+    if (meta.clearance_ok !== undefined) {
+      const ok = meta.clearance_ok;
+      h += `<div class="dp-row"><span class="dp-lbl">clearance</span><span class="dp-val ${ok?'ok':'fail'}">${ok ? 'OK' : 'FAIL'}</span></div>`;
+      if (!ok && meta.min_clearance_m !== undefined)
+        h += `<div class="dp-row"><span class="dp-lbl">has / needs</span><span class="dp-val">${fmtVal(meta.min_clearance_m)}m / ${fmtVal(meta.required_clearance_m)}m</span></div>`;
+      if (!ok && meta.move_direction)
+        h += `<div class="dp-row"><span class="dp-lbl">suggested fix</span><span class="dp-val accent">move ${fmtVal(meta.move_direction)} · ${fmtVal(meta.move_distance_m)}m</span></div>`;
+    }
+    if (meta.reachable !== undefined) {
+      const ok = meta.reachable;
+      h += `<div class="dp-row"><span class="dp-lbl">reachable</span><span class="dp-val ${ok?'ok':'fail'}">${ok ? 'YES' : 'NO'}</span></div>`;
+    }
+    if (meta.facing_ok !== undefined) {
+      const ok = meta.facing_ok;
+      h += `<div class="dp-row"><span class="dp-lbl">facing</span><span class="dp-val ${ok?'ok':'warn'}">${ok ? 'OK' : 'off ' + fmtVal(meta.angle_diff) + '°'}</span></div>`;
+    }
+  }
+
+  // Connections
+  const conns = EDGE_IDX[nid] || [];
+  if (conns.length) {
+    h += `<div class="dp-divider"></div>`;
+    h += `<div class="dp-section">Connections (${conns.length})</div>`;
+    conns.slice(0, 18).forEach(c => {
+      const nb      = NODE_IDX[c.id];
+      const nbColor = (theme === "dark" ? CLR_DARK : CLR_LIGHT)[nb?.ntype] || "#888";
+      const eColor  = ECLR_DARK[c.etype] || "#888";
+      const nbLabel = nb ? nb.label : c.id;
+      h += `<div class="dp-neighbor" data-nid="${c.id}">`;
+      h += `<span class="dp-ndot" style="background:${nbColor}"></span>`;
+      h += `<span class="dp-nname">${nbLabel}</span>`;
+      h += `<span class="dp-etype" style="color:${eColor}">${c.etype}</span>`;
+      h += `</div>`;
+    });
+    if (conns.length > 18) h += `<div style="font-size:9px;color:var(--muted);margin-top:4px">+${conns.length - 18} more</div>`;
+  }
+
+  document.getElementById("dpScroll").innerHTML = h;
+
+  // Click neighbor rows to jump to that node
+  document.querySelectorAll(".dp-neighbor[data-nid]").forEach(row => {
+    row.addEventListener("click", () => {
+      const tid = row.dataset.nid;
+      network.selectNodes([tid]);
+      network.focus(tid, { animation: { duration: 400, easingFunction: "easeInOutQuad" }, scale: Math.max(network.getScale(), 1.2) });
+      openPanel(tid);
+    });
+  });
+
+  document.getElementById("detailPanel").style.display = "block";
+}
+
+// Click node → open panel; click background → close
+network.on("click", params => {
+  if (params.nodes.length) {
+    openPanel(params.nodes[0]);
+  } else {
+    document.getElementById("detailPanel").style.display = "none";
+  }
+});
+
+// Double-click node → focus + zoom
+network.on("doubleClick", params => {
+  if (params.nodes.length) {
+    network.focus(params.nodes[0], {
+      scale: Math.max(network.getScale() * 1.6, 1.8),
+      animation: { duration: 400, easingFunction: "easeInOutQuad" },
+    });
+  }
+});
+
+document.getElementById("dpClose").addEventListener("click", () => {
+  document.getElementById("detailPanel").style.display = "none";
+  network.unselectAll();
+});
+
+// ── New-element animation ──────────────────────────────────────
+function spawnBadges() {
+  const newNodes = NODES_RAW.filter(n => n._new).map(n => n.id);
+  const newEdges = EDGES_RAW.filter(e => e._new).map(e => e.id);
+
+  newNodes.forEach(id => {
+    const pos = network.getPositions([id])[id];
+    if (!pos) return;
+    const dp = network.canvasToDOM(pos);
+    const badge = document.createElement("div");
+    badge.className = "new-badge";
+    badge.textContent = "new";
+    badge.style.left = (dp.x + 9) + "px";
+    badge.style.top  = (dp.y - 16) + "px";
+    document.body.appendChild(badge);
+    requestAnimationFrame(() => badge.classList.add("fade"));
+    setTimeout(() => badge.remove(), 4500);
+  });
+
+  if (newNodes.length || newEdges.length) {
+    setTimeout(() => {
+      nodesDS.update(newNodes.map(id => {
+        const n = nodesDS.get(id);
+        return { id, color: nodeColor(n ? n.ntype : "unknown", false), borderWidth: 0.9 };
+      }));
+      edgesDS.update(newEdges.map(id => {
+        const e = edgesDS.get(id);
+        return { id, color: edgeColor(e ? e.etype : "unknown", false), width: 0.7 };
+      }));
+    }, 4000);
+  }
+}
+
+// ── Live refresh — dual-mode with adaptive backoff ───────────
+// 1. Try smart detection via localhost HTTP server (compare PAGE_TS).
+// 2. If server unreachable → blind location.reload() which always
+//    re-reads the file from disk, even on file:// origins.
+// 3. sessionStorage tracks consecutive no-change reloads to back off
+//    and avoid rapid flickering when the agent is idle.
+//    Resets to fast polling the instant content actually changes.
+
+const _SRV_URL = "http://127.0.0.1:7477/"
+  + location.href.split("/").pop().split("?")[0].split("#")[0];
+// Adaptive: 2 s when fresh, backs off +2 s per no-change, cap 10 s
+const _POLL_MS = Math.min(2000 + _noChangeRuns * 2000, 10000);
+let liveTimer  = null;
+let _checking  = false;
+
+function _saveView() {
+  try {
+    sessionStorage.setItem("sg_view", JSON.stringify({
+      pos: network.getViewPosition(),
+      scale: network.getScale(),
+    }));
+  } catch(e) {}
+}
+
+function _checkForUpdate() {
+  if (_checking) return;
+  _checking = true;
+  _saveView();
+
+  fetch(_SRV_URL + "?_t=" + Date.now(), { cache: "no-store" })
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(html => {
+      _checking = false;
+      const m = html.match(/const PAGE_TS\s*=\s*"(\d+)"/);
+      if (m && m[1] !== PAGE_TS) location.reload();
+      // Server reachable, content unchanged — do nothing (no flicker).
+    })
+    .catch(() => {
+      _checking = false;
+      // Server unreachable (file:// or server down).
+      // Blind reload — the browser re-reads the file from disk.
+      // The adaptive backoff (_POLL_MS) prevents rapid flickering.
+      location.reload();
+    });
+}
+
+function _startLive() {
+  if (liveTimer) return;
+  liveTimer = setInterval(_checkForUpdate, _POLL_MS);
+  const btn = document.getElementById("liveBtn");
+  btn.textContent = "Live ●";
+  btn.classList.add("live-on");
+}
+
+function _stopLive() {
+  clearInterval(liveTimer);
+  liveTimer = null;
+  const btn = document.getElementById("liveBtn");
+  btn.textContent = "Live";
+  btn.classList.remove("live-on");
+}
+
+// Active by default.
+_startLive();
+
+document.getElementById("liveBtn").addEventListener("click", () => {
+  if (liveTimer) _stopLive(); else _startLive();
+});
+</script>
+</body>
+</html>

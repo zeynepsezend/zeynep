@@ -9,6 +9,7 @@ This is the main file to edit when changing how the agent works.
 
 from __future__ import annotations
 import json
+from pathlib import Path
 from typing import Annotated, Any, TypedDict
 from langgraph.graph.message import add_messages
 
@@ -126,6 +127,11 @@ class AgentState(TypedDict):
     # Enriched by enrich_graph_node after all analysis tools complete.
     spatial_graph:       Annotated[dict | None, _keep_last]
     spatial_graph_text:  Annotated[str | None,  _keep_last]
+
+    # Node IDs to highlight in the visualizer. Set by add_objects after placement,
+    # carried into enrich_graph_node so highlights persist through both update steps.
+    # Reset to [] by _build_initial_state at the start of each new user request.
+    viz_highlight_ids:   Annotated[list[str] | None, _keep_last]
 
 
 # ---------------------------------------------------------------------------
@@ -385,8 +391,14 @@ def enrich_graph_node(state: AgentState) -> dict:
         else:
             print(f"\n\033[92m[enrich_graph] No issues found - all clear\033[0m\n")
 
-        print("\033[36m[tip] Visualize the current graph in another terminal:\033[0m")
-        print("\033[36m      python test_spatial_graph.py --session\033[0m\n")
+        try:
+            from visualize_interactive import update_from_enriched_graph as _update_viz
+            _viz_path = Path(__file__).parent / "view_graph" / "spatial_graph_interactive.html"
+            _carry = set(state.get("viz_highlight_ids") or [])
+            _update_viz(G, output_path=_viz_path, extra_new_ids=_carry)
+            print(f"\033[36m[viz] Interactive graph updated: {_viz_path}\033[0m")
+        except Exception as _e:
+            print(f"[viz] Warning: {_e}")
 
         updates = {
             "spatial_graph": graph_to_dict(G),
@@ -569,8 +581,13 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
     print(f"\n[spatial_graph] Initial graph: {_sg.number_of_nodes()} nodes, "
           f"{_sg.number_of_edges()} edges")
     print(_sg_text)
-    print("\033[36m[tip] Visualize the spatial graph in another terminal:\033[0m")
-    print("\033[36m      python test_spatial_graph.py --session\033[0m\n")
+    try:
+        from visualize_interactive import build_interactive_graph as _viz, http_url as _http_url
+        _viz_path = Path(__file__).parent / "view_graph" / "spatial_graph_interactive.html"
+        _viz(_sg, title=f"Spatial Graph — {ctx.layout_name}", output_path=_viz_path)
+        print(f"\033[36m[viz] Interactive graph: {_http_url(_viz_path)}\033[0m")
+    except Exception as _e:
+        print(f"[viz] Warning: {_e}")
 
     slim = _slim_layout(ctx.layout_data)
     layout_text = json.dumps(slim, indent=2)
@@ -611,6 +628,7 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
         "_query_mode":           None,
         "spatial_graph":         _sg_dict,
         "spatial_graph_text":    _sg_text,
+        "viz_highlight_ids":     [],   # clear highlights on each new request
     }
 
 

@@ -97,6 +97,27 @@ def build_add_objects_node(mcp_client, workspace_path):
                         _sg = build_graph_from_layout(parsed)
                         updates["spatial_graph"] = graph_to_dict(_sg)
                         updates["spatial_graph_text"] = serialize_for_llm(_sg)
+                        # Highlight added/moved furniture in the visualizer
+                        try:
+                            from visualize_interactive import build_interactive_graph as _viz
+                            from pathlib import Path as _Path
+                            _pre_geom = {f.get("id"): f.get("geometry")
+                                         for f in _pre_layout.get("furniture", [])}
+                            _new_viz_ids = set()
+                            for _f in parsed.get("furniture", []):
+                                _fid = _f.get("id")
+                                if _fid not in _pre_geom:
+                                    _new_viz_ids.add(_fid)        # newly added
+                                elif _f.get("geometry") != _pre_geom[_fid]:
+                                    _new_viz_ids.add(_fid)        # moved
+                            _viz_path = _Path(__file__).parent.parent / "view_graph" / "spatial_graph_interactive.html"
+                            _viz(_sg, title="Spatial Graph", output_path=_viz_path,
+                                 new_ids=_new_viz_ids)
+                            updates["viz_highlight_ids"] = list(_new_viz_ids)
+                            print(f"\033[36m[viz] Graph updated: "
+                                  f"{len(_new_viz_ids)} elements highlighted\033[0m")
+                        except Exception as _ve:
+                            print(f"[viz] Warning: {_ve}")
                     except Exception:
                         pass
                 else:
@@ -232,6 +253,23 @@ def build_add_objects_node(mcp_client, workspace_path):
                         _sg = build_graph_from_layout(current_layout)
                         updates["spatial_graph"] = graph_to_dict(_sg)
                         updates["spatial_graph_text"] = serialize_for_llm(_sg)
+                        # Highlight added/moved furniture in the visualizer
+                        try:
+                            from visualize_interactive import build_interactive_graph as _viz
+                            from pathlib import Path as _Path
+                            _changed_names = {c["name"].lower() for c in changes}
+                            _new_viz_ids = set()
+                            for _nid, _ndata in _sg.nodes(data=True):
+                                if _ndata.get("name", "").lower() in _changed_names:
+                                    _new_viz_ids.add(_nid)
+                            _viz_path = _Path(__file__).parent.parent / "view_graph" / "spatial_graph_interactive.html"
+                            _viz(_sg, title="Spatial Graph", output_path=_viz_path,
+                                 new_ids=_new_viz_ids)
+                            updates["viz_highlight_ids"] = list(_new_viz_ids)
+                            print(f"\033[36m[viz] Graph updated: "
+                                  f"{len(_new_viz_ids)} elements highlighted\033[0m")
+                        except Exception as _ve:
+                            print(f"[viz] Warning: {_ve}")
                     except Exception:
                         pass
 
