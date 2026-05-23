@@ -214,7 +214,7 @@ RELATIONS:
 
 - **`spatial_graph.py`** — NetworkX MultiGraph module. Pure Python, no LangGraph/MCP/LLM dependencies. `build_graph_from_layout()` (rooms, doors, walls, windows, furniture, mep + near/near_wall/near_window edges), `enrich_graph_from_analysis()`, `serialize_for_llm()`, `graph_to_dict()`, `dict_to_graph()`. Uses `_point_to_segment_distance()` for accurate furniture-to-wall/window proximity. `clearance_ok` is based on `deficit_m > 0` (not just presence of `clearance_violation`). Graph is ephemeral (RAM only), rebuilt from layout JSON after each placement.
 
-- **`test_spatial_graph.py`** — Standalone visualization. `--session` reads `workspace/session_active.json` (live with placed furniture); layout name reads base layout; `--all` tests all layouts. Uses matplotlib, dark theme, nodes/edges colored by type.
+- **`test_spatial_graph.py`** — Standalone visualization. `--session` reads `workspace/session_active.json` (live with placed furniture); layout name reads base layout; `--all` tests all layouts. Uses matplotlib, dark theme, nodes/edges colored by type. Legend includes edge descriptions (e.g. `near_wall (12) — furniture < 3m from wall`). Node types: room (blue), door (orange), wall (gray), window (cyan), furniture (green), mep (red).
 
 - **`nodes/reason.py`** — LLM brain. Reads full conversation + tool results. Decides: `action=tool` (place_object -> add_objects, other tools -> tools.py), `action=query` -> query_agent, `action=final` -> end loop. Injects `space_config`, `profile_config`, and `spatial_graph_text` as context before each LLM call. 3 retry attempts with backoff.
 
@@ -548,19 +548,50 @@ This is the master schema for defining architectural floor plans as JSON.
 
 ## Changelog
 
-### 2026-05-22 — Collision clearance fix + graph elements
+### 2026-05-22 — Spatial graph layer + collision clearance fix
+
+**`spatial_graph.py`** — NEW: NetworkX spatial relationship graph module
+- Pure Python module (~570 lines), no LangGraph/MCP/LLM dependencies
+- `build_graph_from_layout()`: 6 node types (room, door, wall, window, furniture, mep), 6 edge types (contained_in, door_connects, adjacent, near, near_wall, near_window)
+- `enrich_graph_from_analysis()`: adds collision/visibility/path/reachability/orientation data as node attrs and edges (blocks, sightline, path)
+- `serialize_for_llm()`: compact text (ROOMS, CONNECTIVITY, STRUCTURE, WINDOWS, FURNITURE, MEP, RELATIONS, ISSUES) capped at 80 lines
+- `graph_to_dict()` / `dict_to_graph()`: JSON-serializable roundtrip via `nx.node_link_data`
+- `_point_to_segment_distance()`: orthogonal projection + clamp for furniture-to-wall/window proximity
+- Walls skipped in collision enrichment (`_skip_ntypes = {"wall"}`) — structural, not movable
+- `clearance_ok` based on `deficit_m <= 0` (not just presence of `clearance_violation` dict)
+- Fallback move direction: unit vector toward room center when collision.py has no `use_point` gradient
+
+**`test_spatial_graph.py`** — NEW: standalone graph visualizer
+- Dark theme matplotlib, nodes colored by type (room=blue, door=orange, wall=gray, window=cyan, furniture=green, mep=red)
+- Edge styles by type (solid/dashed/dotted/dashdot), with descriptive legend (e.g. `near_wall (12) — furniture < 3m from wall`)
+- Modes: `--session` (live workspace), layout name (base), `--all` (all layouts)
+- Spatial positions from geometry, spring layout fallback for missing positions
+
+**`graph.py`** — Spatial graph integration into LangGraph pipeline
+- `AgentState`: added `spatial_graph: dict | None` and `spatial_graph_text: str | None` (both `_keep_last`)
+- `enrich_graph_node`: deserializes graph, calls `enrich_graph_from_analysis()` with all 5 tool results, prints ANSI-colored FINDINGS (walls filtered), injects correction message when violations found after placement
+- `_build_correction_message()`: builds explicit fix instructions with move vectors, positions, clearance details for LLM consumption
+- Wiring: `reachability -> enrich_graph -> _route_after_group2 -> {reason, scoring}` (enrich runs BEFORE routing)
+- `_build_initial_state()`: builds initial spatial graph from base layout at startup
+
+**`nodes/reason.py`** — Spatial graph context injection
+- Injects `spatial_graph_text` into LLM context before each call (after profile/space config)
+
+**`prompts.py`** — SPATIAL GRAPH section in SYSTEM_PROMPT
+- Instructs LLM to check ISSUES section for violations with exact move vectors
+- Directs LLM to use `move_object` with vectors from ISSUES, not guess positions
+
+**`nodes/add_objects.py`** — Graph rebuild after placement
+- Rebuilds spatial graph (base edges only, no analysis enrichment) after both MCP and fallback placement paths
+- Uses try/except so graph failure doesn't break placement pipeline
 
 **`nodes/collision.py`** — Voronoi boundary method for real clearance
-- Old: `min_clearance_m` measured distance from free cells to their nearest obstacle surface, always bottoming out at 0.1m (1 grid cell) for every object
-- New: scans Voronoi boundaries (adjacent free cells with different nearest-obstacle attribution) to compute the actual gap between each object and its nearest other obstacle. `gap = (dist[a] + dist[b]) * cell_size`
-- Objects touching another obstacle directly (no Voronoi boundary) get `min_clearance_m = 0.0`
-- No changes needed in Grasshopper — GH component only visualizes, Python is authoritative
+- Old: `min_clearance_m` measured distance from free cells to nearest obstacle surface, always 0.1m (1 grid cell)
+- New: scans Voronoi boundaries (adjacent free cells with different nearest-obstacle attribution) to compute actual surface-to-surface gap: `gap = (dist[a] + dist[b]) * cell_size`
+- Objects touching another obstacle directly get `min_clearance_m = 0.0`
+- No GH changes needed — Python is authoritative, GH only visualizes
 
-**`spatial_graph.py`** — Walls and windows as graph nodes
-- Added `wall` nodes: name, wall_type (load-bearing/partition), material, length, p1/p2 endpoints
-- Added `window` nodes: name, window_type (awning/sliding/fixed), roomId, width, p1/p2. `contained_in` edge to room
-- Added `near_wall` edges: furniture → wall, using `_point_to_segment_distance()` (orthogonal projection + clamp), threshold 3m
-- Added `near_window` edges: furniture → window, same room only, same distance method
-- `clearance_ok` now based on `deficit_m <= 0` (not just presence of `clearance_violation` dict)
-- Serialization: `STRUCTURE:` section (per wall), `WINDOWS:` compact (grouped by room with type counts), `near_wall`/`near_window` in RELATIONS
-- `MAX_SERIALIZE_LINES` increased from 50 → 80
+**`generate_session_report.py`** — NEW: PDF report generator
+- 3 diagrams (full graph visualization, Voronoi concept before/after)
+- Sections: summary, collision fix, walls/windows, graph visualization, LLM serialization, clearance_ok fix, files modified
+- Output: `session_report_2026-05-22.pdf`
