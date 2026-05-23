@@ -11,6 +11,7 @@ from nodes.adapt import build_adapt_node
 from nodes.evaluate import build_evaluate_node
 from nodes.feedback import build_feedback_node
 from nodes.modify import build_modify_node
+from nodes.topology import build_topology_node
 
 
 # =============================================================================
@@ -38,11 +39,12 @@ class AgentState(TypedDict, total=False):
     layout_json_string: str                        # current layout as a JSON string, injected into tool calls 
     input_layout_json_string: str | None           # NEW - input layout, defining outline, as a JSON string, injected into tool calls 
     topology_graph_json_string: str | None         # NEW - topology graph for search, as a JSON string
-    evaluation_json_string: str | None             # NEW - evaluation results
     search_results_json_string: str | None         # NEW - {id, score, description} only
     tried_layout_ids: list[str]                    # NEW - keep track of which layout IDs we've tried adapting
+    evaluation_json_string: str | None             # NEW - evaluation results
     #-----------results from nodes (for routing)-----------
     preprocess_result: str                         # NEW - which node to go to after preprocess: "search" | "select" | "modify" | "evaluate" | "reason" | "end"
+    topology_result: str                            # NEW - which node to go to after topology: "success" | "failed"
     search_result: str                             # NEW - which node to go to after search: "success" | "failed"
     select_result: str                             # NEW - which node to go to after select: "success" | "failed"
     adapt_result: str | None                       # NEW - result from adapt node: "success" | "failed"
@@ -55,13 +57,20 @@ class AgentState(TypedDict, total=False):
 def _route_after_preprocessing(state: AgentState) -> str:
     result = state.get("preprocess_result")
     return {
-        "search": "search",
+        "topology": "topology",
         "select": "select",
         "modify": "modify",
         "evaluate": "evaluate",
         "reason": "reason",
         "end": "end",
     }.get(result, "end")
+    
+def _route_after_topology(state: AgentState) -> str:
+    result = state.get("topology_result")
+    return {
+        "success": "search",     # Topology successfully built, go to search
+        "failed": "feedback"     # Topology failed, ask the user
+    }.get(result, "feedback")
 
 def _route_after_search(state: AgentState) -> str:
     result = state.get("search_result")
@@ -92,8 +101,9 @@ def build_graph(ctx: Any) -> Any:
     """Build the layout agent graph."""
     reason = build_reason_node(ctx.llm)
     preprocess = build_preprocess_node()
+    topology = build_topology_node()
     search = build_search_node()
-    select = build_select_node(ctx.llm)
+    select = build_select_node()
     adapt = build_adapt_node(ctx.mcp_client)
     evaluate = build_evaluate_node(ctx.mcp_client)
     feedback = build_feedback_node(ctx.llm)
@@ -117,6 +127,7 @@ def build_graph(ctx: Any) -> Any:
     # Add nodes
     workflow.add_node("reason", make_logged_node(reason, "reason"))
     workflow.add_node("preprocess", make_logged_node(preprocess, "preprocess"))
+    workflow.add_node("topology", make_logged_node(topology, "topology"))
     workflow.add_node("search", make_logged_node(search, "search"))
     workflow.add_node("select", make_logged_node(select, "select"))
     workflow.add_node("adapt", make_logged_node(adapt, "adapt"))
@@ -131,11 +142,15 @@ def build_graph(ctx: Any) -> Any:
         "reason": "reason",
         "select": "select",
         "evaluate": "evaluate",
-        "search": "search",
+        "topology": "topology",
         "modify": "modify",
         "end": END
     })
     workflow.add_edge("reason", "preprocess")
+    workflow.add_conditional_edges("topology", _route_after_topology, {
+        "search": "search",
+        "feedback": "feedback"
+    })
     workflow.add_conditional_edges("search", _route_after_search, {
         "select": "select",
         "feedback": "feedback"
@@ -240,22 +255,20 @@ def _build_initial_state(prompt: str, ctx: Any, session: dict | None = None) -> 
         except:
             pass
 
-    # --- Add tried_layout_ids initialization here ---
-    tried_layout_ids = session.get("tried_layout_ids", [])
-
     return {
         "user_prompt": prompt,
+        "iteration": 0,
+        "max_iterations": ctx.max_iterations,
+        "final_response": None,
         "layout_json_string": layout_json,
         "input_layout_json_string": input_layout_json,
-        "evaluation_json_string": None,
+        "topology_graph_json_string": session.get("topology_graph_json_string"),  # Carry over
         "search_results_json_string": session.get("search_results_json_string"),  # Carry over
+        "tried_layout_ids": session.get("tried_layout_ids", []),  # Carry over
+        "evaluation_json_string": session.get("evaluation_json_string"),  # Carry over
         "preprocess_result": None,
         "search_result": None,
         "select_result": None,
         "adapt_result": None,
-        "topology_graph_json_string": session.get("topology_graph_json_string"),  # Carry over
-        "iteration": 0,
-        "max_iterations": ctx.max_iterations,
-        "final_response": None,
-        "tried_layout_ids": tried_layout_ids,  # <-- Ensure this is always present!
+        "topology_result": None,  
     }
