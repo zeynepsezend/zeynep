@@ -237,12 +237,9 @@ def build_respond_node(llm):
             processed_suggestions,
         ]
 
-        if score_interpretation:
-            sections += ["", "--- SCORE INTERPRETATION (use this context) ---", score_interpretation]
-        if conflict_reasoning:
-            sections += ["", "--- CONFLICT ROOT CAUSES ---", conflict_reasoning]
-        if suggestion_critique:
-            sections += ["", "--- SUGGESTION CRITIQUE (incorporate warnings) ---", suggestion_critique]
+        # score_interpretation, conflict_reasoning, suggestion_critique are now
+        # shown directly in the analysis panel — not fed into this prompt.
+        # Respond writes a 2-3 sentence summary from the raw MCP data only.
         if compare_versions:
             sections += ["", "--- VERSION COMPARISON (lead with delta) ---", compare_versions]
         if biophilic_summary:

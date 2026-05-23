@@ -720,6 +720,60 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   font-family:'DM Mono',monospace; font-size:9px; color:rgba(240,237,232,.18);
   text-align:center; padding:14px 0; letter-spacing:.10em;
 }
+/* ── Specialist narrative blocks ── */
+.ap-specialist-block {
+  border:1px solid rgba(140,125,210,.22);
+  border-radius:6px;
+  background:rgba(90,80,160,.07);
+  margin-bottom:8px;
+  overflow:hidden;
+}
+.ap-specialist-header {
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-align-items:center; align-items:center;
+  justify-content:space-between;
+  padding:7px 11px;
+  cursor:pointer;
+  user-select:none;
+}
+.ap-specialist-title {
+  font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.18em;
+  text-transform:uppercase; color:rgba(170,155,225,.65);
+}
+.ap-specialist-chevron {
+  font-size:9px; color:rgba(140,125,210,.45); transition:transform .18s;
+}
+.ap-specialist-chevron.open { transform:rotate(180deg); }
+.ap-specialist-body {
+  padding:9px 12px 11px;
+  font-family:'DM Mono',monospace; font-size:10px; line-height:1.65;
+  color:rgba(190,180,235,.72);
+  border-top:1px solid rgba(140,125,210,.12);
+  white-space:pre-wrap; word-break:break-word;
+}
+/* ── Action chips below Sensi messages ── */
+.ap-chips-row {
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-flex-wrap:wrap; flex-wrap:wrap;
+  gap:5px; margin-top:10px;
+}
+.ap-jump-chip {
+  display:-webkit-inline-box; display:-webkit-inline-flex; display:inline-flex;
+  -webkit-align-items:center; align-items:center;
+  gap:4px;
+  padding:3px 9px;
+  border-radius:999px;
+  border:1px solid rgba(240,237,232,.13);
+  background:rgba(240,237,232,.04);
+  color:rgba(240,237,232,.45);
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.09em;
+  cursor:pointer; transition:all .15s;
+}
+.ap-jump-chip:hover {
+  border-color:rgba(140,125,210,.55);
+  background:rgba(90,80,160,.12);
+  color:rgba(190,180,235,.85);
+}
 </style>
 </head>
 <body>
@@ -1130,9 +1184,12 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
       </div>
       <div class="ap-scroll" id="ap-scroll">
         <div id="ap-scores"></div>
+        <div id="ap-score-interp" class="ap-specialist-block" style="display:none;"></div>
         <div id="ap-conflicts"></div>
+        <div id="ap-conflict-reason" class="ap-specialist-block" style="display:none;"></div>
         <div id="ap-topology"></div>
         <div id="ap-suggestions"></div>
+        <div id="ap-sug-critique" class="ap-specialist-block" style="display:none;"></div>
       </div>
     </div><!-- /#analysis-panel-right -->
 
@@ -1971,10 +2028,14 @@ window.receiveResponse = function(data) {
     if (data.scores_json) {
       renderAnalysisPanel(
         data.scores_json,
-        data.conflicts_json  || '',
-        data.suggestions_json || '',
-        data.analysis_depth  || 'analyze'
+        data.conflicts_json        || '',
+        data.suggestions_json      || '',
+        data.analysis_depth        || 'analyze',
+        data.score_interpretation  || '',
+        data.conflict_reasoning    || '',
+        data.suggestion_critique   || ''
       );
+      _addAnalysisChips(data.analysis_depth || 'analyze');
     }
   }
 };
@@ -2287,7 +2348,77 @@ function _renderSuggestions(improvements) {
   if (!any) c.innerHTML += '<div class="ap-empty">no suggestions generated</div>';
 }
 
-function renderAnalysisPanel(scoresJson, conflictsJson, suggestionsJson, depth) {
+// ── Specialist block renderer ──────────────────────────────
+function _renderSpecialistBlock(blockId, title, text) {
+  var el = document.getElementById(blockId);
+  if (!el) return;
+  if (!text || !text.trim()) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div class="ap-specialist-header" onclick="_toggleSpecialist(\'' + blockId + '\')">' +
+      '<span class="ap-specialist-title">' + title + '</span>' +
+      '<span class="ap-specialist-chevron" id="' + blockId + '-chev">▼</span>' +
+    '</div>' +
+    '<div class="ap-specialist-body" id="' + blockId + '-body" style="display:none;">' +
+      text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+    '</div>';
+}
+
+function _toggleSpecialist(blockId) {
+  var body = document.getElementById(blockId + '-body');
+  var chev = document.getElementById(blockId + '-chev');
+  if (!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) {
+    chev.textContent = open ? '▼' : '▲';
+    if (open) chev.classList.remove('open'); else chev.classList.add('open');
+  }
+}
+
+// ── Action chips ───────────────────────────────────────────
+function _addAnalysisChips(depth) {
+  var inner = document.getElementById('chat-thread-inner');
+  if (!inner) return;
+  var wraps = inner.querySelectorAll('.bubble-wrap');
+  if (!wraps.length) return;
+  var lastWrap = wraps[wraps.length - 1];
+  var row = document.createElement('div');
+  row.className = 'ap-chips-row';
+  var chips = [
+    '<button class="ap-jump-chip" onclick="jumpPanel(\'scores\')">scores</button>'
+  ];
+  if (depth === 'detect' || depth === 'full') {
+    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'conflicts\')">conflicts</button>');
+  }
+  if (depth === 'full') {
+    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'suggestions\')">suggestions</button>');
+    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'score-interp\')">analysis</button>');
+  }
+  row.innerHTML = chips.join('');
+  lastWrap.appendChild(row);
+}
+
+// ── Panel section jump ─────────────────────────────────────
+function jumpPanel(section) {
+  if (!document.getElementById('analysis-panel-right').classList.contains('open')) {
+    openAnalysisPanel();
+  }
+  setTimeout(function() {
+    var el = document.getElementById('ap-' + section);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Auto-expand if it's a collapsed specialist block
+    var body = document.getElementById('ap-' + section + '-body');
+    if (body && body.style.display === 'none') _toggleSpecialist('ap-' + section);
+    // Brief highlight
+    el.style.outline = '1px solid rgba(140,125,210,.55)';
+    setTimeout(function() { el.style.outline = ''; }, 1100);
+  }, 280);
+}
+
+// ── Main panel render ──────────────────────────────────────
+function renderAnalysisPanel(scoresJson, conflictsJson, suggestionsJson, depth, scoreInterp, conflictReason, suggCritique) {
   if (!scoresJson) return;
   var scores = null, conflicts = null, suggestions = null;
   try { scores = JSON.parse(scoresJson); } catch(e) { return; }
@@ -2310,21 +2441,28 @@ function renderAnalysisPanel(scoresJson, conflictsJson, suggestionsJson, depth) 
   if (_chartView === 'bars') _renderScoreBars(rooms);
   else _renderRadar(rooms);
 
+  // score_interpreter narrative
+  _renderSpecialistBlock('ap-score-interp', 'what this means', scoreInterp || '');
+
   // conflicts section
   var cEl = document.getElementById('ap-conflicts');
   cEl.innerHTML = '';
   var tEl = document.getElementById('ap-topology');
   tEl.innerHTML = '';
+  document.getElementById('ap-conflict-reason').style.display = 'none';
   if (conflicts && (depth === 'detect' || depth === 'full')) {
     _renderConflicts(conflicts.flaggedRooms || []);
     _renderTopology(conflicts.flaggedRooms || [], rooms);
+    _renderSpecialistBlock('ap-conflict-reason', 'why it\'s failing', conflictReason || '');
   }
 
   // suggestions section
   var sEl = document.getElementById('ap-suggestions');
   sEl.innerHTML = '';
+  document.getElementById('ap-sug-critique').style.display = 'none';
   if (suggestions && depth === 'full') {
     _renderSuggestions(suggestions.improvements || []);
+    _renderSpecialistBlock('ap-sug-critique', 'what to watch out for', suggCritique || '');
   }
 }
 

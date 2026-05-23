@@ -122,8 +122,9 @@ from nodes.onboarding.inspire          import build_inspire_node
 from nodes.onboarding.persona_compiler import build_persona_compiler_node
 
 # ── Layout mode — routing ─────────────────────────────────────────────────────
-from nodes.routing.intent_classifier import build_intent_classifier_node
-from nodes.conversation.chitchat     import build_chitchat_node
+from nodes.routing.intent_classifier   import build_intent_classifier_node
+from nodes.conversation.chitchat       import build_chitchat_node
+from nodes.conversation.detail_respond import build_detail_respond_node
 
 # ── Layout mode — layout ──────────────────────────────────────────────────────
 from nodes.layout.load_layout  import build_load_layout_node
@@ -141,7 +142,6 @@ from nodes.quality.respond           import build_respond_node
 
 # ── Layout mode — quality loop ────────────────────────────────────────────────
 from nodes.quality.evaluator         import build_evaluator_node
-from nodes.quality.fact_checker      import build_fact_checker_node
 from nodes.conversation.what_next    import build_what_next_node
 
 # ── Layout mode — tool paths (placeholders) ───────────────────────────────────
@@ -186,7 +186,8 @@ class AgentState(TypedDict, total=False):
     persona_profile:        dict       # full compiled persona object
 
     # ── Layout mode — top-level routing ──────────────────────────────────────
-    intent:                 str        # "comfort"|"overview"|"inspire"|"chitchat"|"tools"
+    intent:                 str        # "comfort"|"overview"|"inspire"|"follow_up"|"chitchat"|"tools"
+    has_analysis_results:   bool       # True once any analysis has been run (persisted)
 
     # ── Layout ───────────────────────────────────────────────────────────────
     layout_id:              str | None
@@ -218,9 +219,6 @@ class AgentState(TypedDict, total=False):
     evaluator_decision:     str        # "APPROVED" | "REVISE"
     evaluator_feedback:     str
     evaluator_loops:        int        # max 1
-    fact_check_decision:    str        # "VERIFIED" | "DISCREPANCY"
-    fact_check_feedback:    str
-    fact_check_loops:       int        # max 1
 
     # ── Output ───────────────────────────────────────────────────────────────
     final_response:         str | None
@@ -256,6 +254,8 @@ def _route_after_intent_classifier(state: AgentState) -> str:
         return "inspire"
     if intent in ("overview", "comfort", "tools"):
         return "load_layout"
+    if intent == "follow_up":
+        return "detail_respond"
     return "chitchat"
 
 
@@ -339,14 +339,6 @@ def _route_after_evaluator(state: AgentState) -> str:
     loops = state.get("evaluator_loops", 0)
     if decision == "REVISE" and loops < 1:
         return "respond"
-    return "fact_checker"
-
-
-def _route_after_fact_checker(state: AgentState) -> str:
-    decision = state.get("fact_check_decision", "VERIFIED")
-    loops = state.get("fact_check_loops", 0)
-    if decision == "DISCREPANCY" and loops < 1:
-        return "respond"
     return "what_next"
 
 
@@ -374,6 +366,7 @@ def build_graph(ctx: Any) -> Any:
     # ── Layout mode — routing ─────────────────────────────────────────────
     intent_classifier = build_intent_classifier_node(ctx.llm_simple)
     chitchat          = build_chitchat_node(ctx.llm_simple)
+    detail_respond    = build_detail_respond_node(ctx.llm_simple)
 
     # ── Layout mode — layout ──────────────────────────────────────────────
     load_layout = build_load_layout_node(ctx.layout_input_dir)
@@ -389,9 +382,8 @@ def build_graph(ctx: Any) -> Any:
     respond           = build_respond_node(ctx.llm_simple)
 
     # ── Layout mode — quality loop ─────────────────────────────────────────
-    evaluator   = build_evaluator_node(ctx.llm_simple)
-    fact_checker = build_fact_checker_node(ctx.llm_simple)
-    what_next   = build_what_next_node(ctx.llm_simple)
+    evaluator = build_evaluator_node(ctx.llm_simple)
+    what_next = build_what_next_node(ctx.llm_simple)
 
     # ── Layout mode — tool paths (placeholders) ────────────────────────────
     change_material    = build_change_material_node()
@@ -415,6 +407,7 @@ def build_graph(ctx: Any) -> Any:
     # Layout mode — routing
     g.add_node("intent_classifier", intent_classifier)
     g.add_node("chitchat",          chitchat)
+    g.add_node("detail_respond",    detail_respond)
 
     # Layout mode — layout
     g.add_node("load_layout",      load_layout)
@@ -431,9 +424,8 @@ def build_graph(ctx: Any) -> Any:
     g.add_node("respond",           respond)
 
     # Layout mode — quality loop
-    g.add_node("evaluator",    evaluator)
-    g.add_node("fact_checker", fact_checker)
-    g.add_node("what_next",    what_next)
+    g.add_node("evaluator", evaluator)
+    g.add_node("what_next", what_next)
 
     # Layout mode — tool paths
     g.add_node("change_material",    change_material)
@@ -480,11 +472,14 @@ def build_graph(ctx: Any) -> Any:
         "intent_classifier",
         _route_after_intent_classifier,
         {
-            "inspire":    "inspire",
-            "load_layout": "load_layout",
-            "chitchat":   "chitchat",
+            "inspire":       "inspire",
+            "load_layout":   "load_layout",
+            "detail_respond": "detail_respond",
+            "chitchat":      "chitchat",
         },
     )
+
+    g.add_edge("detail_respond", "what_next")
 
     g.add_conditional_edges(
         "chitchat",
@@ -557,11 +552,6 @@ def build_graph(ctx: Any) -> Any:
     g.add_conditional_edges(
         "evaluator",
         _route_after_evaluator,
-        {"respond": "respond", "fact_checker": "fact_checker"},
-    )
-    g.add_conditional_edges(
-        "fact_checker",
-        _route_after_fact_checker,
         {"respond": "respond", "what_next": "what_next"},
     )
 
@@ -618,19 +608,23 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         "layout_json_string": session.get("layout_json_string", ""),
         "layout_id":          session.get("layout_id"),
 
+        # ── Persisted analysis context (kept across turns for follow_up) ──
+        "has_analysis_results":  session.get("has_analysis_results", False),
+        "score_interpretation":  session.get("score_interpretation", ""),
+        "conflict_reasoning":    session.get("conflict_reasoning", ""),
+        "suggestion_critique":   session.get("suggestion_critique", ""),
+        # Cached raw MCP data (available to detail_respond on follow_up turns)
+        "last_scores_json":      session.get("last_scores_json", ""),
+        "last_conflicts_json":   session.get("last_conflicts_json", ""),
+        "last_suggestions_json": session.get("last_suggestions_json", ""),
+
         # ── Per-turn fields (reset each turn) ────────────────────────────
         "intent":                "",
         "route_intent_decision": "",
         "comfort_depth":         "analyze",
         "target_room_id":        None,
         "pending_comparison":    False,
-        "last_scores_json":      "",
-        "last_conflicts_json":   "",
-        "last_suggestions_json": "",
         "original_scores_json":  "",
-        "score_interpretation":  "",
-        "conflict_reasoning":    "",
-        "suggestion_critique":   "",
         "compare_versions_summary": "",
         "biophilic_summary":     "",
         "biophilic_plants_needed": False,
@@ -639,9 +633,6 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         "evaluator_decision":    "",
         "evaluator_feedback":    "",
         "evaluator_loops":       0,
-        "fact_check_decision":   "",
-        "fact_check_feedback":   "",
-        "fact_check_loops":      0,
         "final_response":        None,
     }
 
@@ -686,12 +677,17 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         # Layout
         "layout_json_string":  final_state.get("layout_json_string") or session.get("layout_json_string", ""),
         "layout_id":           final_state.get("layout_id")          or session.get("layout_id"),
-        # Analysis results — per-turn only (empty on chitchat/non-analysis turns).
-        # JS tracks panel state across turns; Python just passes what this turn produced.
-        "last_scores_json":      final_state.get("last_scores_json", ""),
-        "last_conflicts_json":   final_state.get("last_conflicts_json", ""),
-        "last_suggestions_json": final_state.get("last_suggestions_json", ""),
-        "comfort_depth":         final_state.get("comfort_depth", ""),
+        # Analysis results — OR fallback keeps last known values across chitchat/follow_up turns
+        "last_scores_json":      final_state.get("last_scores_json")      or session.get("last_scores_json", ""),
+        "last_conflicts_json":   final_state.get("last_conflicts_json")   or session.get("last_conflicts_json", ""),
+        "last_suggestions_json": final_state.get("last_suggestions_json") or session.get("last_suggestions_json", ""),
+        "comfort_depth":         final_state.get("comfort_depth", "")     or session.get("comfort_depth", ""),
+        # Specialist interpretations — persist so detail_respond + intent_classifier can access them
+        "score_interpretation":  final_state.get("score_interpretation")  or session.get("score_interpretation", ""),
+        "conflict_reasoning":    final_state.get("conflict_reasoning")    or session.get("conflict_reasoning", ""),
+        "suggestion_critique":   final_state.get("suggestion_critique")   or session.get("suggestion_critique", ""),
+        # Flag: True once any analysis has ever been run this session
+        "has_analysis_results":  bool(final_state.get("last_scores_json")) or session.get("has_analysis_results", False),
     }
 
     return response, updated_session

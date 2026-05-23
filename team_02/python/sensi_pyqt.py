@@ -542,11 +542,15 @@ class SensiBridge(QObject):
             "inspire_complete":     sess.get("inspire_complete", False),
             "onboarding_complete":  sess.get("onboarding_complete", False),
             "layout_id":            sess.get("layout_id"),
-            # Analysis panel data
+            # Analysis panel data — raw MCP results
             "scores_json":          sess.get("last_scores_json", ""),
             "conflicts_json":       sess.get("last_conflicts_json", ""),
             "suggestions_json":     sess.get("last_suggestions_json", ""),
             "analysis_depth":       sess.get("comfort_depth", ""),
+            # Specialist interpretations for panel narrative sections
+            "score_interpretation": sess.get("score_interpretation", ""),
+            "conflict_reasoning":   sess.get("conflict_reasoning", ""),
+            "suggestion_critique":  sess.get("suggestion_critique", ""),
         })
 
     # ── File picker (native OS dialog) ───────────────────────────────────────

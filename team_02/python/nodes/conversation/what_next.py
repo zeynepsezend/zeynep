@@ -5,38 +5,77 @@ and to user_type. Appends to chitchat responses rather than replacing them.
 """
 
 from __future__ import annotations
+import json
 from _runtime.llm import call_llm_simple
 
 
+def _extract_worst_finding(scores_json: str) -> str:
+    """Return a one-phrase description of the single worst room×sense."""
+    if not scores_json:
+        return "none yet"
+    try:
+        data = json.loads(scores_json)
+        worst_val = 1.0
+        worst_desc = "none"
+        for room in data.get("rooms", []):
+            name = room.get("roomName", "?")
+            for sense, val in room.get("comfortScores", {}).items():
+                if val < worst_val:
+                    worst_val = val
+                    worst_desc = f"{sense} in {name} ({val:.2f})"
+        return worst_desc
+    except Exception:
+        return "none"
+
+
+def _format_persona(persona_profile: dict) -> str:
+    if not persona_profile:
+        return "no specific persona"
+    # Flat schema (persona_compiler v2)
+    if "name" in persona_profile or "role" in persona_profile:
+        desc = persona_profile.get("description", "")
+        name = persona_profile.get("name", "")
+        role = persona_profile.get("role", "")
+        return desc or (f"{name}, {role}" if name else role or "no profile")
+    # Legacy nested schema
+    primary = persona_profile.get("primary_user", {})
+    return primary.get("description", "no specific persona")
+
+
 _SYSTEM_PROMPT = """\
-You are Sensi. You just completed an analysis and the user has seen
-the results. Your job now is to offer natural next steps.
+You are Sensi. The user has just seen a result. Offer the most useful next step — specific to
+what was found, not generic.
 
-Adapt to what just happened:
-  analyze  → offer to "go deeper" (detect conflicts), run a what-if, or stop
-  detect   → offer to get suggestions (full), run a what-if, or stop
-  full     → offer to modify something (what-if), compare personas, try biophilic, or stop
-  overview → offer to run a comfort analysis, or stop
-  chitchat → offer to start an analysis, or stop
+What just ran and what to suggest:
+  analyze    → The panel shows scores. Suggest: "detect the conflicts" or "ask me why [worst sense] is low"
+               or "run the full analysis for suggestions".
+  detect     → Conflicts are visible. Suggest: "get improvement suggestions" or
+               "ask me why [conflict room] is failing" or "run a what-if scenario".
+  full       → Scores + conflicts + suggestions are all visible. Suggest: "try a what-if"
+               (what if I change a material?), "compare this to another persona", or a specific question.
+  follow_up  → Just answered a specific question. Suggest: continuing to dig, running a what-if,
+               or exploring the panel section that answers the next logical question.
+  overview   → Room list was shown. Suggest running a comfort analysis.
+  chitchat   → Nothing analysed yet. Offer to start.
 
-Adapt to the user type:
-  architect — professional framing: "Want me to run a conflict check? Or try a what-if?"
-  client    — friendly framing: "Want to see what could be improved? Or try changing something?"
-  learner   — educational framing: "Want to go deeper? You could try the conflict check next."
+Register by user_type:
+  architect  → concise, technical: "Want to run a what-if on the glazing?"
+  client     → warm, plain: "Want me to suggest ways to fix the bedroom?"
+  learner    → educational: "A good next step would be checking for conflicts — want to try?"
 
 Rules:
-  - Offer 2–3 options MAXIMUM. Too many choices is paralysing.
-  - Be brief: 2 sentences maximum.
-  - Do NOT summarise what just happened. The user just read it.
-  - Use plain language. No markdown. No lists.
-  - If nothing was analysed (chitchat/overview path), mention that analysis is available.
-  - Always include "or type 'done' to finish" as one option.
+  - Maximum 2 sentences. Be specific — name the room or sense if you know it.
+  - Do NOT summarise what just happened. They just read it.
+  - Do NOT list options with bullet points. Write it as natural speech.
+  - Plain text only. No markdown.
+  - End with one short alternative: "or just ask me anything about the results."
 
 CONTEXT:
-  user_type: {user_type}
-  last_path: {last_path}
-  layout_id: {layout_id}
-  persona: {persona_summary}
+  user_type:   {user_type}
+  last_path:   {last_path}
+  layout_id:   {layout_id}
+  persona:     {persona_summary}
+  worst_finding: {worst_finding}
 """
 
 
@@ -44,10 +83,10 @@ def build_what_next_node(llm):
     """Return the what_next node function, capturing the LLM instance."""
 
     def what_next_node(state: dict) -> dict:
-        user_type: str = state.get("user_type", "architect")
+        user_type: str     = state.get("user_type", "architect")
         comfort_depth: str = state.get("comfort_depth", "analyze")
-        intent: str = state.get("intent", "comfort")
-        layout_id: str = state.get("layout_id") or "?"
+        intent: str        = state.get("intent", "comfort")
+        layout_id: str     = state.get("layout_id") or "?"
         persona_profile: dict = state.get("persona_profile") or {}
 
         # Determine what just happened
@@ -59,11 +98,13 @@ def build_what_next_node(llm):
             last_path = "chitchat conversation"
         elif intent == "inspire":
             last_path = "inspire (atmosphere)"
+        elif intent == "follow_up":
+            last_path = f"follow_up (specific question about {comfort_depth} results)"
         else:
             last_path = intent
 
-        primary = persona_profile.get("primary_user", {})
-        persona_summary = primary.get("description", "no specific persona")
+        persona_summary = _format_persona(persona_profile)
+        worst_finding   = _extract_worst_finding(state.get("last_scores_json", ""))
 
         print("[what_next] Generating next step offer...")
 
@@ -72,6 +113,7 @@ def build_what_next_node(llm):
             last_path=last_path,
             layout_id=layout_id,
             persona_summary=persona_summary,
+            worst_finding=worst_finding,
         )
 
         offer = call_llm_simple(llm, system, "Offer next steps.")
