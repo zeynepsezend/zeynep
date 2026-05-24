@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>sensi</title>
 <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;1,9..40,300&family=DM+Mono:wght@300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
 
 <style>
 /* ── tokens ── */
@@ -27,7 +27,7 @@ body {
   width: 100%; height: 100%;
   background: var(--bg);
   color: var(--fg);
-  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   overflow: hidden;
   animation: breathe 4s ease-in-out infinite;
 }
@@ -76,7 +76,7 @@ body {
 }
 #overlay.visible { opacity: 1; pointer-events: auto; }
 .overlay-msg {
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-weight: 300; font-size: 12px; letter-spacing: .12em;
   color: rgba(240,237,232,.38);
   text-align: center; max-width: 280px; line-height: 1.6;
@@ -104,7 +104,7 @@ body {
   max-width: 640px;
 }
 .top-bar-label {
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 14px; letter-spacing: .18em;
   text-transform: uppercase;
   color: rgba(240,237,232,.88);
@@ -118,7 +118,7 @@ body {
   line-height: 1;
 }
 .top-bar-section {
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 12px; letter-spacing: .16em;
   text-transform: uppercase;
   color: rgba(240,237,232,.42);
@@ -138,7 +138,7 @@ body {
   margin-right: 9px;
 }
 .top-bar-step-text {
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 12px; letter-spacing: .12em;
   text-transform: uppercase;
   color: rgba(232,131,106,.95);
@@ -162,7 +162,7 @@ body {
 /* sensi bubble */
 .bubble-s {
   align-self: flex-start;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-weight: 300;
   font-size: clamp(15px, 2.2vw, 18px);
   line-height: 1.6;
@@ -177,7 +177,7 @@ body {
 /* user bubble */
 .bubble-u {
   align-self: flex-end;
-  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   font-size: clamp(14px, 2vw, 16px);
   font-weight: 300;
   line-height: 1.5;
@@ -208,14 +208,14 @@ body {
   border: 1px solid rgba(232,131,106,.28);
   border-radius: 999px;
   color: rgba(232,131,106,.90);
-  font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   font-size: 16px;
   padding: 13px 22px;
   outline: none;
   caret-color: rgba(232,131,106,.80);
   transition: border-color .2s;
 }
-.sensi-input::placeholder { color: rgba(232,131,106,.28); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: .10em; }
+.sensi-input::placeholder { color: rgba(232,131,106,.28); font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: .10em; }
 .sensi-input:focus { border-color: rgba(232,131,106,.55); }
 /* tall textareas (inspire): rounded-rect, not oval */
 textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radius: 20px; padding: 13px 22px; }
@@ -248,7 +248,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   background: transparent;
   border: 1px solid rgba(240,237,232,.15);
   color: rgba(240,237,232,.40);
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
   padding: 12px 28px;
   cursor: pointer;
@@ -267,7 +267,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   background: transparent;
   border: 1px solid rgba(240,237,232,.07);
   color: rgba(240,237,232,.22);
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
   padding: 12px 24px;
   cursor: pointer;
@@ -289,7 +289,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   cursor: pointer;
   border-radius: 99px;
   transition: all .16s ease;
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
   color: rgba(240,237,232,.32);
   user-select: none;
@@ -312,7 +312,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   user-select: none;
 }
 .sense-pill .si { font-size: 16px; color: rgba(240,237,232,.38); transition: color .16s; line-height: 1; margin-bottom: 6px; }
-.sense-pill .sn { font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.12em; text-transform:uppercase; color:rgba(240,237,232,.30); transition:color .16s; }
+.sense-pill .sn { font-family: 'IBM Plex Mono', monospace; font-size:7px; letter-spacing:.12em; text-transform:uppercase; color:rgba(240,237,232,.30); transition:color .16s; }
 /* subtle tint at rest so pills read as interactive */
 .sense-pill[data-sense="thermal"]   { background: rgba(232,131,106,.04); }
 .sense-pill[data-sense="visual"]    { background: rgba(212,185,106,.04); }
@@ -398,7 +398,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 .sense-dot:last-of-type { margin-right: 0; }
 .sense-sym {
   font-size: 9px; margin-left: 3px;
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   color: rgba(240,237,232,.70);
   letter-spacing: .05em;
 }
@@ -418,22 +418,22 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   display: inline-block; margin-right: 4px; flex-shrink: 0;
 }
 .sl-sym {
-  font-family: 'DM Mono', monospace; font-size: 9px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
   color: rgba(240,237,232,.55); margin-right: 3px; letter-spacing: .04em;
 }
 .sl-name {
-  font-family: 'DM Mono', monospace; font-size: 8px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 8px;
   letter-spacing: .12em; text-transform: uppercase;
   color: rgba(240,237,232,.28);
 }
 
 /* ── PERSONA BARS ── */
 .pbar-row { display:flex; align-items:center; margin-bottom:10px; }
-.pbar-lbl { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.12em; text-transform:uppercase; width:80px; flex-shrink:0; margin-right:10px; }
+.pbar-lbl { font-family: 'IBM Plex Mono', monospace; font-size:8px; letter-spacing:.12em; text-transform:uppercase; width:80px; flex-shrink:0; margin-right:10px; }
 .pbar-track { flex:1; height:3px; background:rgba(240,237,232,.07); border-radius:99px; position:relative; margin-right:10px; }
 .pbar-fill  { height:100%; border-radius:99px; transition:width .6s ease; }
 .pbar-tick  { position:absolute; top:-3px; width:1px; height:9px; background:rgba(240,237,232,.32); }
-.pbar-val   { font-family:'DM Mono',monospace; font-size:8px; color:rgba(240,237,232,.30); width:26px; text-align:right; }
+.pbar-val   { font-family: 'IBM Plex Mono', monospace; font-size:8px; color:rgba(240,237,232,.30); width:26px; text-align:right; }
 
 /* ── MOODBOARD STRIP ── */
 .moodboard-strip { display:flex; width:100%; margin-top:14px; }
@@ -450,7 +450,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   border: 1px dashed rgba(240,237,232,.12);
   margin-right: 8px;
   color: rgba(240,237,232,.25);
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 8px; letter-spacing: .18em; text-transform: uppercase;
   padding: 7px 14px;
   cursor: pointer; border-radius: 6px;
@@ -458,7 +458,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 }
 .btn-upload:hover { border-color: rgba(240,237,232,.35); color: rgba(240,237,232,.55); }
 .upload-names {
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 8px; letter-spacing: .10em;
   color: rgba(240,237,232,.22);
   flex: 1; overflow: hidden;
@@ -472,7 +472,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 
 /* label */
 .label {
-  font-family: 'DM Mono', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 7px; letter-spacing: .24em; text-transform: uppercase;
   color: rgba(240,237,232,.18);
   text-align: center;
@@ -494,12 +494,12 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 
 /* ── persona profile sections ── */
 .persona-identity { padding-bottom: 4px; }
-.persona-name { font-family: 'DM Sans','Inter',system-ui,sans-serif; font-size: 20px; font-weight: 300; color: rgba(240,237,232,.90); }
-.persona-role { font-family: 'DM Mono',monospace; font-size: 8px; letter-spacing: .22em; text-transform: uppercase; color: rgba(240,237,232,.30); margin-top: 5px; }
-.persona-desc { font-family: 'Roboto',sans-serif; font-weight: 300; font-size: 12px; line-height: 1.65; color: rgba(240,237,232,.45); margin-top: 10px; }
+.persona-name { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 20px; font-weight: 300; color: rgba(240,237,232,.90); }
+.persona-role { font-family: 'IBM Plex Mono', monospace; font-size: 8px; letter-spacing: .22em; text-transform: uppercase; color: rgba(240,237,232,.30); margin-top: 5px; }
+.persona-desc { font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 12px; line-height: 1.65; color: rgba(240,237,232,.45); margin-top: 10px; }
 
 .persona-section-label {
-  font-family: 'DM Mono',monospace; font-size: 7px; letter-spacing: .24em; text-transform: uppercase;
+  font-family: 'IBM Plex Mono', monospace; font-size: 7px; letter-spacing: .24em; text-transform: uppercase;
   color: rgba(240,237,232,.28); margin: 24px 0 10px;
   display: flex; align-items: center;
 }
@@ -511,34 +511,34 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 .top3-grid > .top3-card:not(:last-child) { margin-right: 7px; }
 .top3-card  { flex: 1; padding: 12px 10px; border: 1px solid rgba(240,237,232,.08); border-radius: 6px; display: flex; flex-direction: column; }
 .top3-icon  { font-size: 14px; line-height: 1; margin-bottom: 5px; }
-.top3-sense { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 5px; }
-.top3-note  { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; line-height: 1.5; color: rgba(240,237,232,.48); }
+.top3-sense { font-family: 'IBM Plex Mono', monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 5px; }
+.top3-note  { font-family:'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 11px; line-height: 1.5; color: rgba(240,237,232,.48); }
 
 /* bar legend */
 .bar-legend { display: flex; margin-bottom: 8px; }
 .bar-legend > span:not(:last-child) { margin-right: 16px; }
-.bar-legend span { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .12em; color: rgba(240,237,232,.28); display: flex; align-items: center; }
+.bar-legend span { font-family: 'IBM Plex Mono', monospace; font-size: 7px; letter-spacing: .12em; color: rgba(240,237,232,.28); display: flex; align-items: center; }
 
 /* gap items */
 .gap-item { padding: 10px 12px; border-left: 2px solid; margin-bottom: 8px; border-radius: 0 5px 5px 0; background: rgba(240,237,232,.02); }
-.gap-item-sense { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 4px; }
-.gap-item-note  { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; line-height: 1.6; color: rgba(240,237,232,.55); }
+.gap-item-sense { font-family: 'IBM Plex Mono', monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 4px; }
+.gap-item-note  { font-family:'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 11px; line-height: 1.6; color: rgba(240,237,232,.55); }
 
 /* aesthetic note */
-.aesthetic-note { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; line-height: 1.65; color: rgba(240,237,232,.38); margin-top: 8px; font-style: italic; }
+.aesthetic-note { font-family:'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 11px; line-height: 1.65; color: rgba(240,237,232,.38); margin-top: 8px; font-style: italic; }
 
 /* formula collapsible */
-.formula-toggle { font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .22em; text-transform: uppercase; color: rgba(240,237,232,.22); cursor: pointer; margin-top: 22px; margin-bottom: 4px; transition: color .2s; }
+.formula-toggle { font-family: 'IBM Plex Mono', monospace; font-size: 7px; letter-spacing: .22em; text-transform: uppercase; color: rgba(240,237,232,.22); cursor: pointer; margin-top: 22px; margin-bottom: 4px; transition: color .2s; }
 .formula-toggle:hover { color: rgba(240,237,232,.50); }
 .formula-content { border-left: 1px solid rgba(240,237,232,.08); padding-left: 14px; margin-top: 8px; margin-bottom: 24px; }
 
 /* formula equation block */
 .formula-eq-block { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid rgba(240,237,232,.06); }
 .formula-eq-row { display: -webkit-box; display: flex; -webkit-box-align: baseline; align-items: baseline; margin-bottom: 10px; }
-.formula-eq-lhs { font-family:'DM Mono',monospace; font-size: 11px; color: rgba(240,237,232,.70); width: 130px; -webkit-flex-shrink: 0; flex-shrink: 0; }
-.formula-eq-rhs { font-family:'DM Mono',monospace; font-size: 11px; color: rgba(240,237,232,.42); -webkit-flex: 1; flex: 1; }
-.formula-eq-note { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; color: rgba(240,237,232,.22); margin-left: 10px; font-style: italic; -webkit-flex-shrink: 0; flex-shrink: 0; }
-.formula-prose { font-family:'Roboto',sans-serif; font-weight: 300; font-size: 11px; line-height: 1.75; color: rgba(240,237,232,.35); }
+.formula-eq-lhs { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(240,237,232,.70); width: 130px; -webkit-flex-shrink: 0; flex-shrink: 0; }
+.formula-eq-rhs { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(240,237,232,.42); -webkit-flex: 1; flex: 1; }
+.formula-eq-note { font-family:'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 11px; color: rgba(240,237,232,.22); margin-left: 10px; font-style: italic; -webkit-flex-shrink: 0; flex-shrink: 0; }
+.formula-prose { font-family:'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 11px; line-height: 1.75; color: rgba(240,237,232,.35); }
 
 /* ── profile side panel ── */
 .profile-panel {
@@ -556,13 +556,104 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 .panel-header > *:not(.panel-close) { margin-right: 8px; }
 .panel-close { background: transparent; border: none; color: rgba(240,237,232,.30); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; margin-left: auto; transition: color .2s; }
 .panel-close:hover { color: var(--fg); }
-.btn-panel-full { background: transparent; border: 1px solid rgba(240,237,232,.10); color: rgba(240,237,232,.30); font-family:'DM Mono',monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px; cursor: pointer; border-radius: 6px; transition: all .2s; }
+.btn-panel-full { background: transparent; border: 1px solid rgba(240,237,232,.10); color: rgba(240,237,232,.30); font-family: 'IBM Plex Mono', monospace; font-size: 7px; letter-spacing: .16em; text-transform: uppercase; padding: 5px 10px; cursor: pointer; border-radius: 6px; transition: all .2s; }
 .btn-panel-full:hover { border-color: rgba(240,237,232,.35); color: var(--fg); }
 .panel-scroll { flex: 1; overflow-y: auto; padding: 16px 20px 32px; }
 
-/* profile button in top bar */
-.btn-profile { background: transparent; border: none; color: rgba(240,237,232,.25); cursor: pointer; padding: 4px; display: flex; align-items: center; transition: color .2s; margin-left: auto; }
+/* profile button in top bar — kept for non-chat screens */
+.btn-profile { background: transparent; border: none; color: rgba(240,237,232,.25); cursor: pointer; padding: 4px; display: flex; align-items: center; transition: color .2s; }
 .btn-profile:hover { color: rgba(240,237,232,.65); }
+
+/* layout badge — mirrors the onboarding step pill, spatial teal colour */
+.top-bar-layout-badge {
+  display: inline-flex; align-items: center;
+  background: rgba(106,184,200,.08);
+  border: 1px solid rgba(106,184,200,.22);
+  border-radius: 999px;
+  padding: 0 14px;
+  height: 34px;
+  margin-left: 10px;
+}
+.top-bar-layout-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(106,184,200,.70);
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+.top-bar-layout-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(106,184,200,.82);
+}
+
+/* user initial avatar — replaces the abstract profile SVG */
+.top-bar-user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(155,143,212,.10);
+  border: 1px solid rgba(155,143,212,.28);
+  color: rgba(155,143,212,.85);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px; font-weight: 400; letter-spacing: .02em;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; text-transform: uppercase;
+  transition: all .2s;
+  padding: 0;
+  flex-shrink: 0;
+}
+.top-bar-user-avatar:hover { background: rgba(155,143,212,.20); border-color: rgba(155,143,212,.50); }
+
+/* top bar right-side status group */
+.top-bar-status-group {
+  display: none;
+  align-items: center;
+  margin-left: auto;
+}
+/* conflict count badge */
+.top-bar-conflict-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: .10em; text-transform: uppercase;
+  color: rgba(232,131,106,.80);
+  background: rgba(232,131,106,.10);
+  border: 1px solid rgba(232,131,106,.22);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+  margin-right: 10px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.top-bar-conflict-badge:hover { background: rgba(232,131,106,.18); }
+/* overall score ring */
+.top-bar-score-ring {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 400;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid rgba(240,237,232,.18);
+  color: rgba(240,237,232,.55);
+  margin-right: 8px;
+  transition: border-color .2s, color .2s;
+}
+.top-bar-score-ring.score-pass  { border-color: rgba(139,184,138,.65); color: rgba(139,184,138,.90); }
+.top-bar-score-ring.score-warn  { border-color: rgba(196,168,130,.65); color: rgba(196,168,130,.90); }
+.top-bar-score-ring.score-fail  { border-color: rgba(232,131,106,.65); color: rgba(232,131,106,.90); }
+
+/* ── Sensi message structure ── */
+.bubble-msg-header {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: .14em; text-transform: uppercase;
+  color: rgba(240,237,232,.30);
+  margin-bottom: 9px; padding-bottom: 7px;
+  border-bottom: 1px solid rgba(240,237,232,.07);
+}
+/* paragraph reset — text styles inherit from .bubble-s */
+.bubble-msg-para { margin: 0; }
+.bubble-msg-para + .bubble-msg-para {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid rgba(240,237,232,.05);
+}
 
 /* ── thinking bubble dots ── */
 @keyframes dotPulse {
@@ -612,11 +703,11 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   -webkit-align-items:center; align-items:center;
 }
 .ap-header-label {
-  font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+  font-family: 'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.18em; text-transform:uppercase;
   color:rgba(240,237,232,.55); margin-right:8px;
 }
 .ap-depth-tag {
-  font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.12em; text-transform:uppercase;
+  font-family: 'IBM Plex Mono', monospace; font-size:8px; letter-spacing:.12em; text-transform:uppercase;
   color:rgba(232,131,106,.75); background:rgba(232,131,106,.10);
   border:1px solid rgba(232,131,106,.22); border-radius:999px;
   padding:2px 8px; margin-right:auto;
@@ -628,7 +719,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 }
 .ap-toggle-btn {
   background:transparent; border:none;
-  color:rgba(240,237,232,.25); font-family:'DM Mono',monospace;
+  color:rgba(240,237,232,.25); font-family: 'IBM Plex Mono', monospace;
   font-size:8px; letter-spacing:.12em; text-transform:uppercase;
   padding:4px 10px; cursor:pointer; transition:all .15s;
 }
@@ -641,7 +732,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 .ap-close:hover { color:var(--fg); }
 .ap-scroll { -webkit-flex:1; flex:1; overflow-y:auto; overflow-x:hidden; padding:10px 14px 24px; }
 .ap-section-label {
-  font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.22em; text-transform:uppercase;
+  font-family: 'IBM Plex Mono', monospace; font-size:7px; letter-spacing:.22em; text-transform:uppercase;
   color:rgba(240,237,232,.22); margin:16px 0 8px;
   display:-webkit-box; display:-webkit-flex; display:flex;
   -webkit-align-items:center; align-items:center;
@@ -650,7 +741,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 .ap-section-label::after  { content:''; -webkit-flex:1; flex:1; height:1px; background:rgba(240,237,232,.08); margin-left:6px; }
 .ap-section-label:first-child { margin-top:0; }
 .ap-room-label {
-  font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+  font-family: 'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase;
   color:rgba(240,237,232,.65); margin-bottom:7px; margin-top:16px; display:block;
   border-bottom:1px solid rgba(240,237,232,.05); padding-bottom:4px;
 }
@@ -660,7 +751,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   -webkit-align-items:center; align-items:center; margin-bottom:6px;
 }
 .ap-bar-sense {
-  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.06em;
+  font-family: 'IBM Plex Mono', monospace; font-size:9px; letter-spacing:.06em;
   color:rgba(240,237,232,.40); width:58px; -webkit-flex-shrink:0; flex-shrink:0;
 }
 .ap-bar-track {
@@ -674,7 +765,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   background:rgba(240,237,232,.20); z-index:2;
 }
 .ap-bar-val {
-  font-family:'DM Mono',monospace; font-size:9px; color:rgba(240,237,232,.38);
+  font-family: 'IBM Plex Mono', monospace; font-size:9px; color:rgba(240,237,232,.38);
   width:30px; text-align:right; -webkit-flex-shrink:0; flex-shrink:0;
 }
 .ap-conflict-room {
@@ -685,7 +776,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 }
 .ap-conflict-room .ap-room-label { margin:0; margin-right:6px; display:inline; }
 .ap-conflict-flag {
-  font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.10em; text-transform:uppercase;
+  font-family: 'IBM Plex Mono', monospace; font-size:7px; letter-spacing:.10em; text-transform:uppercase;
   padding:2px 7px; border-radius:999px; margin-right:4px; margin-bottom:2px;
 }
 .ap-conflict-flag[data-sense="thermal"]   { background:rgba(232,131,106,.14); color:var(--thermal);   border:1px solid rgba(232,131,106,.24); }
@@ -699,11 +790,11 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   margin-bottom:6px; border-radius:0 5px 5px 0; background:rgba(240,237,232,.02);
 }
 .ap-suggestion-room {
-  font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.14em; text-transform:uppercase;
+  font-family: 'IBM Plex Mono', monospace; font-size:7px; letter-spacing:.14em; text-transform:uppercase;
   color:rgba(240,237,232,.28); display:block; margin-bottom:2px;
 }
 .ap-suggestion-sense {
-  font-family:'DM Mono',monospace; font-size:7px; letter-spacing:.08em; text-transform:uppercase;
+  font-family: 'IBM Plex Mono', monospace; font-size:7px; letter-spacing:.08em; text-transform:uppercase;
   padding:1px 5px; border-radius:999px; margin-right:5px;
 }
 .ap-suggestion-sense[data-sense="thermal"]   { color:var(--thermal);   background:rgba(232,131,106,.10); }
@@ -713,11 +804,11 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 .ap-suggestion-sense[data-sense="olfactory"] { color:var(--olfactory); background:rgba(139,184,138,.10); }
 .ap-suggestion-sense[data-sense="tactile"]   { color:var(--tactile);   background:rgba(196,168,130,.10); }
 .ap-suggestion-text {
-  font-family:'Roboto',sans-serif; font-weight:300; font-size:11px;
+  font-family:'IBM Plex Sans', sans-serif; font-weight:300; font-size:11px;
   color:rgba(240,237,232,.48); line-height:1.5; display:block; margin-top:3px;
 }
 .ap-empty {
-  font-family:'DM Mono',monospace; font-size:9px; color:rgba(240,237,232,.18);
+  font-family: 'IBM Plex Mono', monospace; font-size:9px; color:rgba(240,237,232,.18);
   text-align:center; padding:14px 0; letter-spacing:.10em;
 }
 /* ── Specialist narrative blocks ── */
@@ -737,7 +828,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   user-select:none;
 }
 .ap-specialist-title {
-  font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.18em;
+  font-family: 'IBM Plex Mono', monospace; font-size:8px; letter-spacing:.18em;
   text-transform:uppercase; color:rgba(170,155,225,.65);
 }
 .ap-specialist-chevron {
@@ -746,7 +837,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 .ap-specialist-chevron.open { transform:rotate(180deg); }
 .ap-specialist-body {
   padding:9px 12px 11px;
-  font-family:'DM Mono',monospace; font-size:10px; line-height:1.65;
+  font-family: 'IBM Plex Mono', monospace; font-size:10px; line-height:1.65;
   color:rgba(190,180,235,.72);
   border-top:1px solid rgba(140,125,210,.12);
   white-space:pre-wrap; word-break:break-word;
@@ -755,25 +846,27 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
 .ap-chips-row {
   display:-webkit-box; display:-webkit-flex; display:flex;
   -webkit-flex-wrap:wrap; flex-wrap:wrap;
-  gap:5px; margin-top:10px;
+  margin-top:10px;
 }
 .ap-jump-chip {
   display:-webkit-inline-box; display:-webkit-inline-flex; display:inline-flex;
   -webkit-align-items:center; align-items:center;
-  gap:4px;
-  padding:3px 9px;
+  padding:4px 10px;
   border-radius:999px;
   border:1px solid rgba(240,237,232,.13);
   background:rgba(240,237,232,.04);
   color:rgba(240,237,232,.45);
-  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.09em;
+  font-family: 'IBM Plex Mono', monospace; font-size:9px; letter-spacing:.09em;
   cursor:pointer; transition:all .15s;
+  white-space:nowrap;
+  margin-right:5px; margin-bottom:4px;
 }
 .ap-jump-chip:hover {
   border-color:rgba(140,125,210,.55);
   background:rgba(90,80,160,.12);
   color:rgba(190,180,235,.85);
 }
+.ap-chip-arrow { margin-right:3px; opacity:.50; }
 </style>
 </head>
 <body>
@@ -1102,10 +1195,10 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
     max-width:560px;margin:0 auto;width:100%;
     padding:10px 20px 0;display:flex;align-items:center;flex-wrap:wrap;">
     <span id="pchat-name" style="
-      font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.12em;
+      font-family: 'IBM Plex Mono', monospace;font-size:11px;letter-spacing:.12em;
       color:rgba(240,237,232,.75);text-transform:uppercase;margin-right:10px;"></span>
     <span id="pchat-role" style="
-      font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.10em;
+      font-family: 'IBM Plex Mono', monospace;font-size:9px;letter-spacing:.10em;
       color:rgba(240,237,232,.35);text-transform:uppercase;margin-right:12px;"></span>
     <div id="pchat-top3" style="display:flex;"></div>
   </div>
@@ -1144,15 +1237,19 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
         <circle cx="16" cy="16" r="1.2" fill="#F0EDE8" opacity=".80"/>
       </svg>
       <span class="top-bar-label">sensi</span>
-      <span id="chat-layout-tag" class="top-bar-section" style="margin-left:4px;"></span>
-      <button class="btn-profile" id="btn-profile-chat" onclick="openProfilePanel()" title="your comfort profile" style="display:none;margin-left:auto;">
-        <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-          <circle cx="16" cy="16" r="14.5" stroke="currentColor" stroke-width=".9"/>
-          <circle cx="16" cy="16" r="9.5"  stroke="currentColor" stroke-width=".9"/>
-          <circle cx="16" cy="16" r="4.5"  stroke="currentColor" stroke-width=".9"/>
-          <circle cx="16" cy="16" r="1.4" fill="currentColor"/>
-        </svg>
-      </button>
+      <span class="top-bar-sep">|</span>
+      <span class="top-bar-section">layout</span>
+      <!-- layout badge: shows the layout number/name once set -->
+      <div id="chat-layout-badge" class="top-bar-layout-badge" style="display:none;">
+        <div class="top-bar-layout-dot"></div>
+        <span id="chat-layout-id" class="top-bar-layout-id"></span>
+      </div>
+      <!-- right-side status group: shown after persona loads -->
+      <div id="chat-top-status" class="top-bar-status-group">
+        <span id="chat-conflict-badge" class="top-bar-conflict-badge" style="display:none;" onclick="jumpPanel('conflicts')" title="jump to conflicts"></span>
+        <span id="chat-score-ring" class="top-bar-score-ring" style="display:none;" title="overall comfort score"></span>
+        <button class="top-bar-user-avatar" id="chat-user-avatar" onclick="openProfilePanel()" style="display:none;" title="your comfort profile"></button>
+      </div>
     </div>
   </div>
 
@@ -1183,11 +1280,11 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
         <button class="ap-close" onclick="closeAnalysisPanel()">×</button>
       </div>
       <div class="ap-scroll" id="ap-scroll">
+        <div id="ap-topology"></div>
         <div id="ap-scores"></div>
         <div id="ap-score-interp" class="ap-specialist-block" style="display:none;"></div>
         <div id="ap-conflicts"></div>
         <div id="ap-conflict-reason" class="ap-specialist-block" style="display:none;"></div>
-        <div id="ap-topology"></div>
         <div id="ap-suggestions"></div>
         <div id="ap-sug-critique" class="ap-specialist-block" style="display:none;"></div>
       </div>
@@ -1751,15 +1848,15 @@ function renderPersonaProfile(profile, moodboardUrls) {
         ? (delta > 0 ? "rgba(138,184,138,.80)" : "rgba(232,131,106,.80)")
         : "rgba(240,237,232,.28)";
       return `<div style="display:flex;align-items:center;margin-bottom:6px;">
-        <span style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.10em;text-transform:uppercase;color:${SC[s]};width:80px;flex-shrink:0;">${SI[s]} ${s}</span>
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(240,237,232,.70);width:28px;text-align:right;flex-shrink:0;">${w.toFixed(2)}</span>
-        <span style="font-family:'DM Mono',monospace;font-size:8px;color:rgba(240,237,232,.30);margin:0 6px;">vs</span>
-        <span style="font-family:'DM Mono',monospace;font-size:10px;color:rgba(240,237,232,.35);width:28px;flex-shrink:0;">${base.toFixed(2)}</span>
-        <span style="font-family:'DM Mono',monospace;font-size:8px;color:${deltaColor};margin-left:8px;">${deltaStr}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace;font-size:8px;letter-spacing:.10em;text-transform:uppercase;color:${SC[s]};width:80px;flex-shrink:0;">${SI[s]} ${s}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace;font-size:10px;color:rgba(240,237,232,.70);width:28px;text-align:right;flex-shrink:0;">${w.toFixed(2)}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace;font-size:8px;color:rgba(240,237,232,.30);margin:0 6px;">vs</span>
+        <span style="font-family: 'IBM Plex Mono', monospace;font-size:10px;color:rgba(240,237,232,.35);width:28px;flex-shrink:0;">${base.toFixed(2)}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace;font-size:8px;color:${deltaColor};margin-left:8px;">${deltaStr}</span>
       </div>`;
     }).join("");
     wtEl.innerHTML = `
-      <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:rgba(240,237,232,.25);margin-bottom:8px;">your weights · research baseline · delta</div>
+      <div style="font-family: 'IBM Plex Mono', monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:rgba(240,237,232,.25);margin-bottom:8px;">your weights · research baseline · delta</div>
       ${rows}`;
   }
 
@@ -1814,8 +1911,8 @@ function _renderPanelContent() {
         <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
           <span style="color:${SC[s]};font-size:13px;flex-shrink:0;margin-top:1px;">${SI[s]}</span>
           <div>
-            <div style="font-family:'DM Mono',monospace;font-size:7px;letter-spacing:.16em;text-transform:uppercase;color:${SC[s]};margin-bottom:3px;">${s}</div>
-            <div style="font-family:'Roboto',sans-serif;font-weight:300;font-size:10px;line-height:1.5;color:rgba(240,237,232,.42);">${(IMPLICATIONS[s] && IMPLICATIONS[s][role]) || ''}</div>
+            <div style="font-family: 'IBM Plex Mono', monospace;font-size:7px;letter-spacing:.16em;text-transform:uppercase;color:${SC[s]};margin-bottom:3px;">${s}</div>
+            <div style="font-family:'IBM Plex Sans', sans-serif;font-weight:300;font-size:10px;line-height:1.5;color:rgba(240,237,232,.42);">${(IMPLICATIONS[s] && IMPLICATIONS[s][role]) || ''}</div>
           </div>
         </div>`).join("");
   }
@@ -1873,7 +1970,7 @@ function _renderProfileChatSummary() {
     top3El.innerHTML = priorities.map(s =>
       `<span style="
         display:inline-flex;align-items:center;
-        font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.10em;
+        font-family: 'IBM Plex Mono', monospace;font-size:8px;letter-spacing:.10em;
         color:${SC[s]||'rgba(240,237,232,.4)'};text-transform:uppercase;
         margin-right:8px;">
         <span style="width:5px;height:5px;border-radius:50%;background:${SC[s]||'#888'};display:inline-block;margin-right:4px;flex-shrink:0;"></span>${s}
@@ -1927,6 +2024,42 @@ window.receiveProfileChat = function(data) {
   }
 };
 
+// ── Sensi message formatter ───────────────────────────────
+// Handles: "For Name (role), Layout-ID:" header, **bold**, \n\n paragraphs
+function _formatChatMessage(text) {
+  // 1. Escape HTML entities
+  var safe = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // 2. Extract "For Name (role), Layout-ID:" prefix → styled header
+  var headerHtml = '';
+  safe = safe.replace(/^(For\s+[^,\n]+\([^)]+\)[^:\n]*:)\s*/,
+    function(_, h) {
+      headerHtml = '<span class="bubble-msg-header">' + h + '</span>';
+      return '';
+    }
+  );
+
+  // 3. Bold: **text**
+  safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // 4. Paragraphs — prefer explicit \n\n; fall back to single block
+  var bodyHtml;
+  if (safe.indexOf('\n\n') !== -1) {
+    bodyHtml = safe.split(/\n\n+/)
+      .map(function(p) { return p.trim(); })
+      .filter(Boolean)
+      .map(function(p) { return '<p class="bubble-msg-para">' + p + '</p>'; })
+      .join('');
+  } else {
+    bodyHtml = '<p class="bubble-msg-para">' + safe.trim() + '</p>';
+  }
+
+  return headerHtml + bodyHtml;
+}
+
 // ── Chat ──────────────────────────────────────────────────
 function addChatBubble(role, text) {
   const inner = document.getElementById("chat-thread-inner");
@@ -1942,7 +2075,7 @@ function addChatBubble(role, text) {
     wrap.innerHTML = _AVATAR_SVG;
     const div = document.createElement("div");
     div.className = "bubble-s";
-    div.textContent = text;
+    div.innerHTML = _formatChatMessage(text);
     wrap.appendChild(div);
     inner.appendChild(wrap);
   } else {
@@ -1983,11 +2116,19 @@ document.addEventListener("keydown", e => {
   if (e.ctrlKey && (e.key === "+" || e.key === "-" || e.key === "0")) e.preventDefault();
 });
 
-// ── Layout phase tag ─────────────────────────────────────
+// ── Layout phase badge ────────────────────────────────────
 function setLayoutTag(layoutId) {
-  const tag = document.getElementById("chat-layout-tag");
-  if (!tag) return;
-  tag.textContent = layoutId ? "layout " + layoutId : "layout phase";
+  const badge = document.getElementById("chat-layout-badge");
+  const idEl  = document.getElementById("chat-layout-id");
+  if (!badge || !idEl) return;
+  if (layoutId) {
+    // Strip redundant "layout-" / "layout " prefix if the ID already contains it
+    const display = String(layoutId).replace(/^layout[- ]?/i, '');
+    idEl.textContent = display;
+    badge.style.display = "flex";
+  } else {
+    badge.style.display = "none";
+  }
 }
 
 // ── Bridge callbacks ──────────────────────────────────────
@@ -1998,8 +2139,13 @@ window.receiveInit = function(data) {
     // Returning user — persona already loaded
     if (data.persona) {
       S.persona = data.persona;
-      const btn = document.getElementById("btn-profile-chat");
-      if (btn) btn.style.display = "flex";
+      const grp    = document.getElementById("chat-top-status");
+      const avatar = document.getElementById("chat-user-avatar");
+      if (grp) grp.style.display = "flex";
+      if (avatar && S.persona.name) {
+        avatar.textContent  = S.persona.name.charAt(0).toUpperCase();
+        avatar.style.display = "flex";
+      }
     }
     setLayoutTag(data.layout_id || null);
     showScreen("chat");
@@ -2061,9 +2207,14 @@ window.receivePersona = function(data) {
   if (msgEl) msgEl.textContent = data.message || "here's what I know about you.";
   // Render full 6-section profile
   renderPersonaProfile(profile, data.moodboard_urls || []);
-  // Show profile button in chat top bar for future layout sessions
-  const btn = document.getElementById("btn-profile-chat");
-  if (btn) btn.style.display = "flex";
+  // Show status group + set user avatar initial
+  const grp    = document.getElementById("chat-top-status");
+  const avatar = document.getElementById("chat-user-avatar");
+  if (grp) grp.style.display = "flex";
+  if (avatar && profile.name) {
+    avatar.textContent   = profile.name.charAt(0).toUpperCase();
+    avatar.style.display = "flex";
+  }
   showScreen("persona");
 };
 
@@ -2210,7 +2361,7 @@ function _renderRadar(rooms) {
         min: 0, max: 100, stepSize: 25,
         ticks: { color: 'rgba(240,237,232,0.20)', font: { size: 8 }, backdropColor: 'transparent' },
         pointLabels: {
-          color: 'rgba(240,237,232,0.60)', font: { size: 10, family: "'DM Mono', monospace" }
+          color: 'rgba(240,237,232,0.60)', font: { size: 10, family: "'IBM Plex Mono', monospace" }
         },
         grid:       { color: 'rgba(240,237,232,0.08)' },
         angleLines: { color: 'rgba(240,237,232,0.08)' }
@@ -2260,24 +2411,28 @@ function _renderConflicts(flaggedRooms) {
 
 function _renderTopology(flaggedRooms, allRooms) {
   var c = document.getElementById('ap-topology');
-  c.innerHTML = '<div class="ap-section-label">room network</div><div id="cy-container" style="width:100%;height:200px;"></div>';
+  c.innerHTML =
+    '<div class="ap-section-label" style="margin-top:0;">room network</div>' +
+    '<div id="cy-container" style="width:100%;height:280px;border-radius:6px;background:rgba(240,237,232,.02);border:1px solid rgba(240,237,232,.05);"></div>' +
+    '<div id="cy-room-hint" style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;letter-spacing:.10em;color:rgba(240,237,232,.18);text-align:center;padding:5px 0 2px;text-transform:uppercase;">click a room to highlight</div>';
   if (typeof cytoscape === 'undefined') {
     c.innerHTML += '<div class="ap-empty">cytoscape not loaded</div>';
     return;
   }
-  // Build room → failing senses map (reuses the type-safe helper)
+  // Build room → failing senses map
   var roomSenses = {};
   (flaggedRooms || []).forEach(function(r) {
     var senses = _sensesFromConflicts(r.conflicts);
     if (senses.length > 0) roomSenses[r.roomName] = senses;
   });
-  // Nodes from scores data (all rooms)
+  // Nodes — size = 28 base + 8 per conflict; color encodes overall health
   var nodes = (allRooms || []).map(function(room) {
     var overall = room.overallScore || 0.5;
     var issueCount = (roomSenses[room.roomName] || []).length;
-    var color = overall < 0.50 ? '#E8836A' : overall < 0.65 ? '#D4B96A' : '#8BB88A';
-    var size = 24 + issueCount * 10;
-    return { data: { id: room.roomName, label: room.roomName, color: color, size: size } };
+    var color  = overall < 0.50 ? '#E8836A' : overall < 0.65 ? '#D4B96A' : '#8BB88A';
+    var border = overall < 0.50 ? 'rgba(232,131,106,0.55)' : overall < 0.65 ? 'rgba(212,185,106,0.45)' : 'rgba(139,184,138,0.45)';
+    var size   = 28 + issueCount * 8;
+    return { data: { id: room.roomName, label: room.roomName, color: color, border: border, size: size, overall: overall } };
   });
   // Edges between rooms sharing a failing sense
   var edges = [];
@@ -2298,34 +2453,60 @@ function _renderTopology(flaggedRooms, allRooms) {
     style: [
       { selector: 'node', style: {
         'background-color': 'data(color)',
+        'background-opacity': 0.18,
         'label': 'data(label)',
-        'color': 'rgba(240,237,232,0.75)',
-        'font-size': '8px',
-        'font-family': "'DM Mono', monospace",
+        'color': 'rgba(240,237,232,0.72)',
+        'font-size': '9px',
+        'font-family': 'IBM Plex Mono',
         'text-valign': 'bottom',
-        'text-margin-y': '5px',
+        'text-margin-y': '6px',
         'width':  'data(size)',
         'height': 'data(size)',
-        'border-width': 1,
-        'border-color': 'rgba(240,237,232,0.18)'
+        'border-width': 1.5,
+        'border-color': 'data(border)'
+      }},
+      { selector: 'node:selected', style: {
+        'background-opacity': 0.35,
+        'border-width': 2.5,
+        'color': 'rgba(240,237,232,1)'
       }},
       { selector: 'edge', style: {
-        'width': 1.5,
-        'line-color': 'rgba(212,185,106,0.35)',
+        'width': 1,
+        'line-color': 'rgba(212,185,106,0.25)',
         'label': 'data(label)',
         'font-size': '7px',
-        'color': 'rgba(212,185,106,0.65)',
-        'font-family': "'DM Mono', monospace",
+        'color': 'rgba(212,185,106,0.55)',
+        'font-family': 'IBM Plex Mono',
         'text-rotation': 'autorotate',
         'curve-style': 'bezier',
         'text-margin-y': '-6px'
       }}
     ],
-    layout: { name: 'cose', animate: false, padding: 18, nodeRepulsion: 4000 },
+    layout: { name: 'cose', animate: false, padding: 22, nodeRepulsion: 5000 },
     userZoomingEnabled: false,
     userPanningEnabled: false,
     boxSelectionEnabled: false,
     autoungrabify: true
+  });
+
+  // Node click → scroll to that room's bars in scores section
+  _apCy.on('tap', 'node', function(evt) {
+    var roomName = evt.target.data('id');
+    var hint = document.getElementById('cy-room-hint');
+    if (hint) hint.textContent = roomName.toUpperCase();
+    // Highlight matching room label in scores section
+    var scoresEl = document.getElementById('ap-scores');
+    if (!scoresEl) return;
+    var labels = scoresEl.querySelectorAll('.ap-room-label');
+    labels.forEach(function(lbl) {
+      var isMatch = lbl.textContent.toUpperCase().indexOf(roomName.toUpperCase()) !== -1;
+      lbl.style.color = isMatch ? 'rgba(240,237,232,.95)' : 'rgba(240,237,232,.25)';
+      lbl.style.borderBottomColor = isMatch ? 'rgba(240,237,232,.18)' : 'rgba(240,237,232,.04)';
+    });
+    // Scroll analysis panel to scores section
+    setTimeout(function() {
+      scoresEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   });
 }
 
@@ -2386,14 +2567,14 @@ function _addAnalysisChips(depth) {
   var row = document.createElement('div');
   row.className = 'ap-chips-row';
   var chips = [
-    '<button class="ap-jump-chip" onclick="jumpPanel(\'scores\')">scores</button>'
+    '<button class="ap-jump-chip" onclick="jumpPanel(\'scores\')"><span class="ap-chip-arrow">↗</span>scores</button>'
   ];
   if (depth === 'detect' || depth === 'full') {
-    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'conflicts\')">conflicts</button>');
+    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'conflicts\')"><span class="ap-chip-arrow">↗</span>conflicts</button>');
   }
   if (depth === 'full') {
-    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'suggestions\')">suggestions</button>');
-    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'score-interp\')">analysis</button>');
+    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'suggestions\')"><span class="ap-chip-arrow">↗</span>suggestions</button>');
+    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'score-interp\')"><span class="ap-chip-arrow">↗</span>analysis</button>');
   }
   row.innerHTML = chips.join('');
   lastWrap.appendChild(row);
@@ -2417,6 +2598,33 @@ function jumpPanel(section) {
   }, 280);
 }
 
+// ── Top bar status update (score ring + conflict badge) ────
+function _updateTopBarStatus(rooms, flaggedRooms) {
+  // Overall score = average of all room overallScores
+  var scores = (rooms || []).map(function(r) { return r.overallScore || 0; });
+  var avg = scores.length ? scores.reduce(function(a,b){return a+b;},0) / scores.length : 0;
+  var ring = document.getElementById('chat-score-ring');
+  if (ring) {
+    ring.textContent = avg.toFixed(2);
+    ring.className = 'top-bar-score-ring';
+    if (avg >= 0.65)      ring.classList.add('score-pass');
+    else if (avg >= 0.45) ring.classList.add('score-warn');
+    else                  ring.classList.add('score-fail');
+    ring.style.display = 'flex';
+  }
+  // Conflict badge = count of flagged rooms
+  var badge = document.getElementById('chat-conflict-badge');
+  if (badge) {
+    var n = (flaggedRooms || []).length;
+    if (n > 0) {
+      badge.textContent = n + (n === 1 ? ' conflict' : ' conflicts');
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
 // ── Main panel render ──────────────────────────────────────
 function renderAnalysisPanel(scoresJson, conflictsJson, suggestionsJson, depth, scoreInterp, conflictReason, suggCritique) {
   if (!scoresJson) return;
@@ -2432,27 +2640,39 @@ function renderAnalysisPanel(scoresJson, conflictsJson, suggestionsJson, depth, 
 
   openAnalysisPanel();
 
+  // Update top bar status ring + conflict badge
+  var _allRooms = scores.rooms || [];
+  var _flagged  = (conflicts && conflicts.flaggedRooms) ? conflicts.flaggedRooms : [];
+  _updateTopBarStatus(_allRooms, _flagged);
+
   // depth tag
   var tag = document.getElementById('ap-depth-tag');
   if (tag) tag.textContent = _panelDepth;
 
-  // scores section
+  // 1. Room network first (spatial overview — hero element)
   var rooms = scores.rooms || [];
+  var tEl = document.getElementById('ap-topology');
+  tEl.innerHTML = '';
+  if (conflicts && (depth === 'detect' || depth === 'full')) {
+    _renderTopology(conflicts.flaggedRooms || [], rooms);
+  } else {
+    // Still render network with health colors even without conflict detail
+    _renderTopology([], rooms);
+  }
+
+  // 2. Scores section
   if (_chartView === 'bars') _renderScoreBars(rooms);
   else _renderRadar(rooms);
 
-  // score_interpreter narrative
+  // 3. Score interpreter narrative
   _renderSpecialistBlock('ap-score-interp', 'what this means', scoreInterp || '');
 
-  // conflicts section
+  // 4. Conflicts section
   var cEl = document.getElementById('ap-conflicts');
   cEl.innerHTML = '';
-  var tEl = document.getElementById('ap-topology');
-  tEl.innerHTML = '';
   document.getElementById('ap-conflict-reason').style.display = 'none';
   if (conflicts && (depth === 'detect' || depth === 'full')) {
     _renderConflicts(conflicts.flaggedRooms || []);
-    _renderTopology(conflicts.flaggedRooms || [], rooms);
     _renderSpecialistBlock('ap-conflict-reason', 'why it\'s failing', conflictReason || '');
   }
 
