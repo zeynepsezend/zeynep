@@ -16,6 +16,7 @@ class SessionManager:
             "layout_name": None,
             "graph": None,
             "scores": None,
+            "pending_layout": None,
         }
 
     # ------------------------------------------------------------------
@@ -32,6 +33,7 @@ class SessionManager:
             "layout": layout_data,
             "graph": None,
             "scores": None,
+            "pending_layout": None,
         }
         return self.get_session()
 
@@ -52,3 +54,11 @@ class SessionManager:
     def update_scores(self, scores_data: dict) -> None:
         """Store the latest scoring results."""
         self._state["scores"] = scores_data
+
+    def set_pending_layout(self, data: dict) -> None:
+        """Store a proposed layout awaiting user acceptance."""
+        self._state["pending_layout"] = data
+
+    def clear_pending(self) -> None:
+        """Clear the pending layout proposal."""
+        self._state["pending_layout"] = None

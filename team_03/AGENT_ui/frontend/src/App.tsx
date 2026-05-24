@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ThreeViewport from './components/ThreeViewport/ThreeViewport';
+import ProposalBanner from './components/ThreeViewport/ProposalBanner';
 import LayerToggle from './components/LayerToggle';
 import GraphPanel from './components/GraphPanel/GraphPanel';
 import ChatPanel from './components/ChatPanel/ChatPanel';
@@ -147,19 +148,19 @@ export default function App() {
   // ── Poll layout from disk while agent is running ──────────────────────────
   const wasRunningRef = useRef(false);
   useEffect(() => {
-    if (agentState.isAgentRunning) {
+    if (agentState.isAgentRunning && !layoutState.isPending) {
       wasRunningRef.current = true;
       const interval = setInterval(() => {
         layoutState.reloadLayout();
       }, 3000);
       return () => clearInterval(interval);
-    } else if (wasRunningRef.current) {
+    } else if (wasRunningRef.current && !layoutState.isPending) {
       // Agent just finished — do a final reload to catch any last changes
       wasRunningRef.current = false;
       layoutState.reloadLayout();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentState.isAgentRunning]);
+  }, [agentState.isAgentRunning, layoutState.isPending]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleToggleLayer = useCallback((layer: LayerName) => {
@@ -336,14 +337,22 @@ export default function App() {
         display: viewMode === 'geometry' ? 'block' : 'none',
       }}>
         {layoutState.layout ? (
-          <ThreeViewport
-            layout={layoutState.layout}
-            selectedId={selectedId}
-            onSelect={handleViewportSelect}
-            layers={layerVisibility}
-            graphData={layoutState.graphData}
-            modifiedIds={layoutState.modifiedIds}
-          />
+          <>
+            <ThreeViewport
+              layout={layoutState.layout}
+              selectedId={selectedId}
+              onSelect={handleViewportSelect}
+              layers={layerVisibility}
+              graphData={layoutState.graphData}
+              modifiedIds={layoutState.modifiedIds}
+            />
+            {layoutState.isPending && (
+              <ProposalBanner
+                onAccept={layoutState.acceptPending}
+                onReject={layoutState.rejectPending}
+              />
+            )}
+          </>
         ) : (
           <div style={{
             width: '100%',

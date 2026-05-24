@@ -8,6 +8,7 @@ import asyncio
 from typing import Any, Dict, Optional
 
 from websocket_manager import ConnectionManager, MessageType
+from layout_loader import load_layout
 
 # Ordered list of pipeline nodes, matching the real LangGraph graph.
 PIPELINE_NODES = [
@@ -28,21 +29,23 @@ PIPELINE_NODES = [
 
 async def run_agent(
     prompt: str,
-    layout: Optional[Dict[str, Any]],
+    session_state: Optional[Dict[str, Any]],
     ws_manager: ConnectionManager,
     websocket: Any,
+    session: Any = None,
 ) -> None:
     """
     Simulate the agent pipeline by emitting started/completed events for each
     node, then a final agent_response summary.
 
+    After the pipeline completes, re-reads the layout JSON from disk and
+    broadcasts a state_update so the frontend viewport refreshes.
+
     Replace the body of this function with real LangGraph calls when ready.
     """
-    layout_id = (layout or {}).get("layout", {}) if isinstance(layout, dict) else {}
-    if isinstance(layout, dict):
-        layout_id = layout.get("layout_name", "unknown")
-    else:
-        layout_id = "unknown"
+    layout_name = "unknown"
+    if isinstance(session_state, dict):
+        layout_name = session_state.get("layout_name", "unknown")
 
     # Emit events for each pipeline node
     for node in PIPELINE_NODES:
@@ -68,13 +71,30 @@ async def run_agent(
             },
         )
 
+    # ── Re-read the layout from disk (the agent may have modified it) ────
+    if layout_name and layout_name != "unknown":
+        fresh_layout = load_layout(layout_name)
+        if fresh_layout:
+            # Store as pending — only committed to session when user accepts
+            if session is not None:
+                session.set_pending_layout(fresh_layout)
+            # Broadcast as a proposal so the frontend shows a preview
+            await ws_manager.broadcast(
+                {
+                    "type": MessageType.state_update.value,
+                    "field": "layout",
+                    "data": fresh_layout,
+                    "proposal": True,
+                }
+            )
+
     # Final agent response
     await ws_manager.send_personal(
         websocket,
         {
             "type": MessageType.agent_response.value,
             "content": (
-                f"Analysis complete for layout '{layout_id}'.\n\n"
+                f"Analysis complete for layout '{layout_name}'.\n\n"
                 f"**Prompt**: \"{prompt}\"\n\n"
                 "All 12 pipeline nodes ran successfully:\n"
                 "- Profile Agent: identified space requirements\n"

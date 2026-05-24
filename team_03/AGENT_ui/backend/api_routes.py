@@ -145,6 +145,49 @@ async def get_graph():
     return graph
 
 
+@router.post("/api/layouts/{name}/reload")
+async def reload_layout(name: str):
+    """
+    Re-read the layout JSON from disk and update the session.
+    Use this after the agent has modified the layout file externally.
+    Returns the fresh layout data.
+    """
+    data = layout_loader.load_layout(name)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"Layout '{name}' not found.")
+
+    if _session is not None:
+        _session.update_layout(data)
+
+    return data
+
+
+class LayoutCommit(BaseModel):
+    layout: dict
+
+
+@router.post("/api/layouts/{name}/commit")
+async def commit_layout(name: str, body: LayoutCommit):
+    """
+    Write an accepted (previously proposed) layout to disk,
+    replacing the existing layout file. Updates the session state.
+    """
+    if not layout_loader.validate_layout(body.layout):
+        raise HTTPException(status_code=422, detail="Invalid layout JSON.")
+
+    saved = layout_loader.save_layout(name, body.layout)
+    if saved is None:
+        raise HTTPException(
+            status_code=404, detail=f"Layout '{name}' not found on disk."
+        )
+
+    if _session is not None:
+        _session.update_layout(body.layout)
+        _session.clear_pending()
+
+    return {"status": "ok", "path": str(saved)}
+
+
 @router.get("/api/scores")
 async def get_scores():
     """Return the current scoring results."""

@@ -54,6 +54,21 @@ def load_layout(name: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def save_layout(name: str, data: dict) -> Optional[Path]:
+    """
+    Find the layout file by stem name and overwrite it with *data*.
+    Returns the Path written, or None if no matching file was found.
+    """
+    if not LAYOUT_DIR.exists():
+        return None
+    for json_file in LAYOUT_DIR.rglob("*.json"):
+        if json_file.stem == name:
+            with json_file.open("w", encoding="utf-8") as fh:
+                json.dump(data, fh, indent=2)
+            return json_file
+    return None
+
+
 def validate_layout(data: dict) -> bool:
     """
     Return True when *data* contains all required top-level keys.

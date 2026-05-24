@@ -62,12 +62,15 @@ export interface UseLayoutStateReturn {
   availableLayouts: LayoutInfo[];
   selectedLayoutName: string | null;
   modifiedIds: Set<string>;
+  isPending: boolean;
   loadLayout: (name: string) => Promise<void>;
   reloadLayout: () => Promise<void>;
   uploadLayout: (file: File) => Promise<void>;
   fetchLayouts: () => Promise<void>;
   updateFromWS: (message: StateUpdate) => void;
   setScores: (scores: ScoreData) => void;
+  acceptPending: () => Promise<void>;
+  rejectPending: () => void;
 }
 
 export function useLayoutState(): UseLayoutStateReturn {
@@ -77,7 +80,9 @@ export function useLayoutState(): UseLayoutStateReturn {
   const [availableLayouts, setAvailableLayouts] = useState<LayoutInfo[]>([]);
   const [selectedLayoutName, setSelectedLayoutName] = useState<string | null>(null);
   const [modifiedIds, setModifiedIds] = useState<Set<string>>(new Set());
+  const [isPending, setIsPending] = useState(false);
   const layoutRef = useRef<LayoutJSON | null>(null);
+  const preProposalRef = useRef<LayoutJSON | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** Update layout with diffing — highlights modified elements for 6 seconds */
@@ -219,10 +224,68 @@ export function useLayoutState(): UseLayoutStateReturn {
     }
   }, [fetchLayouts, loadLayout]);
 
+  const acceptPending = useCallback(async () => {
+    const current = layout;
+    if (!current) return;
+
+    // Promote the displayed (proposed) layout to the committed state
+    layoutRef.current = current;
+    setIsPending(false);
+    preProposalRef.current = null;
+
+    // Auto-clear highlights after 6s
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+    clearTimerRef.current = setTimeout(() => {
+      setModifiedIds(new Set());
+    }, 6000);
+
+    // Persist to disk
+    if (selectedLayoutName) {
+      try {
+        await fetch(`${API_BASE}/layouts/${encodeURIComponent(selectedLayoutName)}/commit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ layout: current }),
+        });
+      } catch {
+        // Commit to disk failed — local state is still accepted
+      }
+    }
+  }, [layout, selectedLayoutName]);
+
+  const rejectPending = useCallback(() => {
+    const original = preProposalRef.current;
+    if (!original) return;
+
+    layoutRef.current = original;
+    setLayout(original);
+    preProposalRef.current = null;
+    setIsPending(false);
+    setModifiedIds(new Set());
+    if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+  }, []);
+
   const updateFromWS = useCallback((message: StateUpdate) => {
     switch (message.field) {
       case 'layout':
-        setLayoutWithDiff(message.data as LayoutJSON);
+        if (message.proposal) {
+          // Save original layout for potential revert (only if not already pending)
+          if (!preProposalRef.current) {
+            preProposalRef.current = layoutRef.current;
+          }
+          const proposed = message.data as LayoutJSON;
+          setIsPending(true);
+          // Show proposed layout in viewport but don't update layoutRef
+          setLayout(proposed);
+          // Compute diff for pulse highlights (no auto-clear while pending)
+          const diff = diffLayoutIds(preProposalRef.current, proposed);
+          if (diff.size > 0) {
+            setModifiedIds(diff);
+            if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+          }
+        } else {
+          setLayoutWithDiff(message.data as LayoutJSON);
+        }
         break;
       case 'graph':
         setGraphData(normalizeGraphData(message.data as Record<string, unknown>));
@@ -240,11 +303,14 @@ export function useLayoutState(): UseLayoutStateReturn {
     availableLayouts,
     selectedLayoutName,
     modifiedIds,
+    isPending,
     loadLayout,
     reloadLayout,
     uploadLayout,
     fetchLayouts,
     updateFromWS,
     setScores,
+    acceptPending,
+    rejectPending,
   };
 }

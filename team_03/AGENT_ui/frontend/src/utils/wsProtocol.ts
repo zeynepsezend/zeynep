@@ -22,6 +22,7 @@ export interface StateUpdate {
   type: 'state_update';
   field: 'layout' | 'graph' | 'scores';
   data: unknown;
+  proposal?: boolean;
 }
 
 export interface SelectionSync {
