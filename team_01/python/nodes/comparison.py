@@ -80,19 +80,9 @@ def _slim_diff_for_llm(original_json: str, modified_json: str) -> str:
 
 
 def _fallback_summary(original_json: str, modified_json: str) -> str:
-    """Plain-text comparison used when the LLM is unavailable."""
-    def _struct_map(s: str) -> dict:
-        return {el["id"]: el for el in json.loads(s).get("structure", [])}
-    orig = _struct_map(original_json)
-    mod  = _struct_map(modified_json)
-    added   = len([k for k in mod  if k not in orig])
-    removed = len([k for k in orig if k not in mod])
-    changed = len([k for k in orig if k in mod and orig[k].get("attributes") != mod[k].get("attributes")])
-    parts = []
-    if added:   parts.append(f"{added} element(s) added")
-    if removed: parts.append(f"{removed} element(s) removed")
-    if changed: parts.append(f"{changed} element(s) updated")
-    return "Structural change applied: " + (", ".join(parts) or "no differences detected") + "."
+    """Plain-text comparison used when the LLM is unavailable — reuses grouped diff."""
+    diff = _slim_diff_for_llm(original_json, modified_json)
+    return diff if diff else "No structural changes detected."
 
 
 def build_comparison_node(llm):

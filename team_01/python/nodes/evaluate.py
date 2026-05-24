@@ -2,7 +2,10 @@ from __future__ import annotations
 import json
 import math
 import re
+from pathlib import Path
 from nodes.comparison import print_diff
+
+SETTINGS_PATH = Path(__file__).parent.parent.parent / "team_01_settings.json"
 from nodes.modify import (
     STEEL_BEAM_PROPS, STEEL_COL_PROPS, DEFAULT_SECTIONS, SECTION_UPGRADE_MAP,
     BEAM_SECTION_UPGRADE, COL_SECTION_UPGRADE, BEAM_DIM_UPGRADE, COL_DIM_UPGRADE,
@@ -622,6 +625,65 @@ def _build_failure_alternatives(
 
 
 
+def _get_user_request(messages: list) -> str:
+    """Extract the user's raw request text from the first context message."""
+    if not messages:
+        return ""
+    content = messages[0].get("content", "").lower()
+    marker = "user request:"
+    if marker in content:
+        start = content.index(marker) + len(marker)
+        end = content.find("layout summaries:", start)
+        return content[start: end if end > start else start + 300].strip()
+    return content[:300]
+
+
+def _detect_find_min(messages: list) -> str | None:
+    """Return the material name if the user's prompt asks for minimum sections for a specific material."""
+    text = _get_user_request(messages)
+    if not any(kw in text for kw in ("minimum", "find min", "minimum sufficient", "optimiz")):
+        return None
+    if "steel" in text:
+        return "STEEL"
+    if "timber" in text:
+        return "TIMBER"
+    if "rcc" in text or "concrete" in text:
+        return "RCC"
+    return None
+
+
+def _ask_sdl_ll(state: dict) -> None:
+    """Prompt for SDL and LL, update state in place, and persist to settings."""
+    cur_sdl = state.get("sdl_kNm2") or SDL_KNM2
+    print(f"\nSuperimposed dead load (SDL — slab + finishes + partitions) [current: {cur_sdl} kN/m²]:")
+    print("  1. Timber  — 1.5 kN/m²  (wood structure + light finishes)")
+    print("  2. Light   — 2.5 kN/m²  (lightweight slab, minimal finishes)")
+    print("  3. Standard— 3.5 kN/m²  (125mm slab + finishes + partitions)")
+    print("  4. Heavy   — 5.0 kN/m²  (thick slab, heavy finishes, raised floor)")
+    print("  [Enter] — keep current")
+    raw_sdl = input("SDL choice [1-4 or Enter]: ").strip()
+    state["sdl_kNm2"] = {"1": 1.5, "2": 2.5, "3": 3.5, "4": 5.0}.get(raw_sdl, cur_sdl)
+    print(f"  SDL: {state['sdl_kNm2']} kN/m²")
+
+    cur_ll = state.get("live_load_kNm2") or LL_KNM2
+    print(f"\nLive load (use type) [current: {cur_ll} kN/m²]:")
+    print("  1. Residential — 2.0 kN/m²")
+    print("  2. Office      — 3.0 kN/m²")
+    print("  3. Retail/Public— 5.0 kN/m²")
+    print("  [Enter] — keep current")
+    raw_ll = input("LL choice [1-3 or Enter]: ").strip()
+    state["live_load_kNm2"] = {"1": 2.0, "2": 3.0, "3": 5.0}.get(raw_ll, cur_ll)
+    print(f"  LL: {state['live_load_kNm2']} kN/m²")
+
+    try:
+        SETTINGS_PATH.write_text(
+            json.dumps({"sdl_kNm2": state["sdl_kNm2"], "live_load_kNm2": state["live_load_kNm2"]}, indent=2),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
+
+
 def build_evaluate_node(_):
     """Structural first-principles check node — unused arg kept for graph API compatibility."""
 
@@ -629,6 +691,11 @@ def build_evaluate_node(_):
         print(f"\n{'='*50}")
         print(f"  NODE: EVALUATE")
         print(f"{'='*50}")
+
+        # If routing forced us here despite reason giving a (wrong) direct answer,
+        # discard it so the evaluation table is the sole output
+        if state.get("came_from") == "reason" and state.get("final_response") and state.get("evaluation_result") is None:
+            state["final_response"] = None
 
         # Skip full evaluation when tag_and_audit just generated a fresh grid
         if state.get("came_from") == "tag_and_audit":
@@ -643,6 +710,16 @@ def build_evaluate_node(_):
         # Human-in-the-loop: ask material + SDL + LL on every fresh evaluate pass
         # Skip only when re-evaluating after an already-confirmed structural change
         if came_from != "structural_change":
+            # Auto-detect "find minimum for [material]" from the user's original prompt
+            auto_min_mat = _detect_find_min(state.get("messages", []))
+            if auto_min_mat:
+                print(f"\n[auto] Find minimum sections for {auto_min_mat} — skipping material selection.")
+                state["material_override"] = auto_min_mat
+                _ask_sdl_ll(state)
+                state["pending_structural_change"] = {"type": "find_minimum", "material": auto_min_mat}
+                state["layout_before_change"] = state["layout_json_string"]
+                return state
+
             current = state.get("material_override") or "RCC"
             base_current = next((m for m in BASE_MATERIALS if current.startswith(m)), "RCC")
             tier_label = current[len(base_current):]
@@ -665,6 +742,7 @@ def build_evaluate_node(_):
                 raw2 = input("Choice [1/2/3 or RCC/STEEL/TIMBER]: ").strip().upper()
                 selected = lookup.get(raw2) or (raw2 if raw2 in BASE_MATERIALS else None) or "RCC"
                 state["material_override"] = selected
+                _ask_sdl_ll(state)
                 state["pending_structural_change"] = {"type": "find_minimum", "material": selected}
                 state["layout_before_change"] = state["layout_json_string"]
                 return state
@@ -673,30 +751,7 @@ def build_evaluate_node(_):
                 if selected:
                     state["material_override"] = selected
 
-            # SDL — always ask, show current value, Enter = keep
-            cur_sdl = state.get("sdl_kNm2") or SDL_KNM2
-            print(f"\nSuperimposed dead load (SDL — slab + finishes + partitions) [current: {cur_sdl} kN/m²]:")
-            print("  1. Timber  — 1.5 kN/m²  (wood structure + light finishes)")
-            print("  2. Light   — 2.5 kN/m²  (lightweight slab, minimal finishes)")
-            print("  3. Standard— 3.5 kN/m²  (125mm slab + finishes + partitions)")
-            print("  4. Heavy   — 5.0 kN/m²  (thick slab, heavy finishes, raised floor)")
-            print("  [Enter] — keep current")
-            raw_sdl = input("SDL choice [1-4 or Enter]: ").strip()
-            sdl_map = {"1": 1.5, "2": 2.5, "3": 3.5, "4": 5.0}
-            state["sdl_kNm2"] = sdl_map.get(raw_sdl, cur_sdl)
-            print(f"  SDL: {state['sdl_kNm2']} kN/m²")
-
-            # LL — always ask, show current value, Enter = keep
-            cur_ll = state.get("live_load_kNm2") or LL_KNM2
-            print(f"\nLive load (use type) [current: {cur_ll} kN/m²]:")
-            print("  1. Residential — 2.0 kN/m²")
-            print("  2. Office      — 3.0 kN/m²")
-            print("  3. Retail/Public— 5.0 kN/m²")
-            print("  [Enter] — keep current")
-            raw_ll = input("LL choice [1-3 or Enter]: ").strip()
-            ll_map = {"1": 2.0, "2": 3.0, "3": 5.0}
-            state["live_load_kNm2"] = ll_map.get(raw_ll, cur_ll)
-            print(f"  LL: {state['live_load_kNm2']} kN/m²")
+            _ask_sdl_ll(state)
 
         material_override = state.get("material_override")
         ll  = state.get("live_load_kNm2") or LL_KNM2
@@ -893,8 +948,9 @@ def build_evaluate_node(_):
 
         main_fail = not summary.get("overall_PASS", True)
 
-        # Offer section optimisation when everything passes
-        if not main_fail:
+        # Offer section optimisation when everything passes — skip if find_minimum already ran this session
+        already_find_min = bool(_detect_find_min(state.get("messages", []))) or bool(state.get("find_minimum_done"))
+        if not main_fail and not already_find_min:
             current_base = next((m for m in BASE_MATERIALS if current_mat.startswith(m)), "RCC")
             if input("\nAll checks pass. Optimize — find minimum sufficient sections? [y/N]: ").strip().lower() == "y":
                 state["evaluation_result"] = json.dumps(result)

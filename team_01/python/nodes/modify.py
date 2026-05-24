@@ -531,6 +531,7 @@ def build_modify_node(mcp_client, allowed_tools, edited_layout_path, evaluate_fn
                 print(f"  Applying XS sections for {mat}, finding minimum...")
                 layout_str = apply_minimum_sections(layout_str, mat)
                 state["material_override"] = mat
+                state["find_minimum_done"] = True
                 if evaluate_fn:
                     result = evaluate_fn(layout_str, ll, sdl)
                     for _ in range(12):

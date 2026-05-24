@@ -555,11 +555,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -574,11 +574,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -593,11 +593,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -612,11 +612,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -631,11 +631,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -650,11 +650,11 @@
       ],
       "attributes": {
         "type": "internal",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -669,11 +669,11 @@
       ],
       "attributes": {
         "type": "internal",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -688,11 +688,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -707,11 +707,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -726,11 +726,11 @@
       ],
       "attributes": {
         "type": "internal",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -745,11 +745,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -764,11 +764,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -783,11 +783,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -802,11 +802,11 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
@@ -821,21 +821,45 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "300x300",
+        "dimensions": "200x200",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None"
       }
     },
     {
-      "id": "AB_1",
-      "name": "Beam_AB_1",
+      "id": "AB_1a",
+      "name": "Beam_AB_1a",
       "geometry": [
         [
           0,
           0
+        ],
+        [
+          2.5,
+          0.0
+        ]
+      ],
+      "attributes": {
+        "type": "perimeter",
+        "length": "5",
+        "depth": "300",
+        "isWallAligned": "True",
+        "structuralRole": "primary",
+        "material": "RCC",
+        "conflict": "None",
+        "width": "200"
+      }
+    },
+    {
+      "id": "AB_1b",
+      "name": "Beam_AB_1b",
+      "geometry": [
+        [
+          2.5,
+          0.0
         ],
         [
           5,
@@ -845,12 +869,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "5",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -869,21 +893,45 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
-      "id": "CD_1",
-      "name": "Beam_CD_1",
+      "id": "CD_1a",
+      "name": "Beam_CD_1a",
       "geometry": [
         [
           8,
           0
+        ],
+        [
+          11.0,
+          0.0
+        ]
+      ],
+      "attributes": {
+        "type": "perimeter",
+        "length": "6",
+        "depth": "300",
+        "isWallAligned": "True",
+        "structuralRole": "primary",
+        "material": "RCC",
+        "conflict": "None",
+        "width": "200"
+      }
+    },
+    {
+      "id": "CD_1b",
+      "name": "Beam_CD_1b",
+      "geometry": [
+        [
+          11.0,
+          0.0
         ],
         [
           14,
@@ -893,12 +941,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "6",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -917,12 +965,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "4",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -941,12 +989,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -965,12 +1013,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -989,12 +1037,12 @@
       "attributes": {
         "type": "interior",
         "length": "5",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "False",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "Floating beam in Living Room",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1013,12 +1061,12 @@
       "attributes": {
         "type": "interior",
         "length": "4",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1037,12 +1085,12 @@
       "attributes": {
         "type": "interior",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1061,12 +1109,12 @@
       "attributes": {
         "type": "interior",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1085,12 +1133,12 @@
       "attributes": {
         "type": "interior",
         "length": "5",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "False",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "Floating beam in Kitchen Dining",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1109,12 +1157,12 @@
       "attributes": {
         "type": "interior",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "False",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "Floating beam in Central Hall",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1133,12 +1181,12 @@
       "attributes": {
         "type": "interior",
         "length": "6",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1157,12 +1205,12 @@
       "attributes": {
         "type": "interior",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1181,12 +1229,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "5",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1205,12 +1253,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1229,12 +1277,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "6",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1253,12 +1301,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "4",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1277,12 +1325,12 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1301,12 +1349,31 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
+      }
+    },
+    {
+      "id": "CD_1_M",
+      "name": "Column_CD_1_M",
+      "geometry": [
+        [
+          11.0,
+          0.0
+        ]
+      ],
+      "attributes": {
+        "type": "interior",
+        "dimensions": "200x200",
+        "height": "3.5",
+        "isWallAligned": "false",
+        "structuralRole": "primary",
+        "material": "RCC",
+        "conflict": "None"
       }
     },
     {
@@ -1325,12 +1392,12 @@
       "attributes": {
         "type": "interior",
         "length": "3",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "False",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "Floating beam in Central Hall",
-        "width": "300"
+        "width": "200"
       }
     },
     {
@@ -1349,12 +1416,31 @@
       "attributes": {
         "type": "interior",
         "length": "4",
-        "depth": "600",
+        "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "RCC_L",
+        "material": "RCC",
         "conflict": "None",
-        "width": "300"
+        "width": "200"
+      }
+    },
+    {
+      "id": "AB_1_M",
+      "name": "Column_AB_1_M",
+      "geometry": [
+        [
+          2.5,
+          0.0
+        ]
+      ],
+      "attributes": {
+        "type": "interior",
+        "dimensions": "200x200",
+        "height": "3.5",
+        "isWallAligned": "false",
+        "structuralRole": "primary",
+        "material": "RCC",
+        "conflict": "None"
       }
     }
   ],

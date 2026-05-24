@@ -6,7 +6,7 @@ from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 from nodes.reason import build_reason_node
 from nodes.modify import build_modify_node, DEFAULT_SECTIONS, BEAM_SECTION_UPGRADE, COL_SECTION_UPGRADE
-from nodes.evaluate import build_evaluate_node, evaluate_structure
+from nodes.evaluate import build_evaluate_node, evaluate_structure, SETTINGS_PATH, _get_user_request
 from nodes.comparison import build_comparison_node
 
 EXAMPLE_LAYOUTS_DIR = Path(__file__).parent / "example_layouts"
@@ -14,6 +14,13 @@ EXAMPLE_LAYOUTS_DIR = Path(__file__).parent / "example_layouts"
 
 def _dist(a: list, b: list) -> float:
     return math.dist(a, b)
+
+
+def _settings_load(path: Any, key: str) -> float | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get(key)
+    except Exception:
+        return None
 
 
 class AgentState(TypedDict):
@@ -34,6 +41,23 @@ class AgentState(TypedDict):
     layout_before_change: str | None
     live_load_kNm2: float | None
     sdl_kNm2: float | None
+    find_minimum_done: bool | None
+
+
+_EVAL_KEYWORDS = frozenset({
+    "evaluat", "check loads", "check structure", "check if",
+    "find minimum", "minimum section", "minimum sufficient",
+    "optimiz", "upgrade section", "structurally feasible",
+    "structure hold", "assess struct", "run structural",
+    "is this safe", "is it safe", "is the structure",
+    "will it hold", "can it support", "safe to",
+})
+
+
+def _looks_like_eval(state: AgentState) -> bool:
+    """Return True when the user's original prompt is an evaluation/computation request."""
+    text = _get_user_request(state.get("messages", []))
+    return any(kw in text for kw in _EVAL_KEYWORDS)
 
 
 def _route_from_reason(state: AgentState) -> str:
@@ -44,7 +68,10 @@ def _route_from_reason(state: AgentState) -> str:
     if state.get("evaluation_result") is not None:
         return END  # evaluate already ran — done
     if state.get("final_response"):
-        return END  # LLM answered directly — skip evaluate and all its prompts
+        # If the user asked for evaluation/computation, force it even if LLM answered directly
+        if _looks_like_eval(state):
+            return "evaluate"
+        return END  # genuine Q&A — use LLM's direct answer
     return "evaluate"
 
 
@@ -55,6 +82,8 @@ def _route_from_evaluate(state: AgentState) -> str:
         return "modify"
     if state.get("came_from") in ("modify", "structural_change"):
         return "comparison"
+    if state.get("evaluation_result") is not None:
+        return END  # plain evaluation done — skip the redundant reason call
     return "reason"
 
 
@@ -348,8 +377,9 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
         "material_override": detected_material,
         "pending_structural_change": None,
         "layout_before_change": None,
-        "live_load_kNm2": None,
-        "sdl_kNm2": None,
+        "live_load_kNm2": _settings_load(SETTINGS_PATH, "live_load_kNm2"),
+        "sdl_kNm2": _settings_load(SETTINGS_PATH, "sdl_kNm2"),
+        "find_minimum_done": False,
     }
 
 

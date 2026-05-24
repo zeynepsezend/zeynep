@@ -716,25 +716,6 @@
       }
     },
     {
-      "id": "C_2",
-      "name": "Column_C_2",
-      "geometry": [
-        [
-          8,
-          4
-        ]
-      ],
-      "attributes": {
-        "type": "internal",
-        "dimensions": "200x200",
-        "height": "3.5",
-        "isWallAligned": "true",
-        "structuralRole": "primary",
-        "material": "RCC",
-        "conflict": "None"
-      }
-    },
-    {
       "id": "C_3",
       "name": "Column_C_3",
       "geometry": [
@@ -897,12 +878,36 @@
       }
     },
     {
-      "id": "CD_1",
-      "name": "Beam_CD_1",
+      "id": "CD_1a",
+      "name": "Beam_CD_1a",
       "geometry": [
         [
           8,
           0
+        ],
+        [
+          11.0,
+          0.0
+        ]
+      ],
+      "attributes": {
+        "type": "perimeter",
+        "length": "6",
+        "depth": "300",
+        "isWallAligned": "True",
+        "structuralRole": "primary",
+        "material": "RCC",
+        "conflict": "None",
+        "width": "200"
+      }
+    },
+    {
+      "id": "CD_1b",
+      "name": "Beam_CD_1b",
+      "geometry": [
+        [
+          11.0,
+          0.0
         ],
         [
           14,
@@ -1013,54 +1018,6 @@
         "structuralRole": "primary",
         "material": "RCC",
         "conflict": "Floating beam in Living Room",
-        "width": "200"
-      }
-    },
-    {
-      "id": "BC_2",
-      "name": "Beam_BC_2",
-      "geometry": [
-        [
-          5,
-          4
-        ],
-        [
-          8,
-          4
-        ]
-      ],
-      "attributes": {
-        "type": "interior",
-        "length": "3",
-        "depth": "300",
-        "isWallAligned": "False",
-        "structuralRole": "primary",
-        "material": "RCC",
-        "conflict": "Floating beam in Central Hall",
-        "width": "200"
-      }
-    },
-    {
-      "id": "CD_2",
-      "name": "Beam_CD_2",
-      "geometry": [
-        [
-          8,
-          4
-        ],
-        [
-          14,
-          4
-        ]
-      ],
-      "attributes": {
-        "type": "interior",
-        "length": "6",
-        "depth": "300",
-        "isWallAligned": "True",
-        "structuralRole": "primary",
-        "material": "RCC",
-        "conflict": "None",
         "width": "200"
       }
     },
@@ -1200,54 +1157,6 @@
       "attributes": {
         "type": "interior",
         "length": "6",
-        "depth": "300",
-        "isWallAligned": "True",
-        "structuralRole": "primary",
-        "material": "RCC",
-        "conflict": "None",
-        "width": "200"
-      }
-    },
-    {
-      "id": "C_12",
-      "name": "Beam_C_12",
-      "geometry": [
-        [
-          8,
-          0
-        ],
-        [
-          8,
-          4
-        ]
-      ],
-      "attributes": {
-        "type": "interior",
-        "length": "4",
-        "depth": "300",
-        "isWallAligned": "True",
-        "structuralRole": "primary",
-        "material": "RCC",
-        "conflict": "None",
-        "width": "200"
-      }
-    },
-    {
-      "id": "C_23",
-      "name": "Beam_C_23",
-      "geometry": [
-        [
-          8,
-          4
-        ],
-        [
-          8,
-          7
-        ]
-      ],
-      "attributes": {
-        "type": "interior",
-        "length": "3",
         "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
@@ -1416,6 +1325,73 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
+        "depth": "300",
+        "isWallAligned": "True",
+        "structuralRole": "primary",
+        "material": "RCC",
+        "conflict": "None",
+        "width": "200"
+      }
+    },
+    {
+      "id": "CD_1_M",
+      "name": "Column_CD_1_M",
+      "geometry": [
+        [
+          11.0,
+          0.0
+        ]
+      ],
+      "attributes": {
+        "type": "interior",
+        "dimensions": "200x200",
+        "height": "3.5",
+        "isWallAligned": "false",
+        "structuralRole": "primary",
+        "material": "RCC",
+        "conflict": "None"
+      }
+    },
+    {
+      "id": "BC_2",
+      "name": "Beam_BC_2",
+      "geometry": [
+        [
+          5,
+          4
+        ],
+        [
+          14,
+          4
+        ]
+      ],
+      "attributes": {
+        "type": "interior",
+        "length": "3",
+        "depth": "300",
+        "isWallAligned": "False",
+        "structuralRole": "primary",
+        "material": "RCC",
+        "conflict": "Floating beam in Central Hall",
+        "width": "200"
+      }
+    },
+    {
+      "id": "C_12",
+      "name": "Beam_C_12",
+      "geometry": [
+        [
+          8,
+          0
+        ],
+        [
+          8,
+          7
+        ]
+      ],
+      "attributes": {
+        "type": "interior",
+        "length": "4",
         "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",

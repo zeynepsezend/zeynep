@@ -22,7 +22,7 @@ CLI prompt --> bootstrap() --> run_agent()
                         | tool called?
          YES (tag_and_audit) --> modify --> evaluate --> END  (confirmation only)
          YES (other tool)    --> modify --> evaluate --> comparison --> reason (max 2 cycles)
-         NO                  -->            evaluate --> reason --> END
+         NO                  -->            evaluate --> END  (direct — no redundant reason call)
 
          Structural change chosen at evaluate menu:
          evaluate (sets pending_structural_change) --> modify --> evaluate --> comparison --> reason
@@ -41,11 +41,11 @@ CLI prompt --> bootstrap() --> run_agent()
 
 ## Human-in-the-Loop Interactions
 
-### 1. Material selection (always, first evaluate pass only)
+### 1. Material selection (every evaluate pass, skipped only after structural changes)
 
 ```
-Material (current: RCC):
-  1. RCC    — beam 200x300mm | col 200x200mm  <-- active
+Material (current: RCC_L [L tier]):
+  1. RCC    — beam 300x600mm | col 300x300mm  <-- active [L tier]
   2. STEEL  — beam 82x160mm  | col 100x100mm
   3. TIMBER — beam 100x240mm | col 100x100mm
   4. Find minimum — start XS, auto-upgrade to first PASS
@@ -55,24 +55,28 @@ Choice [1/2/3/4 or RCC/STEEL/TIMBER]:
 
 Option 4 (Find minimum): applies XS tier sections, then auto-upgrades each failing element one step at a time until all pass. The entire loop runs atomically inside modify.py (using the injected `evaluate_fn`).
 
-### 2. Load selection (always, first evaluate pass only — asked immediately after material)
+**Auto-detect**: if the user's prompt explicitly names a material ("find minimum sections for steel"), the material picker is skipped entirely — the agent prints `[auto] Find minimum sections for STEEL` and jumps straight to SDL/LL.
+
+### 2. Load selection (every evaluate pass — asked immediately after material)
 
 ```
-Superimposed dead load (SDL — slab + finishes + partitions):
+Superimposed dead load (SDL) [current: 3.5 kN/m²]:
   1. Timber  — 1.5 kN/m²  (wood structure + light finishes)
   2. Light   — 2.5 kN/m²  (lightweight slab, minimal finishes)
-  3. Standard— 3.5 kN/m²  (125mm slab + finishes + partitions)  <-- default
+  3. Standard— 3.5 kN/m²  (125mm slab + finishes + partitions)
   4. Heavy   — 5.0 kN/m²  (thick slab, heavy finishes, raised floor)
+  [Enter] — keep current
 SDL choice [1-4 or Enter]:
 
-Live load (use type):
-  1. Residential — 2.0 kN/m²  <-- default
+Live load (use type) [current: 2.0 kN/m²]:
+  1. Residential — 2.0 kN/m²
   2. Office      — 3.0 kN/m²
   3. Retail/Public— 5.0 kN/m²
+  [Enter] — keep current
 LL choice [1-3 or Enter]:
 ```
 
-Both values are stored in `AgentState` (`sdl_kNm2`, `live_load_kNm2`) and used for all subsequent evaluate calls in the same session, including what-if simulations and auto-upgrade loops.
+Both values are stored in `AgentState` and saved to `team_01/team_01_settings.json` after each prompt. On the next `python main.py "..."` invocation, they are restored from disk — pressing Enter always keeps the last run's values, not hardcoded defaults.
 
 ### 3. Global section upgrade (on FAIL, one tier at a time — each accepted upgrade is one modify cycle)
 
@@ -238,24 +242,24 @@ Answered directly from layout JSON. No tool call.
 
 | File | Original | Current | Net change |
 |------|----------|---------|------------|
-| `graph.py` | 122 | **367** | +245 net |
-| `nodes/reason.py` | 57 | **131** | +74 net |
+| `graph.py` | 122 | **396** | +274 net |
+| `nodes/reason.py` | 57 | **133** | +76 net |
 
 ### Created from scratch
 
 | File | Lines | Role |
 |------|-------|------|
-| `nodes/evaluate.py` | **971** | Structural calculations + HitL menus (no mutations) |
-| `nodes/modify.py` | **612** | All constants, mutations, structural change dispatch |
-| `nodes/comparison.py` | **145** | Layout diff + LLM summary |
+| `nodes/evaluate.py` | **1,034** | Structural calculations + HitL menus (no mutations) |
+| `nodes/modify.py` | **617** | All constants, mutations, structural change dispatch |
+| `nodes/comparison.py` | **135** | Layout diff + LLM summary |
 
 ### Grand total
 
 | Category | Lines |
 |----------|-------|
-| Created new | **1,728** |
-| Added to existing files (net) | **+319** |
-| **Net new lines from template** | **~2,047** |
+| Created new | **1,786** |
+| Added to existing files (net) | **+350** |
+| **Net new lines from template** | **~2,136** |
 | Unchanged | ~638 |
 
 ---
@@ -296,7 +300,7 @@ Answered directly from layout JSON. No tool call.
 | `_generate_column_grid` | Python fallback grid generator when GH returns empty |
 | `build_modify_node` | GH MCP tool calls + `pending_structural_change` dispatch (all 8 change types); auto_upgrade_beams/columns loop to PASS using `evaluate_fn(layout, ll, sdl)` |
 
-### graph.py key changes (367 lines)
+### graph.py key changes (394 lines)
 
 | Change | Purpose |
 |--------|---------|
@@ -304,28 +308,31 @@ Answered directly from layout JSON. No tool call.
 | `layout_before_change: str \| None` | New state field — snapshot before a structural change for diff |
 | `live_load_kNm2: float \| None` | New state field — user-selected LL, persists across all cycles |
 | `sdl_kNm2: float \| None` | New state field — user-selected SDL, persists across all cycles |
-| `_route_from_reason` skips evaluate for Q&A | If `final_response` is set, goes to END without running evaluate or prompting for loads |
+| `_route_from_reason` with `_looks_like_eval` guard | If `final_response` is set for a Q&A, goes to END; if it was an eval request (keyword-matched), overrides to evaluate |
+| `_route_from_evaluate` shortcut | Routes evaluate → END directly after a plain evaluation — removes redundant second reason call |
 | `_route_from_evaluate` with `pending_structural_change` | Routes evaluate → modify when a change is queued |
 | `came_from == "structural_change"` → comparison | Structural change cycles also run through comparison |
 | `evaluate_fn=evaluate_structure` in `build_modify_node` | Enables atomic find-minimum and auto-upgrade loops in modify node |
 | Per-element layout context | `beams` and `columns` arrays with id/material/section/span sent to LLM so it can answer questions directly |
+| `_settings_load` + settings at startup | SDL/LL loaded from `team_01_settings.json` at `_build_initial_state` — persists across runs |
 | Material persistence | Reads from `final_state["layout_json_string"]`, preserves per-element upgrades |
 | `_write_evaluation_report` | Saves `team_01_evaluation_report.md` after every run |
 | Before/after snapshot | Copies current JSON to `_before.json` at run start for IDE diff |
 
-### reason.py key changes (131 lines)
+### reason.py key changes (133 lines)
 
 | Change | Purpose |
 |--------|---------|
 | tag_and_audit defaults | Always pass `typology="column_grid"`, `grid_spacing=4.0` |
 | Asymmetric message cap | First message (layout context): 2500 chars; subsequent messages: 400 chars — prevents layout context from being truncated |
+| Evaluation routing rules in SYSTEM_PROMPT | Explicit instruction to output `final_response=""` for evaluation/structural requests — prevents local LLM from answering directly |
 
-### comparison.py key changes (145 lines)
+### comparison.py key changes (135 lines)
 
 | Change | Purpose |
 |--------|---------|
 | `_slim_diff_for_llm` | Groups changes by section/material pattern and counts — replaces raw JSON diff (3000+ chars → ~200 chars) |
-| `_fallback_summary` | Built-in text summary used when LLM is unavailable — prevents pipeline crash |
+| `_fallback_summary` delegates to `_slim_diff_for_llm` | When LLM unavailable, shows grouped diff ("17x IPE120→IPE160") instead of "35 elements updated" |
 | Compact `SYSTEM_PROMPT` | Reduced to single line to maximise token budget on local model |
 
 ---
@@ -379,3 +386,7 @@ At alternatives menu: number to pick (each triggers one modify cycle), or free t
 17. **Comparison never crashes.** If the LLM is unavailable (context overflow or error), comparison falls back to a built-in text summary so the pipeline always completes.
 18. **Evaluation report saved per run.** `_write_evaluation_report` writes `team_01_evaluation_report.md` with timestamp, prompt, structural check table, and LLM comparison summary.
 19. **_runtime/ and main.py are read-only.** All intelligence is in the five writable files: graph.py, reason.py, modify.py, evaluate.py, comparison.py.
+20. **SDL/LL persist across sessions.** After each prompt, `_ask_sdl_ll` saves to `team_01_settings.json`. At startup, `_build_initial_state` loads them — Enter always keeps the last run's values.
+21. **Evaluation routing is keyword-guarded in code.** `_looks_like_eval` checks the user's original prompt against `_EVAL_KEYWORDS` so structural requests always reach evaluate even when the local LLM bypasses it with a direct answer. `_get_user_request` is a shared helper used by both graph.py and evaluate.py.
+22. **Plain evaluation ends at END directly.** `_route_from_evaluate` shortcuts to END when `evaluation_result is not None` and no structural change is pending — removes the redundant second reason LLM call from every plain evaluate run.
+23. **GH timeout handled gracefully.** The MCP `call_tool` is wrapped in try/except; any network/timeout exception is treated as empty output and the Python column-grid fallback runs immediately.

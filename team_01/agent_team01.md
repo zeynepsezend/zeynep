@@ -14,3 +14,5 @@ The Permanence_OS is an LLM-based structural design agent and orchestrator for t
    - The Permanence_OS routes to the Site Agent to analyze the plot constraints, then generates a structural grid and evaluates material options (RCC, Steel, Timber) for the given spans, then routes the structural output to the Regulation & Cost Agent for a cost estimate.
 5. "Design an open-plan apartment with as few columns as possible and check if the structure holds."
    - The Permanence_OS routes to the Use Agent for an open-plan layout, then generates the minimal structural grid, runs beam and column evaluations, and if any elements fail automatically cycles through section upgrades or proposes a steel frame to achieve the required spans.
+6. "Find the minimum sufficient sections for steel."
+   - The Permanence_OS auto-detects steel from the prompt, skips the material picker, and asks only for SDL and live load. It then applies XS steel sections across all elements and upgrades each failing element step by step — returning the smallest possible IPE profiles that pass all checks for the given loads. SDL and live load choices are saved to disk and pre-filled on the next run.

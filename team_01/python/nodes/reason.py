@@ -24,8 +24,8 @@ TAG_AND_AUDIT TOOL:
 - ALWAYS pass typology: use "column_grid" unless user asks for perimeter_load_bearing or shear_wall
 - ALWAYS pass grid_spacing: use 4.0 unless user specifies a different value
 
-STRUCTURAL EVALUATION (evaluate, check structure, run loads, assess beams/columns):
-Set action="final", final_response="" (empty string). The evaluate node handles all calculations and prompts automatically. NEVER answer the evaluation yourself.
+STRUCTURAL EVALUATION (evaluate, check structure, run loads, assess beams/columns, find minimum sections, upgrade sections, optimize structure, check if structure holds):
+Set action="final", final_response="" (empty string). The evaluate node handles all calculations and prompts automatically. NEVER answer the evaluation yourself — not even to say you cannot do it without running checks.
 
 WHAT-IF QUESTIONS — two-step process, NEVER call a tool:
 Step 1: User asks "what if we remove X" → set action="final", final_response="" (empty string). The evaluate node runs the simulation automatically.
@@ -80,6 +80,11 @@ def build_reason_node(llm):
         print(f"\n{'='*50}")
         print(f"  NODE: REASON  (cycle {cycle})")
         print(f"{'='*50}")
+
+        # Evaluation already complete — skip LLM call (triggered after comparison → reason → END)
+        if state.get("evaluation_result") is not None:
+            state["came_from"] = "reason"
+            return state
 
         # Trim history to stay within token limit
         # First message is the layout context — give it a large window.
