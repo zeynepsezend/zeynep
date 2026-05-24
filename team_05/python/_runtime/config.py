@@ -54,12 +54,15 @@ def _load_mcp_server_from_json(config_path: Path) -> tuple[str, str]:
 
     parsed = json.loads(raw)
 
-    if "mcpServers" not in parsed:
-        raise ValueError("mcp.json missing 'mcpServers' object")
+    if "mcpServers" in parsed:
+        servers = parsed["mcpServers"]
+    elif "servers" in parsed:
+        servers = parsed["servers"]
+    else:
+        raise ValueError("mcp.json missing 'mcpServers' or 'servers' object")
 
-    servers = parsed["mcpServers"]
     if not isinstance(servers, dict) or not servers:
-        raise ValueError("mcp.json 'mcpServers' must be a non-empty object")
+        raise ValueError("mcp.json servers object must be a non-empty object")
 
     server_key = next(iter(servers))
     server_config = servers[server_key]
@@ -82,9 +85,7 @@ def _load_mcp_server_from_json(config_path: Path) -> tuple[str, str]:
             raise ValueError("mcp.json server args[0] must be a non-empty string endpoint")
         endpoint = first_arg
     else:
-        raise ValueError(
-            "mcp.json server entry missing supported endpoint field. Expected 'url' or 'args[0]'."
-        )
+        raise ValueError("mcp.json server entry missing supported endpoint field. Expected 'url' or 'args[0]'.")
 
     return server_key, endpoint
 

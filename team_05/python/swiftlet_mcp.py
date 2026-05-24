@@ -6,6 +6,7 @@ Endpoint: http://localhost:3001/mcp/
 import json
 import sys
 import os
+from pathlib import Path
 
 # Allow importing from _runtime when running from the python/ directory
 sys.path.insert(0, os.path.dirname(__file__))
@@ -16,7 +17,36 @@ try:
 except ImportError:
     _HTTPX_AVAILABLE = False
 
-MCP_ENDPOINT = "http://localhost:3003/mcp/"
+def _load_mcp_endpoint(default: str = "http://localhost:3001/mcp/") -> str:
+    """Load MCP endpoint from repo-root mcp.json, supporting both known schemas."""
+    try:
+        repo_root = Path(__file__).resolve().parents[2]
+        cfg_path = repo_root / "mcp.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+
+        # New schema: {"servers": {"Name": {"url": "..."}}}
+        for srv in cfg.get("servers", {}).values():
+            if isinstance(srv, dict):
+                url = srv.get("url")
+                if isinstance(url, str) and url.strip():
+                    return url.strip()
+
+        # Legacy schema: {"mcpServers": {"Name": {"url": "..."|"args": ["..."]}}}
+        for srv in cfg.get("mcpServers", {}).values():
+            if not isinstance(srv, dict):
+                continue
+            url = srv.get("url")
+            if isinstance(url, str) and url.strip():
+                return url.strip()
+            args = srv.get("args", [])
+            if isinstance(args, list) and args and isinstance(args[0], str) and args[0].strip():
+                return args[0].strip()
+    except Exception:
+        pass
+    return default
+
+
+MCP_ENDPOINT = _load_mcp_endpoint()
 TIMEOUT_S = 15.0
 
 # GH tools that accept a layout JSON and return an updated layout

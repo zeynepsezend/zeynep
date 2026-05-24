@@ -1,6 +1,7 @@
 {
-  "mcpServers": {
-    "Swiftlet_3001_3": {
+  "servers": {
+    "Swiftlet": {
+      "type": "http",
       "url": "http://localhost:3001/mcp/"
     }
   }
