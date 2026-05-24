@@ -30,7 +30,7 @@ class GoogleSheetsDatabase:
         """Load data from Google Sheets via CSV export."""
         try:
             # CSV export URL (works with public sheets)
-            csv_url = f"https://docs.google.com/spreadsheets/d/{self.sheet_id}/export?format=csv"
+            csv_url = f"https://docs.google.com/spreadsheets/d/1rzR-Wt7vjU5ojY8nYX1Jm_cCxNTAbCA81GnAi49KICs/export?format=csv"
             
             print(f"[Google Sheets] Fetching data from sheet...")
             response = requests.get(csv_url, timeout=10)

@@ -196,7 +196,13 @@ def _detect_material(lower: str) -> tuple[str, str] | tuple[None, None]:
 
 def _mentions_slab_change(lower: str) -> bool:
     """True if the query references a structural slab material (with or without 'slab' keyword)."""
-    return any(_normalise(m) in _normalise(lower) for m in _SLAB_MATERIALS)
+    # Check for explicit material mention
+    if any(_normalise(m) in _normalise(lower) for m in _SLAB_MATERIALS):
+        return True
+    # Also detect "slab" + thickness/depth keywords
+    if "slab" in lower and any(kw in lower for kw in ["thickness", "depth", "thick", "mm", " m "]):
+        return True
+    return False
 
 
 def _detect_thickness(lower: str) -> float | None:
