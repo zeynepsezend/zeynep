@@ -51,6 +51,7 @@ def build_search_node() -> Any:
             if not candidates:
                 logger.warning(f"⚠️  No matching layouts found")
                 return {
+                    "search_result": "failed",
                     "search_results_json_string": json.dumps([]),
                     "final_response": "No matching layouts found.",
                     "iteration": iteration + 1,
@@ -59,12 +60,14 @@ def build_search_node() -> Any:
             logger.info(f"✅ Found {len(candidates)} layouts")
             
             return {
+                "search_result": "success",
                 "search_results_json_string": json.dumps(candidates),
                 "iteration": iteration + 1,
             }
         except Exception as e:
             logger.error(f"❌ Search failed: {str(e)}", exc_info=True)
             return {
+                "search_result": "failed",
                 "search_results_json_string": json.dumps([]),
                 "final_response": f"Search failed: {str(e)}",
                 "iteration": iteration + 1,

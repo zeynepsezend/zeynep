@@ -5,7 +5,7 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 end_keywords = ["end", "finish", "done"]
-search_keywords = ["bedroom", "kitchen", "living", "bathroom", "foyer", "extra", "connected", "open", "adjacent"]
+topology_keywords = ["bedroom", "kitchen", "living", "bathroom", "foyer", "extra", "connected", "open", "adjacent"]
 modify_keywords = ["change", "modify", "adjust", "move", "relocate", "add", "remove"]
 evaluate_keywords = ["evaluate", "feedback", "daylight", "privacy", "flow", "functionality"]
 
@@ -18,8 +18,8 @@ def build_preprocess_node() -> Any:
                 "final_response": "Layout finalized."
             }
         
-        if any(keyword in user_prompt for keyword in search_keywords):
-            return {"preprocess_result": "search"}
+        if any(keyword in user_prompt for keyword in topology_keywords):
+            return {"preprocess_result": "topology"}
         
         if "layout-" in user_prompt:
             return {"preprocess_result": "select"}

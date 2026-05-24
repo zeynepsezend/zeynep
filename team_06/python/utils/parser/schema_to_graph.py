@@ -34,10 +34,6 @@ def create_graph_from_layout(layout: dict) -> nx.Graph:
     
     return graph
 
-
-
-
-
 def generate_and_save_graphs(layouts_path: str, output_path: str = None) -> None:
     """
     Generate NetworkX graphs from all layouts and save to JSON.

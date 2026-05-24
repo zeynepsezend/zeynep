@@ -8,6 +8,7 @@ def build_adapt_node(mcp_client: Any) -> Any:
 
     def adapt(state: dict) -> dict:
         layout_json = state.get("layout_json_string")
+        print("[ADAPT] layout_json_string at adapt entry:", (layout_json[:300] if isinstance(layout_json, str) else str(layout_json)))
         input_layout_json = state.get("input_layout_json_string")
         iteration = state.get("iteration", 0)
 
@@ -32,11 +33,19 @@ def build_adapt_node(mcp_client: Any) -> Any:
             else:
                 input_layout = {}
 
-            # Call MCP tool
+
+            def preview(d):
+                if isinstance(d, dict):
+                    return {k: str(v)[:120] for k, v in d.items()}
+                return str(d)[:120]
+
+            print(f"[ADAPT] Calling MCP tool 'adapt_layout_06' with layout_json keys: {list(layout_data.keys())} and values: {preview(layout_data)}")
+            print(f"[ADAPT] input_layout keys: {list(input_layout.keys()) if isinstance(input_layout, dict) else type(input_layout)} and values: {preview(input_layout)}")
             result = mcp_client.call_tool("adapt_layout_06", {
                 "layout_json": layout_data,
                 "input_layout": input_layout
             })
+            print(f"[ADAPT] MCP tool 'adapt_layout_06' result: {str(result)[:300]}")
 
             # Fallback: check if result is empty or error
             if not result or (isinstance(result, str) and result.startswith("Error")):
