@@ -555,13 +555,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -575,13 +575,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -595,13 +595,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -615,13 +615,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -635,13 +635,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -655,13 +655,13 @@
       ],
       "attributes": {
         "type": "internal",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -675,13 +675,13 @@
       ],
       "attributes": {
         "type": "internal",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -695,13 +695,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -715,13 +715,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -735,13 +735,13 @@
       ],
       "attributes": {
         "type": "internal",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -755,13 +755,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -775,13 +775,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -795,13 +795,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -815,13 +815,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -835,13 +835,13 @@
       ],
       "attributes": {
         "type": "exterior",
-        "dimensions": "80x80",
+        "dimensions": "150x150",
         "height": "3.5",
         "isWallAligned": "true",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "section": "HSS80x80x5"
+        "section": "HSS150x150x6"
       }
     },
     {
@@ -860,13 +860,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "5",
-        "depth": "200",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "100",
-        "section": "IPE200"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -885,13 +885,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "120",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "64",
-        "section": "IPE120"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -913,7 +913,7 @@
         "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
         "width": "120",
         "section": "IPE240"
@@ -935,13 +935,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "4",
-        "depth": "200",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "100",
-        "section": "IPE200"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -960,13 +960,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "160",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "82",
-        "section": "IPE160"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -985,13 +985,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "160",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "82",
-        "section": "IPE160"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1010,13 +1010,13 @@
       "attributes": {
         "type": "interior",
         "length": "5",
-        "depth": "200",
+        "depth": "240",
         "isWallAligned": "False",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "Floating beam in Living Room",
-        "width": "100",
-        "section": "IPE200"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1035,13 +1035,13 @@
       "attributes": {
         "type": "interior",
         "length": "4",
-        "depth": "160",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "82",
-        "section": "IPE160"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1060,13 +1060,13 @@
       "attributes": {
         "type": "interior",
         "length": "3",
-        "depth": "120",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "64",
-        "section": "IPE120"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1085,13 +1085,13 @@
       "attributes": {
         "type": "interior",
         "length": "3",
-        "depth": "120",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "64",
-        "section": "IPE120"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1110,13 +1110,13 @@
       "attributes": {
         "type": "interior",
         "length": "5",
-        "depth": "200",
+        "depth": "240",
         "isWallAligned": "False",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "Floating beam in Kitchen Dining",
-        "width": "100",
-        "section": "IPE200"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1135,13 +1135,13 @@
       "attributes": {
         "type": "interior",
         "length": "3",
-        "depth": "120",
+        "depth": "240",
         "isWallAligned": "False",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "Floating beam in Central Hall",
-        "width": "64",
-        "section": "IPE120"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1160,13 +1160,13 @@
       "attributes": {
         "type": "interior",
         "length": "6",
-        "depth": "200",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "100",
-        "section": "IPE200"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1185,13 +1185,13 @@
       "attributes": {
         "type": "interior",
         "length": "3",
-        "depth": "160",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "82",
-        "section": "IPE160"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1210,13 +1210,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "5",
-        "depth": "200",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "100",
-        "section": "IPE200"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1235,13 +1235,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "120",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "64",
-        "section": "IPE120"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1260,13 +1260,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "6",
-        "depth": "200",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "100",
-        "section": "IPE200"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1285,13 +1285,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "4",
-        "depth": "200",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "100",
-        "section": "IPE200"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1310,13 +1310,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "160",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "82",
-        "section": "IPE160"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1335,13 +1335,13 @@
       "attributes": {
         "type": "perimeter",
         "length": "3",
-        "depth": "160",
+        "depth": "240",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
-        "width": "82",
-        "section": "IPE160"
+        "width": "120",
+        "section": "IPE240"
       }
     },
     {
@@ -1363,7 +1363,7 @@
         "depth": "300",
         "isWallAligned": "False",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "Floating beam in Central Hall",
         "width": "150",
         "section": "IPE300"
@@ -1388,7 +1388,7 @@
         "depth": "300",
         "isWallAligned": "True",
         "structuralRole": "primary",
-        "material": "STEEL",
+        "material": "STEEL_L",
         "conflict": "None",
         "width": "150",
         "section": "IPE300"
