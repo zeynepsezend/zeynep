@@ -49,7 +49,7 @@ def build_select_node(llm: Any):
             }
 
         # Filter out already tried layouts
-        untried = [r for r in results if f"layout-{r['id']}" not in tried_layout_ids]
+        untried = [r for r in results if r['id'] not in tried_layout_ids]
 
         if not untried:
             return {
@@ -60,7 +60,7 @@ def build_select_node(llm: Any):
 
         # Pick the next untried layout
         next_layout = untried[0]
-        layout_id = f"layout-{next_layout['id']}"
+        layout_id = next_layout['id']
         save_path = Path(__file__).parent.parent.parent / "team_06_edited_layout.json"
         load_and_save_layout(layout_id, state, save_path)
         tried_layout_ids.append(layout_id)

@@ -4,7 +4,7 @@ import json
 from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 from nodes.preprocess import build_preprocess_node
-from python.nodes.reason import build_reason_node
+from nodes.reason import build_reason_node
 from nodes.search import build_search_node
 from nodes.select import build_select_node
 from nodes.adapt import build_adapt_node

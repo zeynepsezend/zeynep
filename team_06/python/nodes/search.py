@@ -31,8 +31,17 @@ def build_search_node() -> Any:
             
             searcher = GraphSearcher(str(graphs_path))
             results = searcher.search_by_graph_similarity(topology, method="jaccard")
-            logger.info(f"🔍 Search results: {results}")
-            
+
+            # Also search Planfinder graphs if available
+            planfinder_graphs_path = repo_root / "layout_inputs" / "planfinder_graphs.json"
+            if planfinder_graphs_path.exists():
+                pf_searcher = GraphSearcher(str(planfinder_graphs_path))
+                pf_results = pf_searcher.search_by_graph_similarity(topology, method="jaccard")
+                results = sorted(results + pf_results, key=lambda x: x[1], reverse=True)
+                logger.info(f"🔍 Combined search results (sample + planfinder): {results}")
+            else:
+                logger.info(f"🔍 Search results: {results}")
+
             candidates = [
                 {"id": lid, "score": round(s, 2), "description": f"Layout {lid}"}
                 for lid, s in results[:3]
