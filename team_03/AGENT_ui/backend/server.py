@@ -58,15 +58,7 @@ api_routes.set_session(session)
 app.include_router(api_routes.router)
 
 # ---------------------------------------------------------------------------
-# Static file serving for the built frontend (production mode).
-# Only mount if the dist directory exists so the server still starts in dev.
-# ---------------------------------------------------------------------------
-FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
-if FRONTEND_DIST.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="static")
-
-# ---------------------------------------------------------------------------
-# WebSocket endpoint
+# WebSocket endpoint  (MUST be registered BEFORE the catch-all static mount)
 # ---------------------------------------------------------------------------
 
 
@@ -95,6 +87,16 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+
+# ---------------------------------------------------------------------------
+# Static file serving for the built frontend (production mode).
+# Only mount if the dist directory exists so the server still starts in dev.
+# IMPORTANT: This catch-all mount MUST come AFTER all route registrations.
+# ---------------------------------------------------------------------------
+FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="static")
 
 
 # ---------------------------------------------------------------------------

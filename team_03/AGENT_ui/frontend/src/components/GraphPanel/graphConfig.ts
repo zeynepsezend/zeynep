@@ -85,7 +85,7 @@ export const NETWORK_OPTIONS = {
   interaction: {
     hover: true,
     tooltipDelay: 150,
-    dragNodes: true,
+    dragNodes: false,
     dragView: true,
     zoomView: true,
     multiselect: false,
@@ -94,24 +94,24 @@ export const NETWORK_OPTIONS = {
     shape: 'dot',
     font: {
       color: '#e0e6ed',
-      size: 11,
+      size: 10,
       face: FONT_FACE,
       align: 'center' as const,
     },
     borderWidth: 2,
     shadow: {
       enabled: true,
-      size: 8,
+      size: 14,
       x: 0,
-      y: 2,
-      color: 'rgba(0,0,0,0.25)',
+      y: 0,
+      color: 'rgba(0, 229, 255, 0.15)',
     },
   },
   edges: {
     smooth: { type: 'continuous' as const, roundness: 0.3 },
     font: {
-      color: '#6b7b8d',
-      size: 9,
+      color: '#4a5a6e',
+      size: 8,
       face: FONT_FACE,
     },
   },
@@ -119,14 +119,48 @@ export const NETWORK_OPTIONS = {
 
 // ── Theme constants ─────────────────────────────────────────────────────────
 
-export const THEME = {
-  panelBg: 'rgba(10, 14, 23, 0.85)',
-  panelBorder: 'rgba(0, 229, 255, 0.15)',
+export interface GraphTheme {
+  panelBg: string;
+  panelBorder: string;
+  text: string;
+  muted: string;
+  accent: string;
+  ok: string;
+  fail: string;
+  warn: string;
+  canvasBg: string;
+  nodeFontColor: string;
+}
+
+const DARK_THEME: GraphTheme = {
+  panelBg: 'rgba(10, 14, 22, 0.88)',
+  panelBorder: 'rgba(0, 229, 255, 0.10)',
   text: '#e0e6ed',
-  muted: '#6b7b8d',
+  muted: '#4a5a6e',
   accent: '#00E5FF',
   ok: '#39FF14',
   fail: '#FF4444',
   warn: '#FF8C42',
-  canvasBg: '#0a0e17',
-} as const;
+  canvasBg: '#06090f',
+  nodeFontColor: '#e0e6ed',
+};
+
+const LIGHT_THEME: GraphTheme = {
+  panelBg: 'rgba(255, 255, 255, 0.78)',
+  panelBorder: 'rgba(0, 0, 0, 0.08)',
+  text: '#1a1d24',
+  muted: '#6b7280',
+  accent: '#0077ed',
+  ok: '#248a3d',
+  fail: '#d63230',
+  warn: '#e07020',
+  canvasBg: '#f0f2f5',
+  nodeFontColor: '#1a1d24',
+};
+
+/** Returns the graph theme for the given dark/light mode. */
+export function getTheme(isDark: boolean): GraphTheme {
+  return isDark ? DARK_THEME : LIGHT_THEME;
+}
+
+export const THEME = DARK_THEME;

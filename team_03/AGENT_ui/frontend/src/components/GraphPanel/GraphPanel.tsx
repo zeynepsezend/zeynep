@@ -6,9 +6,11 @@ import {
   NODE_DESCRIPTIONS,
   EDGE_DESCRIPTIONS,
   NETWORK_OPTIONS,
-  THEME,
+  getTheme,
+  type GraphTheme,
 } from './graphConfig';
 import { mapGraphData, NodeLinkData, VisNode, VisEdge } from './graphDataMapper';
+import { useTheme } from '../common/ThemeToggle';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -25,209 +27,249 @@ interface DetailInfo {
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 
-const glassPanel: React.CSSProperties = {
-  background: THEME.panelBg,
-  backdropFilter: 'blur(24px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-  border: `1px solid ${THEME.panelBorder}`,
-  borderRadius: 12,
-  color: THEME.text,
-  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
-};
+function makeStyles(T: GraphTheme) {
+  const isDark = T.canvasBg === '#06090f';
 
-const styles = {
-  container: {
-    position: 'relative' as const,
-    width: '100%',
-    height: '100%',
-    background: THEME.canvasBg,
-    overflow: 'hidden',
-  },
-  canvas: {
-    width: '100%',
-    height: '100%',
-  },
-  // ── Legend panel (left) ────────────────────────────────────────
-  legend: {
-    ...glassPanel,
-    position: 'absolute' as const,
-    top: '50%',
-    left: 16,
-    transform: 'translateY(-50%)',
-    width: 168,
-    maxHeight: '82vh',
-    overflowY: 'auto' as const,
-    padding: '8px 0',
-    zIndex: 200,
-    scrollbarWidth: 'none' as const,
-  },
-  legSection: {
-    padding: '5px 13px 3px',
-    fontSize: 9,
-    fontWeight: 600,
-    letterSpacing: '0.09em',
-    textTransform: 'uppercase' as const,
-    color: THEME.muted,
-  },
-  legSep: {
-    marginTop: 4,
-    paddingTop: 9,
-    borderTop: `1px solid ${THEME.panelBorder}`,
-  },
-  legItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 7,
-    padding: '4px 13px',
-    fontSize: 10.5,
-    color: THEME.text,
-    cursor: 'pointer',
-    userSelect: 'none' as const,
-    transition: 'background 0.15s, opacity 0.2s',
-  },
-  legDot: (color: string): React.CSSProperties => ({
-    width: 7,
-    height: 7,
-    borderRadius: '50%',
-    flexShrink: 0,
-    background: color,
-    opacity: 0.9,
-  }),
-  legLine: (color: string): React.CSSProperties => ({
-    width: 14,
-    height: 1.5,
-    borderRadius: 1,
-    flexShrink: 0,
-    background: color,
-    opacity: 0.7,
-  }),
-  legLabel: {
-    flex: 1,
-  },
-  legCount: {
-    fontSize: 9,
-    color: THEME.muted,
-    fontVariantNumeric: 'tabular-nums' as const,
-  },
-  // ── Detail panel (right) ──────────────────────────────────────
-  detail: {
-    ...glassPanel,
-    position: 'absolute' as const,
-    right: 16,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    width: 260,
-    maxHeight: '80vh',
-    overflow: 'hidden',
-    zIndex: 200,
-  },
-  dpHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '10px 14px 9px',
-    borderBottom: `1px solid ${THEME.panelBorder}`,
-  },
-  dpChip: (color: string): React.CSSProperties => ({
-    fontSize: 9,
-    fontWeight: 600,
-    letterSpacing: '0.06em',
-    textTransform: 'uppercase' as const,
-    padding: '2px 7px',
-    borderRadius: 5,
-    marginRight: 6,
-    background: `${color}22`,
-    color,
-  }),
-  dpName: {
-    fontSize: 12,
-    fontWeight: 600,
-    whiteSpace: 'nowrap' as const,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    flex: 1,
-    minWidth: 0,
-  },
-  dpClose: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    color: THEME.muted,
-    fontSize: 13,
-    lineHeight: 1,
-    padding: '3px 6px',
-    borderRadius: 5,
-    flexShrink: 0,
-    transition: 'background 0.15s, color 0.15s',
-  },
-  dpScroll: {
-    overflowY: 'auto' as const,
-    maxHeight: 'calc(80vh - 48px)',
-    padding: '10px 14px 14px',
-    scrollbarWidth: 'thin' as const,
-    scrollbarColor: `${THEME.panelBorder} transparent`,
-  },
-  dpDesc: {
-    fontSize: 10,
-    color: THEME.muted,
-    lineHeight: '1.55',
-    marginBottom: 10,
-  },
-  dpSection: {
-    fontSize: 9,
-    fontWeight: 600,
-    letterSpacing: '0.09em',
-    textTransform: 'uppercase' as const,
-    color: THEME.muted,
-    margin: '10px 0 5px',
-  },
-  dpRow: {
-    display: 'flex',
-    gap: 6,
-    alignItems: 'baseline',
-    marginBottom: 3,
-  },
-  dpLbl: {
-    fontSize: 9.5,
-    color: THEME.muted,
-    minWidth: 88,
-    flexShrink: 0,
-    letterSpacing: '0.01em',
-  },
-  dpVal: {
-    fontSize: 10.5,
-    wordBreak: 'break-word' as const,
-  },
-  dpDivider: {
-    height: 1,
-    background: THEME.panelBorder,
-    margin: '8px 0',
-  },
-  dpNeighbor: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '4px 0',
-    borderBottom: `1px solid ${THEME.panelBorder}`,
-    cursor: 'pointer',
-    transition: 'background 0.1s',
-  },
-  dpNdot: (color: string): React.CSSProperties => ({
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    flexShrink: 0,
-    background: color,
-  }),
-  dpNname: {
-    flex: 1,
-    fontSize: 10,
-  },
-  dpEtype: (color: string): React.CSSProperties => ({
-    fontSize: 9,
-    color,
-  }),
-};
+  const glassPanel: React.CSSProperties = {
+    background: T.panelBg,
+    backdropFilter: 'blur(40px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+    border: `1px solid ${T.panelBorder}`,
+    borderRadius: 10,
+    color: T.text,
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+    boxShadow: isDark
+      ? `0 4px 24px rgba(0,0,0,0.4), 0 0 1px ${T.accent}15`
+      : '0 4px 16px rgba(0,0,0,0.08)',
+  };
+
+  return {
+    container: {
+      position: 'relative' as const,
+      width: '100%',
+      height: '100%',
+      background: T.canvasBg,
+      overflow: 'hidden',
+    },
+    canvas: {
+      width: '100%',
+      height: '100%',
+    },
+    // ── Legend panel (left) ────────────────────────────────────────
+    legend: {
+      ...glassPanel,
+      position: 'absolute' as const,
+      top: '50%',
+      left: 10,
+      transform: 'translateY(-50%)',
+      width: 148,
+      maxHeight: '78%',
+      overflowY: 'auto' as const,
+      padding: '5px 0',
+      zIndex: 200,
+      scrollbarWidth: 'none' as const,
+    },
+    legSection: {
+      padding: '5px 10px 2px',
+      fontSize: 8,
+      fontWeight: 700,
+      letterSpacing: '0.12em',
+      textTransform: 'uppercase' as const,
+      color: T.accent,
+      opacity: 0.7,
+    },
+    legSep: {
+      marginTop: 2,
+      paddingTop: 5,
+      borderTop: `1px solid ${T.panelBorder}`,
+    },
+    legItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '3px 10px',
+      fontSize: 9.5,
+      color: T.text,
+      cursor: 'pointer',
+      userSelect: 'none' as const,
+      transition: 'background 0.15s, opacity 0.2s',
+    },
+    legDot: (color: string): React.CSSProperties => ({
+      width: 7,
+      height: 7,
+      borderRadius: '50%',
+      flexShrink: 0,
+      background: color,
+      boxShadow: isDark ? `0 0 6px ${color}60` : 'none',
+    }),
+    legLine: (color: string): React.CSSProperties => ({
+      width: 14,
+      height: 2,
+      borderRadius: 1,
+      flexShrink: 0,
+      background: color,
+      boxShadow: isDark ? `0 0 4px ${color}40` : 'none',
+    }),
+    legLabel: {
+      flex: 1,
+      letterSpacing: '0.02em',
+    },
+    legCount: {
+      fontSize: 9,
+      fontWeight: 600,
+      color: isDark ? T.accent : T.muted,
+      opacity: isDark ? 0.6 : 1,
+      fontVariantNumeric: 'tabular-nums' as const,
+    },
+    // ── Center/fit button ──────────────────────────────────────────
+    fitBtn: {
+      position: 'absolute' as const,
+      top: 10,
+      right: 12,
+      zIndex: 200,
+      background: T.panelBg,
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      border: `1px solid ${T.panelBorder}`,
+      borderRadius: 8,
+      width: 30,
+      height: 30,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      color: T.muted,
+      transition: 'background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s',
+      boxShadow: isDark ? `0 2px 12px rgba(0,0,0,0.3), 0 0 1px ${T.accent}10` : '0 2px 8px rgba(0,0,0,0.08)',
+      padding: 0,
+      outline: 'none',
+    } as React.CSSProperties,
+    // ── Detail panel (right) ──────────────────────────────────────
+    detail: {
+      ...glassPanel,
+      position: 'absolute' as const,
+      right: 12,
+      top: '50%',
+      transform: 'translateY(-50%)',
+      width: 250,
+      maxHeight: '80vh',
+      overflow: 'hidden',
+      zIndex: 200,
+    },
+    dpHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '10px 12px 8px',
+      borderBottom: `1px solid ${T.panelBorder}`,
+    },
+    dpChip: (color: string): React.CSSProperties => ({
+      fontSize: 8,
+      fontWeight: 700,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase' as const,
+      padding: '2px 7px',
+      borderRadius: 4,
+      marginRight: 6,
+      background: `${color}18`,
+      color,
+      border: `1px solid ${color}30`,
+      boxShadow: isDark ? `0 0 8px ${color}15` : 'none',
+    }),
+    dpName: {
+      fontSize: 11,
+      fontWeight: 600,
+      whiteSpace: 'nowrap' as const,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      flex: 1,
+      minWidth: 0,
+    },
+    dpClose: {
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      color: T.muted,
+      fontSize: 12,
+      lineHeight: 1,
+      padding: '3px 6px',
+      borderRadius: 4,
+      flexShrink: 0,
+      transition: 'background 0.15s, color 0.15s',
+    },
+    dpScroll: {
+      overflowY: 'auto' as const,
+      maxHeight: 'calc(80vh - 48px)',
+      padding: '8px 12px 12px',
+      scrollbarWidth: 'thin' as const,
+      scrollbarColor: `${T.panelBorder} transparent`,
+    },
+    dpDesc: {
+      fontSize: 9.5,
+      color: T.muted,
+      lineHeight: '1.55',
+      marginBottom: 8,
+    },
+    dpSection: {
+      fontSize: 8,
+      fontWeight: 700,
+      letterSpacing: '0.12em',
+      textTransform: 'uppercase' as const,
+      color: T.accent,
+      opacity: 0.7,
+      margin: '8px 0 4px',
+    },
+    dpRow: {
+      display: 'flex',
+      gap: 6,
+      alignItems: 'baseline',
+      marginBottom: 3,
+    },
+    dpLbl: {
+      fontSize: 9,
+      color: T.muted,
+      minWidth: 80,
+      flexShrink: 0,
+      letterSpacing: '0.02em',
+    },
+    dpVal: {
+      fontSize: 10,
+      wordBreak: 'break-word' as const,
+      fontWeight: 500,
+    },
+    dpDivider: {
+      height: 1,
+      background: T.panelBorder,
+      margin: '6px 0',
+    },
+    dpNeighbor: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 7,
+      padding: '3px 0',
+      borderBottom: `1px solid ${T.panelBorder}`,
+      cursor: 'pointer',
+      transition: 'background 0.1s',
+    },
+    dpNdot: (color: string): React.CSSProperties => ({
+      width: 6,
+      height: 6,
+      borderRadius: '50%',
+      flexShrink: 0,
+      background: color,
+      boxShadow: isDark ? `0 0 4px ${color}50` : 'none',
+    }),
+    dpNname: {
+      flex: 1,
+      fontSize: 9.5,
+    },
+    dpEtype: (color: string): React.CSSProperties => ({
+      fontSize: 8.5,
+      color,
+      fontWeight: 500,
+    }),
+  };
+}
 
 // ── Component ───────────────────────────────────────────────────────────────
 
@@ -237,6 +279,11 @@ const GraphPanel: React.FC<GraphPanelProps> = ({ graphData, selectedId, onSelect
   const nodesDSRef = useRef<DataSet<VisNode> | null>(null);
   const edgesDSRef = useRef<DataSet<VisEdge> | null>(null);
 
+  const { theme: themeMode } = useTheme();
+  const isDark = themeMode === 'dark';
+  const THEME = getTheme(isDark);
+  const styles = useMemo(() => makeStyles(THEME), [isDark]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [detail, setDetail] = useState<DetailInfo | null>(null);
   const [nodeFilters, setNodeFilters] = useState<Set<string>>(new Set());
   const [edgeFilters, setEdgeFilters] = useState<Set<string>>(new Set());
@@ -244,8 +291,8 @@ const GraphPanel: React.FC<GraphPanelProps> = ({ graphData, selectedId, onSelect
   // ── Derived data ────────────────────────────────────────────────
   const mapped = useMemo(() => {
     if (!graphData) return null;
-    return mapGraphData(graphData);
-  }, [graphData]);
+    return mapGraphData(graphData, isDark);
+  }, [graphData, isDark]);
 
   // Counts for legend
   const nodeCounts = useMemo(() => {
@@ -402,6 +449,17 @@ const GraphPanel: React.FC<GraphPanelProps> = ({ graphData, selectedId, onSelect
     };
   }, [selectedId, nodesById, openDetail]);
 
+  // ── Update node font colors when theme changes ──────────────────
+  useEffect(() => {
+    const nodesDS = nodesDSRef.current;
+    if (!nodesDS) return;
+    const fontColor = THEME.nodeFontColor;
+    nodesDS.update(nodesDS.get().map((n: any) => ({
+      id: n.id,
+      font: { ...n.font, color: fontColor },
+    })));
+  }, [isDark]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Apply legend filters ────────────────────────────────────────
   useEffect(() => {
     const nodesDS = nodesDSRef.current;
@@ -514,6 +572,36 @@ const GraphPanel: React.FC<GraphPanelProps> = ({ graphData, selectedId, onSelect
     <div style={styles.container}>
       {/* Vis.js canvas */}
       <div ref={containerRef} style={styles.canvas} />
+
+      {/* ── Center / fit-all button (top-right) ─────────────────── */}
+      <button
+        style={styles.fitBtn}
+        title="Center graph"
+        aria-label="Center graph"
+        onClick={() => networkRef.current?.fit({ animation: { duration: 400, easingFunction: 'easeInOutQuad' } })}
+        onMouseEnter={(e) => {
+          const el = e.currentTarget;
+          el.style.color = THEME.accent;
+          el.style.borderColor = THEME.accent;
+          el.style.background = `${THEME.accent}18`;
+        }}
+        onMouseLeave={(e) => {
+          const el = e.currentTarget;
+          el.style.color = THEME.muted;
+          el.style.borderColor = THEME.panelBorder;
+          el.style.background = THEME.panelBg;
+        }}
+      >
+        {/* Crosshair / target SVG */}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="22" y1="12" x2="18" y2="12" />
+          <line x1="6" y1="12" x2="2" y2="12" />
+          <line x1="12" y1="6" x2="12" y2="2" />
+          <line x1="12" y1="22" x2="12" y2="18" />
+        </svg>
+      </button>
 
       {/* ── Legend panel (left) ─────────────────────────────────── */}
       <div style={styles.legend}>

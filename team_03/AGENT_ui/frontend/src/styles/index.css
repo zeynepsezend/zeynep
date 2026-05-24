@@ -11,13 +11,17 @@ html, body, #root {
 }
 
 body {
-  background: #0a0e17;
-  color: #e0e6ed;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  background: var(--bg, #06090f);
+  color: var(--text, #e0e6ed);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -25,28 +29,44 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 229, 255, 0.2);
-  border-radius: 3px;
+  background: rgba(0, 229, 255, 0.12);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 229, 255, 0.35);
+  background: rgba(0, 229, 255, 0.25);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 229, 255, 0.2) transparent;
+  scrollbar-color: rgba(0, 229, 255, 0.12) transparent;
 }
 
 /* Selection colors */
 ::selection {
-  background: rgba(0, 229, 255, 0.3);
+  background: rgba(0, 229, 255, 0.25);
   color: #e0e6ed;
 }
 
 /* Focus styles for accessibility */
 :focus-visible {
-  outline: 2px solid rgba(0, 229, 255, 0.5);
+  outline: 1px solid rgba(0, 229, 255, 0.4);
   outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+button, input, textarea, select {
+  font-family: inherit;
+}
+
+/* Glow keyframes */
+@keyframes accentPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes subtleGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 229, 255, 0.15); }
+  50% { box-shadow: 0 0 16px rgba(0, 229, 255, 0.25); }
 }

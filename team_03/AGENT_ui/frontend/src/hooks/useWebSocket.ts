@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { WSMessage } from '../utils/wsProtocol';
 
-const WS_URL = `ws://${window.location.hostname}:3000/ws`;
+// Use the current host so Vite's proxy handles the WS connection in dev mode
+const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
 const RECONNECT_DELAY = 3000;
 
 export interface UseWebSocketReturn {

@@ -7,6 +7,21 @@ import type { StateUpdate } from '../utils/wsProtocol';
 
 const API_BASE = '/api';
 
+/** NetworkX node_link_data uses "edges" key; our frontend expects "links". Normalize. */
+function normalizeGraphData(data: Record<string, unknown>): NodeLinkData | null {
+  if (!data || data.error) return null;
+  const nodes = data.nodes as NodeLinkData['nodes'];
+  // Accept both "links" and "edges" keys
+  const links = (data.links ?? data.edges ?? []) as NodeLinkData['links'];
+  return {
+    directed: data.directed as boolean ?? false,
+    multigraph: data.multigraph as boolean ?? true,
+    graph: (data.graph as Record<string, unknown>) ?? {},
+    nodes,
+    links,
+  };
+}
+
 export interface UseLayoutStateReturn {
   layout: LayoutJSON | null;
   graphData: NodeLinkData | null;
@@ -17,6 +32,7 @@ export interface UseLayoutStateReturn {
   uploadLayout: (file: File) => Promise<void>;
   fetchLayouts: () => Promise<void>;
   updateFromWS: (message: StateUpdate) => void;
+  setScores: (scores: ScoreData) => void;
 }
 
 export function useLayoutState(): UseLayoutStateReturn {
@@ -64,7 +80,9 @@ export function useLayoutState(): UseLayoutStateReturn {
         const graphRes = await fetch(`${API_BASE}/graph`);
         if (graphRes.ok) {
           const gData = await graphRes.json();
-          setGraphData(gData);
+          if (gData) {
+            setGraphData(normalizeGraphData(gData));
+          }
         }
       } catch {
         // Graph endpoint may not be available
@@ -126,7 +144,7 @@ export function useLayoutState(): UseLayoutStateReturn {
         setLayout(message.data as LayoutJSON);
         break;
       case 'graph':
-        setGraphData(message.data as NodeLinkData);
+        setGraphData(normalizeGraphData(message.data as Record<string, unknown>));
         break;
       case 'scores':
         setScores(message.data as ScoreData);
@@ -144,5 +162,6 @@ export function useLayoutState(): UseLayoutStateReturn {
     uploadLayout,
     fetchLayouts,
     updateFromWS,
+    setScores,
   };
 }

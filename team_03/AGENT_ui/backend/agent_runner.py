@@ -50,20 +50,21 @@ async def run_agent(
         await ws_manager.send_personal(
             websocket,
             {
-                "type": MessageType.agent_event,
+                "type": MessageType.agent_event.value,
                 "node": node,
                 "status": "started",
             },
         )
-        await asyncio.sleep(1)
+        await asyncio.sleep(1.0)
 
-        # completed
+        # completed with simulated data
         await ws_manager.send_personal(
             websocket,
             {
-                "type": MessageType.agent_event,
+                "type": MessageType.agent_event.value,
                 "node": node,
                 "status": "completed",
+                "data": f"{node} analysis finished",
             },
         )
 
@@ -71,13 +72,24 @@ async def run_agent(
     await ws_manager.send_personal(
         websocket,
         {
-            "type": MessageType.agent_response,
+            "type": MessageType.agent_response.value,
             "content": (
-                f"[STUB] Analysis complete for layout '{layout_id}'. "
-                f"Processed prompt: \"{prompt}\". "
-                "All pipeline nodes ran successfully. "
-                "Replace agent_runner.py with real LangGraph integration."
+                f"Analysis complete for layout '{layout_id}'.\n\n"
+                f"**Prompt**: \"{prompt}\"\n\n"
+                "All 12 pipeline nodes ran successfully:\n"
+                "- Profile Agent: identified space requirements\n"
+                "- Space Type Agent: classified zones\n"
+                "- Reasoning: determined optimal placement strategy\n"
+                "- Add Objects: placed furniture and equipment\n"
+                "- Collision/Visibility/Orientation: spatial analysis passed\n"
+                "- Path/Reachability: connectivity verified\n"
+                "- Scoring: layout scored and graded\n\n"
+                "*This is a simulated response. Connect the LangGraph pipeline for real analysis.*"
             ),
-            "tool_calls": [],
+            "tool_calls": [
+                {"name": "collision_check", "status": "completed", "args": {"threshold": 0.3}, "result": "No collisions detected"},
+                {"name": "visibility_analysis", "status": "completed", "args": {"sightlines": True}, "result": "All zones visible"},
+                {"name": "scoring", "status": "completed", "args": {"weights": "default"}, "result": "Score: 82/100 (B)"},
+            ],
         },
     )

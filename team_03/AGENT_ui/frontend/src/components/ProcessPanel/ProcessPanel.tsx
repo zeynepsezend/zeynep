@@ -1,5 +1,5 @@
 import React from 'react';
-import GlassPanel from '../common/GlassPanel';
+import { useTheme } from '../common/ThemeToggle';
 import ToolStatusCard, { NodeStatus } from './ToolStatusCard';
 
 export interface ProcessPanelProps {
@@ -11,47 +11,45 @@ type PipelineEntry =
   | { type: 'parallel'; names: string[] };
 
 const PIPELINE: PipelineEntry[] = [
-  { type: 'single', name: 'profile_agent' },
-  { type: 'single', name: 'space_type_agent' },
-  { type: 'single', name: 'reason' },
-  { type: 'single', name: 'add_objects' },
+  { type: 'single',   name: 'profile_agent' },
+  { type: 'single',   name: 'space_type_agent' },
+  { type: 'single',   name: 'reason' },
+  { type: 'single',   name: 'add_objects' },
   { type: 'parallel', names: ['collision', 'visibility', 'orientation'] },
   { type: 'parallel', names: ['path_analysis', 'reachability'] },
-  { type: 'single', name: 'scoring' },
-  { type: 'single', name: 'checkpoint' },
-  { type: 'single', name: 'explain' },
+  { type: 'single',   name: 'scoring' },
+  { type: 'single',   name: 'checkpoint' },
+  { type: 'single',   name: 'explain' },
 ];
 
-const ConnectorLine: React.FC<{ width?: string }> = ({ width = '1px' }) => (
+// ── Connector line between sequential steps ──────────────────────────────────
+
+const ConnectorLine: React.FC<{ color: string }> = ({ color }) => (
   <div style={{
-    width,
-    height: '16px',
-    background: 'rgba(0, 229, 255, 0.15)',
+    width: '0.5px',
+    height: '12px',
+    background: color,
     margin: '0 auto',
     flexShrink: 0,
   }} />
 );
 
-const FanConnector: React.FC<{ count: number }> = ({ count }) => {
-  if (count <= 1) return <ConnectorLine />;
+// ── Fan-out SVG (single node → parallel group) ───────────────────────────────
+
+const FanConnector: React.FC<{ count: number; color: string }> = ({ count, color }) => {
+  if (count <= 1) return <ConnectorLine color={color} />;
   return (
-    <div style={{ position: 'relative', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg
-        width="100%"
-        height="20"
-        viewBox={`0 0 ${count * 80} 20`}
-        preserveAspectRatio="none"
-        style={{ overflow: 'visible' }}
-      >
+    <div style={{ position: 'relative', height: '14px', width: '100%' }}>
+      <svg width="100%" height="14" preserveAspectRatio="none" style={{ display: 'block' }}>
         {Array.from({ length: count }, (_, i) => {
-          const x = (i + 0.5) * (100 / count);
+          const pct = ((i + 0.5) / count) * 100;
           return (
             <line
               key={i}
               x1="50%" y1="0"
-              x2={`${x}%`} y2="20"
-              stroke="rgba(0, 229, 255, 0.15)"
-              strokeWidth="1"
+              x2={`${pct}%`} y2="14"
+              stroke={color}
+              strokeWidth="0.5"
             />
           );
         })}
@@ -60,26 +58,22 @@ const FanConnector: React.FC<{ count: number }> = ({ count }) => {
   );
 };
 
-const FanInConnector: React.FC<{ count: number }> = ({ count }) => {
-  if (count <= 1) return <ConnectorLine />;
+// ── Fan-in SVG (parallel group → single node) ────────────────────────────────
+
+const FanInConnector: React.FC<{ count: number; color: string }> = ({ count, color }) => {
+  if (count <= 1) return <ConnectorLine color={color} />;
   return (
-    <div style={{ position: 'relative', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg
-        width="100%"
-        height="20"
-        viewBox={`0 0 ${count * 80} 20`}
-        preserveAspectRatio="none"
-        style={{ overflow: 'visible' }}
-      >
+    <div style={{ position: 'relative', height: '14px', width: '100%' }}>
+      <svg width="100%" height="14" preserveAspectRatio="none" style={{ display: 'block' }}>
         {Array.from({ length: count }, (_, i) => {
-          const x = (i + 0.5) * (100 / count);
+          const pct = ((i + 0.5) / count) * 100;
           return (
             <line
               key={i}
-              x1={`${x}%`} y1="0"
-              x2="50%" y2="20"
-              stroke="rgba(0, 229, 255, 0.15)"
-              strokeWidth="1"
+              x1={`${pct}%`} y1="0"
+              x2="50%" y2="14"
+              stroke={color}
+              strokeWidth="0.5"
             />
           );
         })}
@@ -88,63 +82,55 @@ const FanInConnector: React.FC<{ count: number }> = ({ count }) => {
   );
 };
 
+// ── Main component ───────────────────────────────────────────────────────────
+
 const ProcessPanel: React.FC<ProcessPanelProps> = ({ nodeStatuses }) => {
+  const { colors } = useTheme();
+
   const getStatus = (name: string): NodeStatus =>
     nodeStatuses[name] ?? 'pending';
 
-  const headerStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '14px',
-    flexShrink: 0,
-  };
-
-  const titleStyle: React.CSSProperties = {
-    color: '#e0e6ed',
-    fontSize: '13px',
-    fontWeight: 600,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
-  };
-
-  const parallelGroupStyle: React.CSSProperties = {
-    display: 'flex',
-    gap: '8px',
-    alignItems: 'stretch',
-  };
-
-  const parallelGroupLabelStyle: React.CSSProperties = {
-    color: '#6b7b8d',
-    fontSize: '9px',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-    textAlign: 'center',
-    marginBottom: '4px',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
-  };
-
-  const panelStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-    overflowY: 'auto',
-    scrollbarWidth: 'thin',
-    scrollbarColor: 'rgba(0,229,255,0.2) transparent',
-  };
+  const lineColor = colors.border ?? 'rgba(128,128,128,0.25)';
+  const muteColor = colors.muted;
 
   return (
-    <GlassPanel style={panelStyle}>
-      <div style={headerStyle}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" strokeWidth="2">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      scrollbarWidth: 'thin',
+      scrollbarColor: `${lineColor} transparent`,
+      padding: '12px 8px',
+      boxSizing: 'border-box',
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        marginBottom: '12px',
+        flexShrink: 0,
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3" />
-          <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+          <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
         </svg>
-        <span style={titleStyle}>Pipeline</span>
+        <span style={{
+          color: colors.text,
+          fontSize: '11px',
+          fontWeight: 600,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          fontFamily: colors.font,
+        }}>
+          Pipeline
+        </span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* Steps */}
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
         {PIPELINE.map((entry, idx) => {
           const isLast = idx === PIPELINE.length - 1;
           const nextEntry = PIPELINE[idx + 1];
@@ -152,14 +138,11 @@ const ProcessPanel: React.FC<ProcessPanelProps> = ({ nodeStatuses }) => {
           if (entry.type === 'single') {
             return (
               <React.Fragment key={entry.name}>
-                <ToolStatusCard
-                  name={entry.name}
-                  status={getStatus(entry.name)}
-                />
+                <ToolStatusCard name={entry.name} status={getStatus(entry.name)} />
                 {!isLast && (
                   nextEntry?.type === 'parallel'
-                    ? <FanConnector count={nextEntry.names.length} />
-                    : <ConnectorLine />
+                    ? <FanConnector count={nextEntry.names.length} color={lineColor} />
+                    : <ConnectorLine color={lineColor} />
                 )}
               </React.Fragment>
             );
@@ -167,24 +150,51 @@ const ProcessPanel: React.FC<ProcessPanelProps> = ({ nodeStatuses }) => {
             // parallel group
             return (
               <React.Fragment key={entry.names.join('|')}>
-                <div style={parallelGroupLabelStyle}>parallel</div>
-                <div style={parallelGroupStyle}>
-                  {entry.names.map(name => (
-                    <div key={name} style={{ flex: 1 }}>
-                      <ToolStatusCard
-                        name={name}
-                        status={getStatus(name)}
-                      />
-                    </div>
+                {/* "parallel" micro-label */}
+                <div style={{
+                  color: muteColor,
+                  fontSize: '8px',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  textAlign: 'center',
+                  marginBottom: '2px',
+                  opacity: 0.6,
+                  fontFamily: colors.font,
+                }}>
+                  parallel
+                </div>
+
+                {/* Cards stacked vertically for compact fit */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0px',
+                  paddingLeft: '6px',
+                  borderLeft: `0.5px solid ${lineColor}`,
+                  marginLeft: '6px',
+                }}>
+                  {entry.names.map((name, ni) => (
+                    <React.Fragment key={name}>
+                      <ToolStatusCard name={name} status={getStatus(name)} />
+                      {ni < entry.names.length - 1 && (
+                        <div style={{
+                          height: '0.5px',
+                          background: lineColor,
+                          margin: '0 8px',
+                          opacity: 0.5,
+                        }} />
+                      )}
+                    </React.Fragment>
                   ))}
                 </div>
-                {!isLast && <FanInConnector count={entry.names.length} />}
+
+                {!isLast && <FanInConnector count={1} color={lineColor} />}
               </React.Fragment>
             );
           }
         })}
       </div>
-    </GlassPanel>
+    </div>
   );
 };
 

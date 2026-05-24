@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../common/ThemeToggle';
 import ToolCallCard, { ToolCallCardProps } from './ToolCallCard';
 
 export interface ToolCall extends ToolCallCardProps {}
@@ -39,6 +40,8 @@ const formatTimestamp = (ts: number): string => {
 };
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
   const isUser = message.role === 'user';
 
   const wrapperStyle: React.CSSProperties = {
@@ -47,7 +50,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
     alignItems: 'flex-start',
     gap: '10px',
     marginBottom: '14px',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+    fontFamily: colors.font,
   };
 
   const iconWrapperStyle: React.CSSProperties = {
@@ -59,29 +62,29 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
     borderRadius: '50%',
     flexShrink: 0,
     background: isUser
-      ? 'rgba(0, 229, 255, 0.12)'
-      : 'rgba(255, 255, 255, 0.05)',
+      ? colors.accentDim
+      : (isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'),
     border: isUser
-      ? '1px solid rgba(0, 229, 255, 0.4)'
-      : '1px solid rgba(255, 255, 255, 0.08)',
-    color: isUser ? '#00E5FF' : '#6b7b8d',
+      ? `1px solid ${colors.accent}66`
+      : `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+    color: isUser ? colors.accent : colors.muted,
     marginTop: '2px',
   };
 
   const bubbleStyle: React.CSSProperties = {
     maxWidth: '75%',
     background: isUser
-      ? 'rgba(0, 229, 255, 0.07)'
-      : 'rgba(255, 255, 255, 0.04)',
+      ? colors.accentDim
+      : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
     border: isUser
-      ? '1px solid rgba(0, 229, 255, 0.3)'
-      : '1px solid rgba(255, 255, 255, 0.07)',
+      ? `1px solid ${colors.accent}4d`
+      : `1px solid ${isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.07)'}`,
     borderRadius: isUser ? '12px 4px 12px 12px' : '4px 12px 12px 12px',
     padding: '10px 14px',
   };
 
   const contentStyle: React.CSSProperties = {
-    color: '#e0e6ed',
+    color: colors.text,
     fontSize: '13.5px',
     lineHeight: '1.55',
     whiteSpace: 'pre-wrap',
@@ -89,7 +92,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   };
 
   const timestampStyle: React.CSSProperties = {
-    color: '#6b7b8d',
+    color: colors.muted,
     fontSize: '10px',
     marginTop: '6px',
     textAlign: isUser ? 'right' : 'left',

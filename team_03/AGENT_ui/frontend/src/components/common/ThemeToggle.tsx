@@ -1,14 +1,17 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { darkTheme, lightTheme, type ThemeColors } from '../../styles/theme';
 
 type Theme = 'dark' | 'light';
 
 interface ThemeContextValue {
   theme: Theme;
+  colors: ThemeColors;
   toggleTheme: () => void;
 }
 
 export const ThemeContext = createContext<ThemeContextValue>({
   theme: 'dark',
+  colors: darkTheme,
   toggleTheme: () => {},
 });
 
@@ -16,14 +19,35 @@ export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>('dark');
+  const colors = theme === 'dark' ? darkTheme : lightTheme;
 
   const toggleTheme = () => {
-    // Light mode is a placeholder — only dark mode is fully implemented
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  // Apply CSS variables to document root so global styles respond
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--bg', colors.bg);
+    root.style.setProperty('--text', colors.text);
+    root.style.setProperty('--muted', colors.muted);
+    root.style.setProperty('--accent', colors.accent);
+    root.style.setProperty('--accent-dim', colors.accentDim);
+    root.style.setProperty('--border', colors.border);
+    root.style.setProperty('--panel-bg', colors.panelBg);
+    root.style.setProperty('--card-bg', colors.cardBg);
+    root.style.setProperty('--input-bg', colors.inputBg);
+    root.style.setProperty('--ok', colors.ok);
+    root.style.setProperty('--warning', colors.warning);
+    root.style.setProperty('--error', colors.error);
+    root.style.setProperty('--success', colors.success);
+    root.style.setProperty('--font', colors.font);
+    document.body.style.background = colors.bg;
+    document.body.style.color = colors.text;
+  }, [colors]);
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, colors, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -50,7 +74,7 @@ const MoonIcon: React.FC = () => (
 );
 
 const ThemeToggle: React.FC = () => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, colors, toggleTheme } = useTheme();
 
   const buttonStyle: React.CSSProperties = {
     display: 'flex',
@@ -59,13 +83,13 @@ const ThemeToggle: React.FC = () => {
     width: '36px',
     height: '36px',
     borderRadius: '8px',
-    border: '1px solid rgba(0, 229, 255, 0.2)',
-    background: 'rgba(10, 14, 23, 0.7)',
-    color: '#00E5FF',
+    border: `1px solid ${colors.border}`,
+    background: colors.cardBg,
+    color: colors.accent,
     cursor: 'pointer',
-    transition: 'background 0.2s, border-color 0.2s',
+    transition: 'background 0.2s, border-color 0.2s, color 0.2s',
     outline: 'none',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+    fontFamily: colors.font,
   };
 
   return (

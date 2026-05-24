@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 import layout_loader
 from session_manager import SessionManager
+from adapters.graph_adapter import build_graph
 
 router = APIRouter()
 
@@ -104,7 +105,7 @@ async def get_session():
 
 @router.post("/api/session")
 async def create_session(body: SessionCreate):
-    """Create a new session by loading the named layout."""
+    """Create a new session by loading the named layout and building the graph."""
     if _session is None:
         raise HTTPException(status_code=500, detail="Session manager not initialised.")
 
@@ -115,6 +116,13 @@ async def create_session(body: SessionCreate):
         )
 
     state = _session.create_session(body.layout_name, data)
+
+    # Auto-build the spatial graph from the layout
+    graph_data = build_graph(data)
+    if "error" not in graph_data:
+        _session.update_graph(graph_data)
+        state["graph"] = graph_data
+
     return state
 
 

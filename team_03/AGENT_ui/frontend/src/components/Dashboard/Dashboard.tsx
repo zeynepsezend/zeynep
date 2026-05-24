@@ -1,5 +1,6 @@
 import React from 'react';
 import GlassPanel from '../common/GlassPanel';
+import { useTheme } from '../common/ThemeToggle';
 import ScoreCard from './ScoreCard';
 import GradeDisplay from './GradeDisplay';
 import Histogram from './Histogram';
@@ -34,58 +35,99 @@ const TOOL_SCORES: Array<{
   key: keyof Pick<ScoreData, 'collision' | 'visibility' | 'path' | 'reachability' | 'orientation'>;
   label: string;
   weightKey: keyof ScoreData['weights'];
+  icon: string;
 }> = [
-  { key: 'collision', label: 'Collision', weightKey: 'collision' },
-  { key: 'visibility', label: 'Visibility', weightKey: 'visibility' },
-  { key: 'path', label: 'Path', weightKey: 'path' },
-  { key: 'reachability', label: 'Reachability', weightKey: 'reachability' },
-  { key: 'orientation', label: 'Orientation', weightKey: 'orientation' },
+  { key: 'collision', label: 'Collision', weightKey: 'collision', icon: 'M12 9v2m0 4h.01M3.464 20.536L12 4l8.536 16.536H3.464z' },
+  { key: 'visibility', label: 'Visibility', weightKey: 'visibility', icon: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z' },
+  { key: 'path', label: 'Path', weightKey: 'path', icon: 'M13 17l5-5-5-5M6 17l5-5-5-5' },
+  { key: 'reachability', label: 'Reach', weightKey: 'reachability', icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14' },
+  { key: 'orientation', label: 'Orient', weightKey: 'orientation', icon: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5' },
 ];
 
-const EmptyState: React.FC = () => (
-  <div style={{
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    gap: '12px',
-    color: '#6b7b8d',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
-  }}>
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(0,229,255,0.25)" strokeWidth="1.5">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="12" />
-      <line x1="12" y1="16" x2="12.01" y2="16" />
-    </svg>
-    <div style={{ fontSize: '13px' }}>No scores yet</div>
-    <div style={{ fontSize: '11px', opacity: 0.7 }}>Run the agent to generate layout scores</div>
-  </div>
-);
+const EmptyState: React.FC = () => {
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      padding: '4px 0',
+    }}>
+      {/* Placeholder KPI row */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+      }}>
+        {TOOL_SCORES.map(tool => (
+          <div key={tool.key} style={{
+            flex: '1 1 60px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: '12px 4px',
+            borderRadius: '8px',
+            background: isDark ? 'rgba(0, 229, 255, 0.02)' : 'rgba(0,0,0,0.02)',
+            border: `1px solid ${isDark ? 'rgba(0, 229, 255, 0.05)' : 'rgba(0,0,0,0.04)'}`,
+            gap: '6px',
+          }}>
+            <span style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: isDark ? 'rgba(0, 229, 255, 0.15)' : 'rgba(0,0,0,0.08)',
+              letterSpacing: '-0.03em',
+            }}>--</span>
+            <span style={{
+              fontSize: 8,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: colors.muted,
+              opacity: 0.5,
+            }}>{tool.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Placeholder overall */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '16px',
+        flex: 1,
+        color: colors.muted,
+        fontFamily: colors.font,
+      }}>
+        <div style={{
+          width: 56,
+          height: 56,
+          borderRadius: '50%',
+          border: `2px solid ${isDark ? 'rgba(0, 229, 255, 0.08)' : 'rgba(0,0,0,0.06)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <span style={{ fontSize: 28, fontWeight: 800, opacity: 0.12 }}>?</span>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, opacity: 0.6, letterSpacing: '0.04em' }}>
+            Run the agent to generate
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.6, letterSpacing: '0.04em' }}>
+            layout analysis scores
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Dashboard: React.FC<DashboardProps> = ({ scores }) => {
-  const headerStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '16px',
-    flexShrink: 0,
-  };
-
-  const titleStyle: React.CSSProperties = {
-    color: '#e0e6ed',
-    fontSize: '13px',
-    fontWeight: 600,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
-  };
-
-  const dividerStyle: React.CSSProperties = {
-    height: '1px',
-    background: 'rgba(0,229,255,0.1)',
-    margin: '14px 0',
-  };
+  const { colors } = useTheme();
 
   const panelStyle: React.CSSProperties = {
     display: 'flex',
@@ -95,28 +137,40 @@ const Dashboard: React.FC<DashboardProps> = ({ scores }) => {
   };
 
   return (
-    <GlassPanel style={panelStyle}>
-      <div style={headerStyle}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" strokeWidth="2">
+    <GlassPanel style={panelStyle} glow>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '12px',
+        flexShrink: 0,
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="2">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
         </svg>
-        <span style={titleStyle}>Analysis Dashboard</span>
+        <span style={{
+          color: colors.text,
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          fontFamily: colors.font,
+        }}>Analysis Dashboard</span>
       </div>
 
       {!scores ? (
         <EmptyState />
       ) : (
         <>
-          {/* Row 1: 5 score cards */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            gap: '8px',
+            gap: '6px',
             flexWrap: 'wrap',
           }}>
             {TOOL_SCORES.map(tool => (
-              <div key={tool.key} style={{ flex: '1 1 80px', display: 'flex', justifyContent: 'center' }}>
+              <div key={tool.key} style={{ flex: '1 1 70px', display: 'flex', justifyContent: 'center' }}>
                 <ScoreCard
                   name={tool.label}
                   score={scores[tool.key] as number}
@@ -126,39 +180,21 @@ const Dashboard: React.FC<DashboardProps> = ({ scores }) => {
             ))}
           </div>
 
-          <div style={dividerStyle} />
+          <div style={{ height: '1px', background: colors.border, margin: '12px 0' }} />
 
-          {/* Row 2: Overall grade + WeightBar */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '24px',
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <GradeDisplay grade={scores.grade} score={scores.overall} />
             <div style={{ flex: 1 }}>
               <WeightBar scores={scores} />
             </div>
           </div>
 
-          {/* Row 3: Histograms */}
           {scores.histogramData && (
             <>
-              <div style={dividerStyle} />
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '16px',
-              }}>
-                <Histogram
-                  data={scores.histogramData.clearance}
-                  label="Clearance Distribution"
-                  color="#00E5FF"
-                />
-                <Histogram
-                  data={scores.histogramData.pathDistances}
-                  label="Path Distance Distribution"
-                  color="#00C853"
-                />
+              <div style={{ height: '1px', background: colors.border, margin: '12px 0' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <Histogram data={scores.histogramData.clearance} label="Clearance" color={colors.accent} />
+                <Histogram data={scores.histogramData.pathDistances} label="Path Dist." color={colors.success} />
               </div>
             </>
           )}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../common/ThemeToggle';
 
 export interface ScoreCardProps {
   name: string;
@@ -7,104 +8,90 @@ export interface ScoreCardProps {
   maxScore?: number;
 }
 
-const getScoreColor = (score: number): string => {
-  if (score > 75) return '#00E5FF';
-  if (score >= 40) return '#FF9500';
-  return '#FF3B30';
+const getScoreColor = (score: number, accent: string, warning: string, error: string): string => {
+  if (score > 75) return accent;
+  if (score >= 40) return warning;
+  return error;
 };
 
 const ScoreCard: React.FC<ScoreCardProps> = ({ name, score, weight, maxScore = 100 }) => {
-  const size = 110;
-  const strokeWidth = 8;
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  const size = 88;
+  const strokeWidth = 5;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clampedScore = Math.max(0, Math.min(maxScore, score));
   const progress = clampedScore / maxScore;
   const dashOffset = circumference * (1 - progress);
-  const color = getScoreColor(score);
-
-  const containerStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '6px',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
-  };
-
-  const svgContainerStyle: React.CSSProperties = {
-    position: 'relative',
-    width: size,
-    height: size,
-  };
-
-  const centerTextStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    textAlign: 'center',
-    lineHeight: 1,
-  };
-
-  const scoreNumStyle: React.CSSProperties = {
-    fontSize: '22px',
-    fontWeight: 700,
-    color,
-    letterSpacing: '-0.02em',
-    display: 'block',
-  };
-
-  const nameStyle: React.CSSProperties = {
-    color: '#e0e6ed',
-    fontSize: '11px',
-    fontWeight: 500,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  };
-
-  const weightStyle: React.CSSProperties = {
-    color: '#6b7b8d',
-    fontSize: '10px',
-    textAlign: 'center',
-    letterSpacing: '0.02em',
-  };
+  const color = getScoreColor(score, colors.accent, colors.warning, colors.error);
 
   return (
-    <div style={containerStyle}>
-      <div style={svgContainerStyle}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '4px',
+      fontFamily: colors.font,
+      padding: '8px 4px',
+      borderRadius: '8px',
+      background: isDark ? 'rgba(0, 229, 255, 0.02)' : 'rgba(0,0,0,0.02)',
+      border: `1px solid ${isDark ? 'rgba(0, 229, 255, 0.06)' : 'rgba(0,0,0,0.04)'}`,
+      transition: 'background 0.2s, border-color 0.2s',
+    }}>
+      <div style={{ position: 'relative', width: size, height: size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* Track */}
           <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="rgba(255,255,255,0.06)"
+            cx={size / 2} cy={size / 2} r={radius} fill="none"
+            stroke={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'}
             strokeWidth={strokeWidth}
           />
-          {/* Progress arc — starts from top (rotate -90deg) */}
           <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
+            cx={size / 2} cy={size / 2} r={radius} fill="none"
+            stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={dashOffset}
             transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            style={{ transition: 'stroke-dashoffset 0.6s ease, stroke 0.4s ease' }}
-            filter={`drop-shadow(0 0 4px ${color}40)`}
+            style={{ transition: 'stroke-dashoffset 0.8s ease, stroke 0.4s ease' }}
+            filter={isDark ? `drop-shadow(0 0 6px ${color}50)` : 'none'}
           />
         </svg>
-        <div style={centerTextStyle}>
-          <span style={scoreNumStyle}>{Math.round(score)}</span>
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)', textAlign: 'center', lineHeight: 1,
+        }}>
+          <span style={{
+            fontSize: 26,
+            fontWeight: 800,
+            color,
+            letterSpacing: '-0.03em',
+            display: 'block',
+            textShadow: isDark ? `0 0 12px ${color}40` : 'none',
+          }}>
+            {Math.round(score)}
+          </span>
         </div>
       </div>
-      <div style={nameStyle}>{name}</div>
-      <div style={weightStyle}>{Math.round(weight * 100)}% weight</div>
+      <div style={{
+        color: colors.text,
+        fontSize: 9,
+        fontWeight: 600,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        textAlign: 'center',
+        opacity: 0.9,
+      }}>
+        {name}
+      </div>
+      <div style={{
+        color: colors.muted,
+        fontSize: 8,
+        textAlign: 'center',
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+      }}>
+        {Math.round(weight * 100)}% weight
+      </div>
     </div>
   );
 };
