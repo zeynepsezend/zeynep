@@ -45,7 +45,7 @@ def build_graph_from_programs_and_edges(programs: List[str], edges: List[Tuple[s
 
 def build_topology_node(llm: Any) -> Any:
     def topology(state: dict) -> dict:
-        description = state.get("apartment_description", "")
+        description = state.get("parsed_prompt") or state.get("user_prompt", "")
         iteration = state.get("iteration", 0)
 
         # 1. Deterministic parsing
@@ -54,7 +54,7 @@ def build_topology_node(llm: Any) -> Any:
             G = build_graph_from_programs_and_edges(programs, edges)
             graph_json = json.dumps(nx.node_link_data(G))
             return {
-                "status": "success",
+                "topology_result": "success",
                 "topology_graph_json_string": graph_json,
                 "iteration": iteration + 1,
                 "parsing_method": "deterministic"
