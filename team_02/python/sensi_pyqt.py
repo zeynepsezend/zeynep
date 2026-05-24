@@ -635,13 +635,20 @@ class SensiBridge(QObject):
         key  = {1: "r1_picks", 2: "r2_picks", 3: "final_picks"}.get(round_num, "final_picks")
         self._inspire[key] = urls
 
-    @pyqtSlot()
-    def buildMoodboard(self):
+    @pyqtSlot(str)
+    def buildMoodboard(self, sense_counts_json: str = "{}"):
         """
         Finalise the inspire phase:
-        1. Inject image data into session state
+        1. Inject image data + moodboard sense pick counts into session state
         2. Send the aesthetic description to the graph (triggers persona_compiler)
         3. Return persona data via window.receivePersona(...)
+
+        Args:
+            sense_counts_json: JSON object mapping sense name → number of images
+                               the user selected from that sense category across
+                               all moodboard rounds. Example: '{"visual":4,"spatial":2}'.
+                               Computed by JS in finaliseMoodboard() from
+                               S.inspireSensesPerRound + S.inspireSelectedPerRound.
         """
         all_picks: list = list(dict.fromkeys(
             self._inspire["r1_picks"] +
@@ -649,10 +656,20 @@ class SensiBridge(QObject):
             self._inspire["final_picks"]
         ))
 
+        # Parse the sense pick counts sent from JS
+        try:
+            sense_picks: dict = json.loads(sense_counts_json) if sense_counts_json else {}
+        except Exception:
+            sense_picks = {}
+
         # Mirror what app.py does before calling run_agent
         self._session["inspire_image_analysis"] = self._inspire["analysis"]
         self._session["inspire_moodboard_urls"]  = all_picks
+        self._session["inspire_sense_picks"]     = sense_picks   # ← new: sense pick counts
         self._session["inspire_prompted"]        = True  # UI handled the aesthetic question; skip inspire sub-step A
+
+        if sense_picks:
+            print(f"[buildMoodboard] Sense picks from moodboard: {sense_picks}")
 
         # Include user_name explicitly so persona_compiler has it even if
         # quiz_answers didn't carry through cleanly.

@@ -14,10 +14,13 @@ Output file:  team_02/personas/persona.json
 
 Robustness layers (in order of application):
   1. LLM call → JSON profile (happy path)
-  2. Brace-counting JSON extractor — handles prose before/after the JSON block
-  3. Minimal-profile fallback if all parsing fails
-  4. Deterministic q3 sensory patch — always applied last, ensures weights/priorities
-     reflect what the user explicitly said even if the LLM under-delivered
+  2. <think> tag stripper — removes Qwen3/DeepSeek-R1 reasoning blocks before parsing
+  3. Markdown fence stripper — handles ```json … ``` wrapping
+  4. Brace-counting JSON extractor — handles prose before/after the JSON block
+  5. Minimal-profile fallback if all parsing fails
+  6. Q3 sensory patch (unconditional) — guarantees q3 senses ≥ 0.75, repairs priorities
+  7. Quiz fallback patch — extracts lifestyle, age_group, household_type,
+     aesthetic_preferences, key_requirements directly from quiz_answers when LLM skips them
 """
 
 from __future__ import annotations
@@ -140,6 +143,20 @@ _SENSE_KEYWORDS: dict[str, list[str]] = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _strip_think_tags(text: str) -> str:
+    """
+    Remove <think>...</think> reasoning blocks from LLM output before JSON
+    parsing.  call_llm_simple() strips these automatically for normal text
+    responses, but persona_compiler calls it and then further processes the
+    raw string as JSON — so we keep this local copy for the JSON parse path.
+    """
+    import re
+    try:
+        return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE).strip()
+    except Exception:
+        return text
+
+
 def _extract_json_object(text: str) -> str | None:
     """
     Find the first balanced {…} block that parses as valid JSON.
@@ -175,20 +192,18 @@ def _senses_from_q3(q3_text: str) -> list[str]:
 
 def _apply_q3_sensory_patch(persona_profile: dict, quiz_answers: dict) -> dict:
     """
-    Safety net: if all comfort_weights are still at 0.5 (default / LLM failure),
-    parse q3 directly and boost the weights for any senses the user named.
-    Also updates sensory_priorities and sensory_sensitivities to reflect them.
+    Guarantee that any sense explicitly named in q3 (the user's comfort bothers)
+    has a weight of at least 0.75 in the final profile.
 
-    This runs even after a successful LLM call — if the LLM ignored q3 and
-    left everything at 0.5, this corrects it deterministically.
+    This runs unconditionally — even when the LLM succeeded and returned
+    differentiated weights.  The logic is:
+      - If the LLM already gave a q3 sense ≥ 0.75 → leave it alone (it did its job).
+      - If the LLM gave a q3 sense < 0.75, or the LLM fell back to defaults
+        and left everything at 0.5 → boost it to 0.80.
+
+    Also repairs sensory_priorities and sensory_sensitivities when the LLM
+    left them as generic defaults (all-senses list or empty).
     """
-    weights = persona_profile.get("comfort_weights", {})
-    all_default = all(abs(weights.get(s, 0.5) - 0.5) < 0.02 for s in _ALL_SENSES)
-
-    if not all_default:
-        # LLM already differentiated weights — trust it.
-        return persona_profile
-
     q3 = quiz_answers.get("q3", "")
     if not q3:
         return persona_profile
@@ -197,16 +212,292 @@ def _apply_q3_sensory_patch(persona_profile: dict, quiz_answers: dict) -> dict:
     if not bothered_senses:
         return persona_profile
 
-    print(f"[persona_compiler] q3 patch — boosting weights for: {bothered_senses}")
+    weights = persona_profile.get("comfort_weights", {})
 
+    boosted = []
     for sense in bothered_senses:
-        weights[sense] = 0.80
+        if weights.get(sense, 0.5) < 0.75:
+            weights[sense] = 0.80
+            boosted.append(sense)
 
-    # Reorder priorities: bothered senses first, rest after
-    other = [s for s in _ALL_SENSES if s not in bothered_senses]
-    persona_profile["comfort_weights"]       = weights
-    persona_profile["sensory_priorities"]    = bothered_senses + other
-    persona_profile["sensory_sensitivities"] = bothered_senses
+    if boosted:
+        print(f"[persona_compiler] q3 patch — boosted under-weighted senses to 0.80: {boosted}")
+
+    persona_profile["comfort_weights"] = weights
+
+    # Repair sensory_priorities if the LLM left it as the generic all-senses default
+    # (i.e. not ordered by what the user actually said).
+    current_priorities = persona_profile.get("sensory_priorities", [])
+    all_equal_priority = (
+        not current_priorities
+        or set(current_priorities) == set(_ALL_SENSES)
+           and current_priorities[:len(bothered_senses)] != bothered_senses
+    )
+    if all_equal_priority:
+        other = [s for s in _ALL_SENSES if s not in bothered_senses]
+        persona_profile["sensory_priorities"] = bothered_senses + other
+        print(f"[persona_compiler] q3 patch — reordered sensory_priorities: {bothered_senses} first")
+
+    # Repair sensory_sensitivities if the LLM left it empty
+    if not persona_profile.get("sensory_sensitivities"):
+        persona_profile["sensory_sensitivities"] = bothered_senses
+        print(f"[persona_compiler] q3 patch — set sensory_sensitivities from q3: {bothered_senses}")
+
+    return persona_profile
+
+
+# Age-group keywords for q4 deterministic extraction
+_AGE_GROUP_KEYWORDS: dict[str, list[str]] = {
+    "child":       ["child", "kid", "toddler", "baby", "under 18"],
+    "young_adult": ["20s", "30s", "young adult", "student", "uni", "university", "college"],
+    "adult":       ["40s", "50s", "adult", "mid", "middle age"],
+    "elderly":     ["60s", "70s", "80s", "senior", "elder", "retired", "grandma", "grandpa",
+                    "grandmother", "grandfather"],
+}
+
+# Household keywords for q4 deterministic extraction
+_HOUSEHOLD_KEYWORDS: dict[str, list[str]] = {
+    "single": ["alone", "by myself", "on my own", "solo", "just me"],
+    "dual":   ["partner", "spouse", "husband", "wife", "girlfriend", "boyfriend",
+               "roommate", "flatmate", "grandma", "grandpa", "grandmother", "grandfather"],
+    "family": ["kids", "children", "family", "parents", "siblings", "baby", "toddler",
+               "son", "daughter"],
+}
+
+
+def _apply_quiz_fallback_patch(persona_profile: dict, quiz_answers: dict,
+                               inspire_summary: str) -> dict:
+    """
+    Deterministic extraction of persona fields from raw quiz_answers.
+    Applied when the LLM fallback fires, so the minimal profile is enriched
+    with as much direct user data as possible.
+
+    Fields recovered:
+      description      — built from name + role + q3 bothers
+      aesthetic_preferences — from inspire_summary (already synthesised) or q2
+      lifestyle        — from q2 (space story gives a strong lifestyle hint)
+      age_group        — keyword-matched from q4
+      household_type   — keyword-matched from q4
+      key_requirements — q5 non-negotiable, up to 3 items
+    """
+    q2 = quiz_answers.get("q2", "")
+    q4 = quiz_answers.get("q4", "")
+    q5 = quiz_answers.get("q5", "")
+    name = persona_profile.get("name", "User")
+    role = persona_profile.get("role", "client")
+    bothers = persona_profile.get("sensory_sensitivities", [])
+
+    # ── description ──────────────────────────────────────────────────────────
+    if not persona_profile.get("description") or \
+            persona_profile["description"] == "User with unspecified comfort preferences":
+        bother_str = ", ".join(bothers) if bothers else "general comfort"
+        persona_profile["description"] = (
+            f"{name} is a {role} whose primary sensory concerns are {bother_str}."
+        )
+
+    # ── aesthetic_preferences ─────────────────────────────────────────────────
+    if not persona_profile.get("aesthetic_preferences"):
+        persona_profile["aesthetic_preferences"] = (
+            inspire_summary.strip() if inspire_summary.strip()
+            else q2.strip()
+        )
+
+    # ── lifestyle ─────────────────────────────────────────────────────────────
+    if not persona_profile.get("lifestyle"):
+        persona_profile["lifestyle"] = q2.strip() if q2 else ""
+
+    # ── age_group ─────────────────────────────────────────────────────────────
+    if persona_profile.get("age_group") is None and q4:
+        t = q4.lower()
+        for group, keywords in _AGE_GROUP_KEYWORDS.items():
+            if any(kw in t for kw in keywords):
+                persona_profile["age_group"] = group
+                break
+
+    # ── household_type ────────────────────────────────────────────────────────
+    if persona_profile.get("household_type") is None and q4:
+        t = q4.lower()
+        for htype, keywords in _HOUSEHOLD_KEYWORDS.items():
+            if any(kw in t for kw in keywords):
+                persona_profile["household_type"] = htype
+                break
+
+    # ── key_requirements ─────────────────────────────────────────────────────
+    if not persona_profile.get("key_requirements") and q5:
+        # q5 is a single non-negotiable — store it as the first requirement
+        persona_profile["key_requirements"] = [q5.strip()]
+
+    return persona_profile
+
+
+# ---------------------------------------------------------------------------
+# Holistic weight patch
+# ---------------------------------------------------------------------------
+
+# Keyword → sense signal map.
+# Each keyword contributes a small nudge to the weight of its sense.
+# Stronger signals (q5 non-negotiable, q3 bothers) use higher deltas;
+# softer signals (q2 story, inspire aesthetic) use smaller deltas.
+_SENSE_SIGNALS: dict[str, list[str]] = {
+    "visual":    [
+        "light", "natural light", "daylight", "sunlight", "sunshine", "window", "sky",
+        "view", "bright", "glare", "shadow", "darkness", "color", "colour", "skylight",
+        "luminous", "daylighting", "visual", "lighting", "illuminate",
+    ],
+    "thermal":   [
+        "warm", "warmth", "cold", "cool", "hot", "heat", "temperature", "cozy", "cosy",
+        "breeze", "draft", "draught", "thermal", "humid", "stuffy", "fresh air",
+    ],
+    "acoustic":  [
+        "quiet", "silence", "silent", "noise", "sound", "loud", "calm", "peaceful",
+        "acoustic", "echo", "reverberation", "hum", "music", "voice", "tranquil",
+    ],
+    "spatial":   [
+        "open", "openness", "space", "spacious", "airy", "high ceiling", "flow",
+        "connection", "layout", "proportion", "scale", "cramped", "tight", "narrow",
+        "volume", "room", "height", "spatial", "vast", "expansive", "intimate",
+    ],
+    "olfactory": [
+        "smell", "scent", "fragrance", "fresh", "air quality", "ventilation",
+        "nature", "earthy", "musty", "clean air", "olfactory", "odor", "odour",
+        "perfume", "pine", "floral",
+    ],
+    "tactile":   [
+        "texture", "material", "surface", "soft", "rough", "smooth", "warm material",
+        "wood", "stone", "fabric", "concrete", "linen", "wool", "tactile", "touch",
+        "haptic", "cushion", "carpet", "timber",
+    ],
+}
+
+
+def _signals_from_text(text: str) -> dict[str, int]:
+    """
+    Count how many keyword signals each sense has in a block of text.
+    Returns {sense: hit_count}.
+    """
+    t = text.lower()
+    return {
+        sense: sum(1 for kw in keywords if kw in t)
+        for sense, keywords in _SENSE_SIGNALS.items()
+    }
+
+
+def _apply_holistic_weight_patch(
+    persona_profile: dict,
+    quiz_answers: dict,
+    inspire_summary: str,
+    inspire_sense_picks: dict | None = None,
+) -> dict:
+    """
+    Derive comfort_weight adjustments from ALL quiz answers, inspire_summary,
+    and moodboard sense picks.
+
+    Signal sources and their contribution strength:
+      q5  non-negotiable  → strong   (+0.18 per hit, cap 0.90)
+          The user's single most important requirement — highest signal weight.
+      q3  bothers         → already handled by _apply_q3_sensory_patch (0.80 floor).
+          This function does NOT re-process q3 to avoid double-counting.
+      inspire_summary     → medium   (+0.08 per hit, cap 0.80)
+          Synthesised aesthetic world — reliable source of sensory preferences.
+      q2  space story     → soft     (+0.05 per hit, cap 0.75)
+          Implicit preferences from the space description.
+      q4  household       → context  (fixed boosts for specific household types)
+          Multi-person households: acoustic +0.07, spatial +0.05.
+      inspire_sense_picks → visual signal (+0.05 per image pick per sense, max +0.20)
+          Moodboard image selections — each image is tagged with its dominant senses,
+          so repeated picks for a sense category are a strong aesthetic signal.
+
+    Weights are only ever INCREASED by this patch, never lowered. If the LLM
+    already gave a sense a high weight, it stays. If it left a sense at 0.5
+    despite strong signals in the text, this corrects it.
+    """
+    weights = persona_profile.get("comfort_weights", {})
+    q2 = quiz_answers.get("q2", "")
+    q4 = quiz_answers.get("q4", "")
+    q5 = quiz_answers.get("q5", "")
+
+    adjustments: dict[str, float] = {s: 0.0 for s in _ALL_SENSES}
+
+    # ── q5 non-negotiable (strongest signal) ─────────────────────────────────
+    if q5:
+        hits = _signals_from_text(q5)
+        for sense, count in hits.items():
+            if count > 0:
+                adjustments[sense] += 0.18 * min(count, 2)   # max +0.36
+
+    # ── inspire_summary (medium signal) ──────────────────────────────────────
+    if inspire_summary:
+        hits = _signals_from_text(inspire_summary)
+        for sense, count in hits.items():
+            if count > 0:
+                adjustments[sense] += 0.08 * min(count, 3)   # max +0.24
+
+    # ── q2 space story (soft signal) ──────────────────────────────────────────
+    if q2:
+        hits = _signals_from_text(q2)
+        for sense, count in hits.items():
+            if count > 0:
+                adjustments[sense] += 0.05 * min(count, 2)   # max +0.10
+
+    # ── q4 household context (fixed contextual boosts) ────────────────────────
+    if q4:
+        q4_lower = q4.lower()
+        multi_person = any(kw in q4_lower for kw in [
+            "partner", "spouse", "husband", "wife", "girlfriend", "boyfriend",
+            "roommate", "flatmate", "grandma", "grandpa", "grandmother", "grandfather",
+            "kids", "children", "family", "son", "daughter", "siblings",
+        ])
+        if multi_person:
+            adjustments["acoustic"] += 0.07   # shared spaces → noise matters more
+            adjustments["spatial"]  += 0.05   # shared spaces → volume matters more
+
+    # ── moodboard sense picks (visual preference signal) ─────────────────────
+    # Each image in the moodboard is tagged with its dominant senses in JS.
+    # When the user repeatedly selects images of a sense category, that is a
+    # clear aesthetic preference signal. We cap contribution at 4 picks per
+    # sense (+0.20 max) to avoid a single sweep dominating the formula.
+    if inspire_sense_picks:
+        moodboard_boosts = []
+        for sense, count in inspire_sense_picks.items():
+            if sense in _ALL_SENSES and count > 0:
+                adjustments[sense] += 0.05 * min(count, 4)   # max +0.20
+                moodboard_boosts.append(f"{sense}×{count}")
+        if moodboard_boosts:
+            print(f"[persona_compiler] moodboard sense picks: {moodboard_boosts}")
+
+    # ── Apply adjustments (only upward, never downward) ───────────────────────
+    boosted = []
+    for sense in _ALL_SENSES:
+        delta = adjustments[sense]
+        if delta > 0.0:
+            current = weights.get(sense, 0.5)
+            # Caps: q3 senses already at 0.80 can reach 0.90; others cap at 0.80
+            cap = 0.90 if current >= 0.75 else 0.80
+            new_val = min(round(current + delta, 2), cap)
+            if new_val > current:
+                weights[sense] = new_val
+                boosted.append(f"{sense}: {current:.2f}→{new_val:.2f}")
+
+    persona_profile["comfort_weights"] = weights
+
+    if boosted:
+        print(f"[persona_compiler] holistic weight patch — adjustments: {boosted}")
+    else:
+        print("[persona_compiler] holistic weight patch — no adjustments needed")
+
+    # ── Re-rank sensory_priorities to match updated weights ───────────────────
+    # Only re-rank if q3 bothers are still correctly in the top slots,
+    # to avoid overriding a good LLM ordering.
+    q3_bothers = _senses_from_q3(quiz_answers.get("q3", ""))
+    current_priorities = persona_profile.get("sensory_priorities", [])
+    top_match = current_priorities[:len(q3_bothers)] == q3_bothers if q3_bothers else True
+
+    if not top_match or not current_priorities:
+        # Re-rank by weight descending, keeping q3 bothers at the top
+        non_bother = [s for s in _ALL_SENSES if s not in q3_bothers]
+        non_bother_sorted = sorted(non_bother, key=lambda s: weights.get(s, 0.5), reverse=True)
+        persona_profile["sensory_priorities"] = q3_bothers + non_bother_sorted
+        print(f"[persona_compiler] priorities re-ranked: {persona_profile['sensory_priorities']}")
 
     return persona_profile
 
@@ -225,10 +516,11 @@ def build_persona_compiler_node(llm, persona_output_path: str):
     """
 
     def persona_compiler_node(state: dict) -> dict:
-        quiz_answers: dict    = state.get("quiz_answers") or {}
-        inspire_summary: str  = state.get("inspire_summary", "")
-        user_name: str        = state.get("user_name", "") or ""
-        preliminary_role: str = state.get("preliminary_role", "client") or "client"
+        quiz_answers: dict        = state.get("quiz_answers") or {}
+        inspire_summary: str      = state.get("inspire_summary", "")
+        inspire_sense_picks: dict = state.get("inspire_sense_picks") or {}
+        user_name: str            = state.get("user_name", "") or ""
+        preliminary_role: str     = state.get("preliminary_role", "client") or "client"
 
         print("[persona_compiler] Compiling full persona profile...")
         print(f"[persona_compiler] quiz_answers keys: {list(quiz_answers.keys())}")
@@ -259,6 +551,10 @@ def build_persona_compiler_node(llm, persona_output_path: str):
             print(f"[persona_compiler] LLM response: {len(raw)} chars")
 
             clean = raw.strip()
+            # Strip <think>...</think> reasoning blocks (Qwen3, DeepSeek-R1, etc.)
+            # Must happen BEFORE markdown fence stripping so the fence check
+            # sees the actual content, not the opening of a think block.
+            clean = _strip_think_tags(clean)
             # Strip markdown fences if the model wrapped the JSON
             if clean.startswith("```"):
                 lines = clean.splitlines()
@@ -280,8 +576,9 @@ def build_persona_compiler_node(llm, persona_output_path: str):
 
         except Exception as exc:
             print(f"[persona_compiler] LLM/parse error ({exc}) — using minimal profile")
+            print(f"[persona_compiler] quiz_answers available: {list(quiz_answers.keys())}")
             persona_profile = dict(_MINIMAL_PROFILE)
-            persona_profile["notes"] = f"LLM fallback. quiz_answers: {str(quiz_answers)[:300]}"
+            persona_profile["notes"] = "Profile built from direct quiz answers (LLM synthesis unavailable)."
 
         # ── Ensure all required keys exist ────────────────────────────────
         for key, default in _MINIMAL_PROFILE.items():
@@ -295,12 +592,40 @@ def build_persona_compiler_node(llm, persona_output_path: str):
                 weights[sense] = 0.5
         persona_profile["comfort_weights"] = weights
 
-        # ── Q3 sensory patch — deterministic safety net ───────────────────
-        # Applied whether the LLM succeeded or not. If the LLM already
-        # differentiated the weights, this is a no-op. If it returned all
-        # 0.5s (either from fallback or LLM laziness), this fills in the
-        # sensory data from the user's explicit q3 answer.
+        # ── Patch name / role FIRST so all downstream patches read correct values
+        stored_name = persona_profile.get("name", "")
+        if not stored_name or stored_name.lower() in ("user", "there", ""):
+            if user_name and user_name.lower() not in ("there", ""):
+                persona_profile["name"] = user_name.strip().capitalize()
+                print(f"[persona_compiler] Name patched from session: {persona_profile['name']}")
+
+        stored_role = persona_profile.get("role", "client")
+        if stored_role == "client" and preliminary_role not in ("client", "", None):
+            persona_profile["role"] = preliminary_role
+            print(f"[persona_compiler] Role patched from session: {preliminary_role}")
+
+        # ── Q3 sensory patch — always runs ───────────────────────────────
+        # Guarantees any sense named in q3 has weight ≥ 0.75, and repairs
+        # sensory_priorities / sensory_sensitivities if the LLM left defaults.
         persona_profile = _apply_q3_sensory_patch(persona_profile, quiz_answers)
+
+        # ── Holistic weight patch — always runs ───────────────────────────
+        # Boosts weights for senses that appear as strong signals in q5
+        # (non-negotiable), q2 (space story), inspire_summary, and q4
+        # (household context). Weights only ever go up, never down.
+        # This runs after the q3 patch so q3 floors are already in place.
+        persona_profile = _apply_holistic_weight_patch(
+            persona_profile, quiz_answers, inspire_summary, inspire_sense_picks
+        )
+
+        # ── Quiz fallback patch — fills empty narrative fields ────────────
+        # Deterministically extracts lifestyle, aesthetic_preferences,
+        # age_group, household_type, key_requirements from raw quiz_answers
+        # whenever the LLM left them blank. Runs after role is patched so
+        # the description reads the correct role.
+        persona_profile = _apply_quiz_fallback_patch(
+            persona_profile, quiz_answers, inspire_summary
+        )
 
         # ── Recompute preference_vs_baseline ─────────────────────────────
         pvb = persona_profile.get("preference_vs_baseline") or {}
@@ -323,18 +648,6 @@ def build_persona_compiler_node(llm, persona_output_path: str):
         persona_profile["preference_vs_baseline"] = pvb
         if pvb:
             print(f"[persona_compiler] Preference vs baseline deviations: {list(pvb.keys())}")
-
-        # ── Patch name / role from session if LLM missed them ─────────────
-        stored_name = persona_profile.get("name", "")
-        if not stored_name or stored_name.lower() in ("user", "there", ""):
-            if user_name and user_name.lower() not in ("there", ""):
-                persona_profile["name"] = user_name.strip().capitalize()
-                print(f"[persona_compiler] Name patched from session: {persona_profile['name']}")
-
-        stored_role = persona_profile.get("role", "client")
-        if stored_role == "client" and preliminary_role not in ("client", "", None):
-            persona_profile["role"] = preliminary_role
-            print(f"[persona_compiler] Role patched from session: {preliminary_role}")
 
         # ── Save to disk ──────────────────────────────────────────────────
         save_ok = False

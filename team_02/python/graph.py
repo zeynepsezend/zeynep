@@ -171,6 +171,7 @@ class AgentState(TypedDict, total=False):
     inspire_complete:        bool       # True after inspire captured the answer
     inspire_image_analysis:  str        # VLM aesthetic analysis (set by PyQt5 moodboard pipeline)
     inspire_moodboard_urls:  list       # final image URLs approved in moodboard (PyQt5 GUI)
+    inspire_sense_picks:     dict       # {sense: count} of images selected per sense in moodboard
     onboarding_complete:     bool       # True after persona_compiler runs
 
     # ── User identity (set by quiz + persona_compiler, persisted across turns) ─
@@ -590,6 +591,7 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         "inspire_complete":       session.get("inspire_complete", False),
         "inspire_image_analysis": session.get("inspire_image_analysis", ""),
         "inspire_moodboard_urls": session.get("inspire_moodboard_urls", []),
+        "inspire_sense_picks":    session.get("inspire_sense_picks", {}),
         "onboarding_complete":    session.get("onboarding_complete", False),
 
         # ── User identity (persisted) ──────────────────────────────────────
@@ -662,6 +664,7 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
         "inspire_complete":       final_state.get("inspire_complete",       session.get("inspire_complete", False)),
         "inspire_image_analysis": final_state.get("inspire_image_analysis") or session.get("inspire_image_analysis", ""),
         "inspire_moodboard_urls": final_state.get("inspire_moodboard_urls") or session.get("inspire_moodboard_urls", []),
+        "inspire_sense_picks":    final_state.get("inspire_sense_picks")    or session.get("inspire_sense_picks", {}),
         "onboarding_complete":    final_state.get("onboarding_complete",    session.get("onboarding_complete", False)),
         # Identity
         "user_name":           final_state.get("user_name")           or session.get("user_name", ""),

@@ -103,32 +103,82 @@ _QUESTIONS: dict[int, str] = {
 _TOTAL_STEPS = 5  # Steps 0-5 inclusive (6 answers total, 5 follow-up questions)
 
 
-# -- ACK system prompt ---------------------------------------------------------
+# -- Step 1→2 ACK: role templates (replaces LLM call) -------------------------
+# The UI sends one of exactly 3 fixed strings for step 1. Role is already
+# detected deterministically by _detect_role — no LLM needed here.
 
-_ACK_SYSTEM_PROMPT = """\
-You are Sensi, a warm and attentive comfort companion.
-The user just answered a question during their onboarding.
+_ROLE_ACKS: dict[str, str] = {
+    "architect": "Design perspective — exactly what Sensi needs, {name}.",
+    "client":    "Good to have you here, {name}.",
+    "student":   "Love the curiosity, {name} — you're in the right place.",
+}
+
+
+# -- Step 3→4 ACK: sense-aware templates (replaces LLM call) ------------------
+# Input is always "The senses that pull me out of comfort: X, Y, Z."
+# We extract the senses directly and pick a fitting line.
+
+def _ack_for_senses(name: str, q3_text: str) -> str:
+    """Build a sense-aware ACK without an LLM call."""
+    # Parse sense names out of the structured UI string
+    lower = q3_text.lower()
+    found = [s for s in ("thermal", "visual", "acoustic", "spatial", "olfactory", "tactile")
+             if s in lower]
+
+    if not found:
+        return f"Noted, {name} — comfort is personal."
+    if len(found) == 1:
+        return f"{found[0].capitalize()} sensitivity noted, {name}."
+    if len(found) <= 3:
+        listed = " and ".join(f"{s}" for s in found) if len(found) == 2 \
+            else ", ".join(found[:-1]) + f" and {found[-1]}"
+        return f"{listed.capitalize()} — clear signals, {name}."
+    # 4+ senses selected
+    return f"Your senses are finely tuned, {name}."
+
+
+# -- Step 4→5 ACK: life-stage template (replaces LLM call) -------------------
+# Input is always "Life stage: X. Living situation: Y."
+
+def _ack_for_life_stage(name: str, q4_text: str) -> str:
+    """Build a life-stage-aware ACK without an LLM call."""
+    lower = q4_text.lower()
+    if "family" in lower or "kids" in lower or "children" in lower:
+        return f"A shared home — that shapes comfort in real ways, {name}."
+    if "partner" in lower or "spouse" in lower or "girlfriend" in lower \
+            or "boyfriend" in lower or "husband" in lower or "wife" in lower:
+        return f"Living with someone changes the comfort equation, {name}."
+    if "alone" in lower or "just me" in lower or "by myself" in lower or "solo" in lower:
+        return f"Your space, your rules then, {name}."
+    if "grandma" in lower or "grandpa" in lower or "grandmother" in lower \
+            or "grandfather" in lower:
+        return f"Multi-generational living — that tells me a lot, {name}."
+    if "flatmate" in lower or "roommate" in lower:
+        return f"Shared spaces come with their own comfort negotiations, {name}."
+    return f"Thanks for sharing that, {name}."
+
+
+# -- Step 2→3 ACK: LLM call (the one worth keeping) ---------------------------
+# This is the only free-text answer where the user shares something personal.
+# The LLM earns its place here — one call, where warmth actually matters.
+
+_ACK_STORY_PROMPT = """\
+You are Sensi, a warm comfort companion.
+The user just described a space that made them feel at home.
 
 Their name is: {user_name}
 Their role:    {user_role}
 
-Give a brief, natural acknowledgment -- one short sentence, max 10 words.
-Use their name naturally if it fits, but do not force it every time.
-Then ask the next question on a new line.
+Write ONE short acknowledgment sentence — max 10 words — that:
+  - Always includes their name
+  - Responds warmly to the emotional quality of what they described
+    (do NOT repeat their words verbatim)
+  - Feels genuine, not generic
 
-Next question: {next_question}
+Then on a new line, ask: {next_question}
 
-Tone rules by role:
-  architect: can reference spatial or technical terms lightly
-             (e.g. acoustic comfort, thermal mass, daylighting)
-  client:    plain, warm, conversational -- no technical jargon at all
-  student:   encouraging and curious -- make them feel their answer is insightful
-
-General rules:
-  - Vary your acknowledgments. NEVER start with "Great!", "Awesome!", "Fantastic!"
-  - Do NOT repeat what the user said back to them verbatim
-  - Keep it short: one ack line + the question. Nothing else.
-  - Output ONLY the acknowledgment + question. No headers, no markdown.
+Output ONLY the acknowledgment + question. No headers, no markdown.
+Tone: if architect, a light spatial reference is fine. Otherwise keep it warm and plain.
 """
 
 
@@ -179,20 +229,51 @@ def build_quiz_node(llm):
         next_step     = quiz_step + 1
         next_question = _QUESTIONS[next_step]
 
+        n = user_name or "there"
+
         if quiz_step == 0:
-            # Step 0: name just extracted -- warm first response, skip LLM overhead
-            response = f"Nice to meet you, {user_name}! {next_question}"
-        else:
+            # Step 0: name just extracted — hardcoded, no LLM.
+            response = f"Nice to meet you, {n}! {next_question}"
+
+        elif quiz_step == 1:
+            # Step 1→2: role answer — always one of 3 structured strings.
+            # Template is faster and just as warm as an LLM call here.
+            ack = _ROLE_ACKS.get(preliminary_role, f"Got it, {n}.").format(name=n)
+            response = f"{ack}\n{next_question}"
+            print(f"[quiz] Step 1 ACK (template, role={preliminary_role})")
+
+        elif quiz_step == 2:
+            # Step 2→3: free-text space story — the one place the LLM earns
+            # its keep. User shared something personal; a warm response matters.
             try:
-                prompt = _ACK_SYSTEM_PROMPT.format(
-                    user_name     = user_name or "there",
+                prompt = _ACK_STORY_PROMPT.format(
+                    user_name     = n,
                     user_role     = preliminary_role,
                     next_question = next_question,
                 )
                 response = call_llm_simple(llm, prompt, raw_prompt)
+                if not response.strip():
+                    print("[quiz] LLM returned empty story ACK -- using fallback")
+                    response = f"That sounds like a meaningful space, {n}.\n{next_question}"
             except Exception as exc:
-                print(f"[quiz] LLM acknowledgment failed ({exc}) -- using fallback")
-                response = next_question
+                print(f"[quiz] LLM story ACK failed ({exc}) -- using fallback")
+                response = f"That sounds like a meaningful space, {n}.\n{next_question}"
+
+        elif quiz_step == 3:
+            # Step 3→4: structured sense list — template, no LLM.
+            ack = _ack_for_senses(n, raw_prompt)
+            response = f"{ack}\n{next_question}"
+            print(f"[quiz] Step 3 ACK (template)")
+
+        elif quiz_step == 4:
+            # Step 4→5: structured life-stage string — template, no LLM.
+            ack = _ack_for_life_stage(n, raw_prompt)
+            response = f"{ack}\n{next_question}"
+            print(f"[quiz] Step 4 ACK (template)")
+
+        else:
+            # Catch-all for any unexpected step
+            response = f"{n}, {next_question}"
 
         return {
             **state,
