@@ -3,7 +3,7 @@ import json
 import pathlib
 from typing import Any
 
-from nodes.ec3_client import get_ec3_gwp
+from nodes.ec3_client import get_gwp
 
 # ---------------------------------------------------------------------------
 # Static property database loader
@@ -31,14 +31,24 @@ def _load_props() -> dict:
 
 
 def _lookup_static(material_key: str) -> dict:
-    """Search all category sections of material_properties.json for material_key."""
+    """Search all category sections of material_properties.json for material_key.
+
+    Falls back to word-reversed key (e.g. 'wood_solid' -> 'solid_wood') to
+    handle LLM inconsistencies in material name ordering.
+    """
     props = _load_props()
     key = material_key.lower().replace(" ", "_").replace("-", "_")
-    for section_name, section in props.items():
-        if section_name == "_meta" or not isinstance(section, dict):
-            continue
-        if key in section:
-            return section[key]
+    candidates = [key]
+    parts = key.split("_")
+    if len(parts) > 1:
+        candidates.append("_".join(reversed(parts)))
+
+    for candidate in candidates:
+        for section_name, section in props.items():
+            if section_name == "_meta" or not isinstance(section, dict):
+                continue
+            if candidate in section:
+                return section[candidate]
     return {}
 
 # ---------------------------------------------------------------------------
@@ -117,7 +127,7 @@ def _format_material_advice(material_key: str, live_gwp: float | None) -> str:
     gwp_unit = static.get("gwp_unit", "kgCO2e/m²")
 
     if live_gwp is not None:
-        gwp_display = f"{live_gwp} {gwp_unit} (EC3 live average)"
+        gwp_display = f"{live_gwp} {gwp_unit} (Okobaudat live)"
     elif gwp_fallback is not None:
         gwp_display = f"{gwp_fallback} {gwp_unit} (reference value)"
     else:
@@ -152,7 +162,7 @@ def build_architectural_advice_node():
 
         sections: list[str] = ["## Architectural Material Advice\n"]
         for mat in capped:
-            live_gwp = get_ec3_gwp(mat)
+            live_gwp = get_gwp(mat)
             sections.append(_format_material_advice(mat, live_gwp))
 
         advice_text = "\n".join(sections)
