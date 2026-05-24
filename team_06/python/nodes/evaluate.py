@@ -19,15 +19,22 @@ def build_evaluate_node(mcp_client: Any) -> Any:
                 "iteration": iteration + 1,
             }
 
+
         try:
             # Parse layout
             layout_data = json.loads(layout_json) if isinstance(layout_json, str) else layout_json
 
-            # Call MCP daylight tool
+            def preview(d):
+                if isinstance(d, dict):
+                    return {k: str(v)[:120] for k, v in d.items()}
+                return str(d)[:120]
+
+            print(f"[EVALUATE] Calling MCP tool 'daylight_06' with layout_json keys: {list(layout_data.keys())} and values: {preview(layout_data)}")
             result = mcp_client.call_tool("daylight_06", {
                 "layout_json": layout_data,
                 "window_wall_ratio": 0.5
             })
+            print(f"[EVALUATE] MCP tool 'daylight_06' result: {str(result)[:300]}")
 
             logger.info(f"🔍 MCP result type: {type(result)}")
 
