@@ -50,6 +50,14 @@ def _polygon_perimeter(polygon: list) -> float:
 def _find_room(layout: dict, room_name: str) -> dict | None:
     for room in layout.get("rooms", []):
         if room.get("name", "").lower() == room_name.lower():
+            # Normalise area field: support both area_m2 and attributes.area
+            if "area_m2" not in room:
+                area = room.get("attributes", {}).get("area")
+                if area is not None:
+                    room = {**room, "area_m2": area}
+            # Normalise polygon field: support both polygon and geometry
+            if "polygon" not in room and "geometry" in room:
+                room = {**room, "polygon": room["geometry"]}
             return room
     return None
 
@@ -57,6 +65,42 @@ def _find_room(layout: dict, room_name: str) -> dict | None:
 # ---------------------------------------------------------------------------
 # Virtual tool handlers
 # ---------------------------------------------------------------------------
+
+def _handle_get_count_by_type(tool_args: dict, state: dict) -> str:
+    element_type = tool_args.get("element_type", "").lower().rstrip("s")  # normalise plural
+    layout = json.loads(state.get("layout_json_string", "{}"))
+
+    # Support both layout schemas:
+    # new: top-level "doors", "windows", "rooms", "columns" arrays
+    # old: "openings" array with type field, "rooms", "columns"
+    type_map = {
+        "door":   lambda l: len(l.get("doors", [])) or sum(1 for o in l.get("openings", []) if o.get("type") == "door"),
+        "window": lambda l: len(l.get("windows", [])) or sum(1 for o in l.get("openings", []) if o.get("type") == "window"),
+        "room":   lambda l: len(l.get("rooms", [])),
+        "column": lambda l: len(l.get("columns", [])),
+    }
+    counter = type_map.get(element_type)
+    if not counter:
+        return json.dumps({"error": f"Unknown element type '{element_type}'. Use door, window, room, or column."})
+
+    count = counter(layout)
+    return json.dumps({"element_type": element_type, "count": count})
+
+
+def _handle_get_area_by_type(tool_args: dict, state: dict) -> str:
+    element_type = tool_args.get("element_type", "").lower()
+    layout = json.loads(state.get("layout_json_string", "{}"))
+
+    total_area = 0.0
+    if element_type in ("floor", "ceiling", "room"):
+        for room in layout.get("rooms", []):
+            area = room.get("area_m2") or room.get("attributes", {}).get("area", 0)
+            total_area += float(area)
+    else:
+        return json.dumps({"error": f"Area lookup not supported for '{element_type}'. Use room/floor/ceiling."})
+
+    return json.dumps({"element_type": element_type, "total_area_m2": round(total_area, 2)})
+
 
 def _handle_compute_finish_cost(tool_args: dict, state: dict) -> str:
     room_name = tool_args.get("room_name", "")
@@ -193,13 +237,43 @@ def build_tool_node(mcp_client, allowed_tools, edited_layout_path, cost_db: dict
 
             # Call the tool — virtual tools are handled locally; everything else goes to MCP
             if tool_name == "get_unit_cost_by_type":
-                element_type = str(tool_args.get("element_type", "")).lower().replace(" ", "_")
-                cost = sheets_db.get_live_rate(element_type, base_rate=500.0)
+                element_type = _normalise_material(str(tool_args.get("element_type", "")))
+                subtype = _normalise_material(str(tool_args.get("subtype", "")))
+                rates = _load_cost_rates()
+
+                # Look up cost_rates.json first: doors → by_subtype or by_material leaf
+                cost = None
+                if element_type in ("door", "doors"):
+                    door_rates = rates.get("doors", {})
+                    cost = (
+                        door_rates.get("by_subtype", {}).get(subtype)
+                        or rates.get("door_finishes", {}).get("leaf_material", {}).get("by_material", {}).get(subtype)
+                        or door_rates.get("default")
+                    )
+                elif element_type in ("window", "windows"):
+                    win_rates = rates.get("windows", {})
+                    cost = (
+                        win_rates.get("by_subtype", {}).get(subtype)
+                        or rates.get("window_finishes", {}).get("by_material", {}).get(subtype)
+                        or win_rates.get("default")
+                    )
+                elif element_type in ("column", "columns"):
+                    col_rates = rates.get("columns", {})
+                    cost = col_rates.get("by_subtype", {}).get(subtype) or col_rates.get("default")
+
+                # Fall back to live Supabase rate if cost_rates.json has no match
+                if cost is None:
+                    cost = sheets_db.get_live_rate(element_type, base_rate=500.0)
+
                 tool_output = json.dumps(
-                    {"element_type": element_type, "unit_cost": cost, "currency": "USD"}
+                    {"element_type": element_type, "subtype": subtype or None, "unit_cost": cost, "currency": "USD"}
                     if cost is not None
-                    else {"error": f"No live cost data for '{element_type}'"}
+                    else {"error": f"No cost data found for '{element_type}' subtype '{subtype}'"}
                 )
+            elif tool_name == "get_count_by_type":
+                tool_output = _handle_get_count_by_type(tool_args, state)
+            elif tool_name == "get_area_by_type":
+                tool_output = _handle_get_area_by_type(tool_args, state)
             elif tool_name == "compute_finish_cost":
                 tool_output = _handle_compute_finish_cost(tool_args, state)
             elif tool_name == "compute_slab_cost":

@@ -58,6 +58,28 @@ def _lookup_static(material_key: str) -> dict:
 _ROOM_FINISH_KEYS = ["floor_finish", "wall_finish", "ceiling_material", "slab_material"]
 _OPENING_KEYS = ["leaf_material", "frame_material", "glazing", "window_material"]
 
+# Element-type labels that are NOT materials — skip these from tool arg extraction
+_ELEMENT_TYPES = {"door", "doors", "window", "windows", "room", "rooms", "column", "columns", "floor", "ceiling", "wall", "slab"}
+
+# Informal or abbreviated names → canonical material_properties.json keys
+_MATERIAL_ALIASES: dict[str, str] = {
+    "wooden":           "solid_wood",
+    "wood":             "solid_wood",
+    "timber":           "solid_wood",
+    "concrete":         "rc_solid",
+    "reinforced_concrete": "rc_solid",
+    "glass":            "glass_frameless",
+    "glazing":          "curtain_wall",
+    "tile":             "ceramic_tile",
+    "tiles":            "ceramic_tile",
+    "stone":            "natural_stone",
+    "plaster":          "plaster_paint",
+    "gypsum":           "gypsum_board",
+    "carpet_tile":      "carpet",
+    "hardwood_floor":   "solid_wood",
+    "engineered":       "engineered_wood",
+}
+
 
 def _extract_materials(state: dict[str, Any]) -> list[str]:
     """Collect unique material keys from tool call history, layout JSON, and input_data."""
@@ -74,9 +96,16 @@ def _extract_materials(state: dict[str, Any]) -> list[str]:
                 continue
             for call in body.get("tool_calls", []):
                 args = call.get("arguments", {})
-                val = args.get("material") or args.get("finish") or args.get("element")
-                if val:
-                    materials.append(str(val).lower().replace(" ", "_").replace("-", "_"))
+                # element_type is always a category (door/window/room) — never a material
+                for field in ("material", "finish", "element", "subtype"):
+                    raw = args.get(field)
+                    if not raw:
+                        continue
+                    key = str(raw).lower().replace(" ", "_").replace("-", "_")
+                    if key in _ELEMENT_TYPES:
+                        continue
+                    key = _MATERIAL_ALIASES.get(key, key)
+                    materials.append(key)
         except (json.JSONDecodeError, KeyError, TypeError):
             continue
 

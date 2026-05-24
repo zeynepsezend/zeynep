@@ -1,9 +1,6 @@
 {
-  "room_name": "Living Room",
-  "surface": "floor",
-  "material": "porcelain_tile",
-  "area_m2": 40.0,
-  "rate_per_m2": 60,
-  "finish_cost": 2400.0,
+  "element_type": "window",
+  "subtype": "wooden",
+  "unit_cost": 761,
   "currency": "USD"
 }
