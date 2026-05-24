@@ -20,16 +20,17 @@ flowchart TB
     G0(["① ONBOARDING\nGreet · Quiz  (6 turns)  · Inspire  (2 graph turns · PyQt5 GUI pipeline)  · Persona Compiler\nInspire pipeline: image upload → VLM analysis → Unsplash → 3 selection rounds → moodboard approval → LLM synthesis\nRuns once — skipped for returning users"]):::onboard
 
     %% ── LAYOUT MODE SPINE ───────────────────────────────────────────────
-    G2{{"② ROUTING\nIntent Classification"}}:::decision
+    G2{{"② ROUTING\nIntent Classification\ncomfort · overview · tools · follow_up · inspire · chitchat"}}:::decision
     G3(["③ LAYOUT\nLoad Layout"]):::convo
     G4{{"④ ROUTE INTENT\nAnalyze · Detect · Full · What-if · Compare"}}:::decision
     G5["⑤ MAIN ANALYSIS CHAIN\nAnalyze → Score → Detect → Suggest"]:::process
-    G6["⑥ QUALITY LOOP\nRespond · Evaluate · Fact-Check"]:::process
+    G6["⑥ QUALITY LOOP\nRespond · Evaluate  (max 1 revision)"]:::process
     G7(["⑦ FEEDBACK LOOP\nWhat next?"]):::convo
     END_F([END]):::terminal
 
     %% ── SIDE NODES ──────────────────────────────────────────────────────
     CHITCHAT(["CHITCHAT\nGeneral questions · Layout mode only"]):::convo
+    DETAIL(["DETAIL_RESPOND\nFollow-up answers · cached session data\nno MCP re-run"]):::convo
     OVERVIEW(["OVERVIEW_RESPOND\nQuick room list · No analysis"]):::convo
     OUTPUT[("OUTPUT_WRITER\nWrites layout JSON · background")]:::bg
 
@@ -42,21 +43,22 @@ flowchart TB
     %% ── MAIN FLOW ───────────────────────────────────────────────────────
     START --> G0
     G0 -->|"onboarding_complete"| G2
-    G2 -->|"analysis · overview"| G3
-    G2 -->|"inspire"| G5
+    G2 -->|"analysis · overview · tools"| G3
+    G2 -->|"inspire"| G0
     G2 -->|"chitchat"| CHITCHAT
+    G2 -->|"follow_up"| DETAIL
     G3 -->|"overview"| OVERVIEW --> G7
     G3 -->|"analysis"| G4
     G4 --> G5
     G5 --> G6
     G6 --> G7
-    G7 -->|"deeper · what-if"| G4
     G7 --> END_F
 
     %% ── SIDE FLOWS ──────────────────────────────────────────────────────
     CHITCHAT -->|"analysis intent"| G2
     CHITCHAT --> G7
-    G6 -.->|"post-graph"| OUTPUT
+    DETAIL --> G7
+    G7 -.->|"post-graph"| OUTPUT
 
     %% ── TOOL BRANCHES ───────────────────────────────────────────────────
     G4 --> G5a & G5b & G5c & G5d

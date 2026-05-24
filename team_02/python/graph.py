@@ -1,28 +1,21 @@
 """
-graph.py -- Sensi state graph  (v3 — simplified onboarding + mandatory inspire)
+graph.py -- Sensi state graph  (v3 Bundle C — follow_up path, fact_checker removed)
 
 ===========================================================================
-WHAT CHANGED FROM v2
+WHAT CHANGED FROM v3 → Bundle C
 ===========================================================================
 
-Onboarding (redesigned):
-  Old: greet → user_profiler → intent_classifier → persona_builder loop → advisor
-  New: greet → quiz (multi-turn) → inspire (mandatory) → persona_compiler
-
-  Removed nodes: user_profiler, persona_builder, persona_validator, advisor
-  Added nodes:   quiz, persona_compiler
-  Changed node:  inspire — now a factory (needs LLM), mandatory in onboarding,
-                 placeholder in layout mode. No longer reached via intent_classifier.
-
-  Onboarding is now a strict linear sequence gated by:
-    greeted → quiz_complete → inspire_complete → onboarding_complete
-
-  persona.json is written to disk by persona_compiler so returning users
-  skip onboarding entirely (detected in main.py on startup).
-
-Layout mode (unchanged from v2):
-  intent_classifier → load_layout → route_intent → analysis chain → quality loop
-  All placeholder tool nodes retained in the graph for visibility.
+Layout mode (Bundle C — 2026-05-24):
+  - intent_classifier now classifies 6 intents:
+      comfort | overview | inspire | follow_up | chitchat | tools
+  - follow_up path added:
+      intent_classifier → detail_respond → what_next
+      (uses cached session data — score_interpretation, conflict_reasoning,
+       suggestion_critique — no MCP re-run)
+  - fact_checker REMOVED (redundant for short persona-aware summaries)
+  - Specialist outputs (score_interpretation, conflict_reasoning, suggestion_critique)
+    persisted in session across turns and passed to JS via sensi_pyqt.py
+  - respond prompt slimmed; what_next prompt tightened (depth-aware)
 
 ===========================================================================
 ONBOARDING FLOW  (first session only)
@@ -42,29 +35,30 @@ ONBOARDING FLOW  (first session only)
 LAYOUT MODE FLOW
 ===========================================================================
 
-  ┌─ ROUTING ────────────────────────────────────────────────────────────┐
-  │  intent_classifier [LLM] — comfort / overview / inspire / chitchat   │
-  └──────────────────────────────────────────────────────────────────────┘
-  ┌─ ANALYSIS CHAIN ─────────────────────────────────────────────────────┐
-  │  load_layout → persona check → route_intent                          │
-  │  → analyze [MCP] → score_interpreter [LLM]                          │
-  │  → detect [MCP] → conflict_reasoner [LLM]                           │
-  │  → suggest [MCP] → suggestion_critic [LLM] → respond [LLM]          │
-  └──────────────────────────────────────────────────────────────────────┘
-  ┌─ TOOL PATHS (placeholders) ──────────────────────────────────────────┐
-  │  what-if:   change_material / modify_glazing / add_furniture         │
-  │             → analyze (re-score) → compare_versions → score_interp  │
-  │  topologic: topologic_analysis → conflict_reasoner                   │
-  │  compare:   persona_comparison → score_interpreter                   │
-  │  biophilic: biophilic_audit → (opt) add_furniture → score_interp    │
-  └──────────────────────────────────────────────────────────────────────┘
-  ┌─ QUALITY LOOP ───────────────────────────────────────────────────────┐
-  │  respond → evaluator [LLM] ←→ respond  (max 1)                      │
-  │  evaluator → fact_checker [LLM] ←→ respond  (max 1)                 │
-  └──────────────────────────────────────────────────────────────────────┘
-  ┌─ FEEDBACK LOOP ──────────────────────────────────────────────────────┐
-  │  fact_checker → what_next [LLM] → END                               │
-  └──────────────────────────────────────────────────────────────────────┘
+  ┌─ ROUTING ────────────────────────────────────────────────────────────────┐
+  │  intent_classifier [LLM]                                                 │
+  │    comfort | overview | tools  → load_layout                             │
+  │    follow_up                   → detail_respond → what_next              │
+  │    inspire                     → inspire                                 │
+  │    chitchat                    → chitchat                                │
+  └──────────────────────────────────────────────────────────────────────────┘
+  ┌─ ANALYSIS CHAIN ─────────────────────────────────────────────────────────┐
+  │  load_layout → route_intent                                              │
+  │  → analyze [MCP] → score_interpreter [LLM]                              │
+  │  → detect [MCP] → conflict_reasoner [LLM]                               │
+  │  → suggest [MCP] → suggestion_critic [LLM] → respond [LLM]              │
+  └──────────────────────────────────────────────────────────────────────────┘
+  ┌─ TOOL PATHS (placeholders) ──────────────────────────────────────────────┐
+  │  what-if:   change_material / modify_glazing / add_furniture             │
+  │             → analyze (re-score) → compare_versions → score_interp      │
+  │  topologic: topologic_analysis → conflict_reasoner                       │
+  │  compare:   persona_comparison → score_interpreter                       │
+  │  biophilic: biophilic_audit → (opt) add_furniture → score_interp        │
+  └──────────────────────────────────────────────────────────────────────────┘
+  ┌─ QUALITY LOOP ───────────────────────────────────────────────────────────┐
+  │  respond → evaluator [LLM] ←→ respond  (max 1 revision)                 │
+  │  evaluator → what_next [LLM] → END                                      │
+  └──────────────────────────────────────────────────────────────────────────┘
 
 ===========================================================================
 NODE SUMMARY
@@ -72,13 +66,14 @@ NODE SUMMARY
 
   ONBOARDING
   greet              [LLM]     "Hi, I'm Sensi — who are you?"
-  quiz               [LLM]     structured 6-step profiler (replaces 4 old nodes)
+  quiz               [LLM]     structured 6-step profiler
   inspire            [LLM]     mandatory aesthetic profiler; placeholder in layout mode
   persona_compiler   [LLM]     compiles quiz + inspire → persona.json on disk
 
   LAYOUT MODE — ROUTING
-  intent_classifier  [LLM]     comfort / overview / inspire / chitchat / tools
+  intent_classifier  [LLM]     comfort / overview / inspire / follow_up / chitchat / tools
   chitchat           [LLM]     off-topic or general questions in layout mode
+  detail_respond     [LLM]     follow_up answers — uses cached session analysis, no MCP
 
   LAYOUT MODE — LAYOUT
   load_layout        [PYTHON]  reads layout JSON from disk
@@ -95,9 +90,8 @@ NODE SUMMARY
   respond            [LLM]     final natural-language response
 
   LAYOUT MODE — QUALITY LOOP
-  evaluator          [LLM]     coherence, completeness, tone check
-  fact_checker       [LLM]     no invented scores or rooms
-  what_next          [LLM]     feedback loop offer
+  evaluator          [LLM]     coherence, completeness, tone check  (max 1 revision)
+  what_next          [LLM]     depth-aware feedback loop offer
 
   LAYOUT MODE — TOOL PATHS (placeholders)
   change_material    [PH·MCP]  modify material → re-score

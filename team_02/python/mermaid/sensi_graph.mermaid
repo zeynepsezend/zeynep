@@ -40,10 +40,11 @@ flowchart TB
 
     %% ── ② ROUTING  (layout mode) ────────────────────────────────────────────
     subgraph ROUTING["② ROUTING  —  layout mode"]
-        INTENT_CLASSIFIER["INTENT_CLASSIFIER  [LLM]\ncomfort · overview · inspire\nchitchat · tools"]:::llm
+        INTENT_CLASSIFIER["INTENT_CLASSIFIER  [LLM]\ncomfort · overview · tools\nfollow_up · inspire · chitchat"]:::llm
     end
 
     CHITCHAT["CHITCHAT  [LLM]\noff-topic questions · general chat\ndetects if user shifts to analysis"]:::llm
+    DETAIL_RESPOND["DETAIL_RESPOND  [LLM]\nfollow_up answers using cached session data\nscore_interpretation · conflict_reasoning\nsuggestion_critique — no MCP re-run"]:::llm
     OVERVIEW_RESPOND["OVERVIEW_RESPOND  [PY]\nquick room list · no analysis"]:::py
 
     %% ── ③ LAYOUT ────────────────────────────────────────────────────────────
@@ -57,11 +58,11 @@ flowchart TB
     %% ── ⑤ MAIN ANALYSIS CHAIN ───────────────────────────────────────────────
     subgraph ANALYSIS["⑤ MAIN ANALYSIS CHAIN"]
         ANALYZE["ANALYZE  [MCP]\ncompute_comfort_scores\n6 senses · all rooms · per persona"]:::mcp
-        SCORE_INTERP["SCORE_INTERPRETER  [LLM]\nwhat do scores mean for this persona?"]:::specialist
+        SCORE_INTERP["SCORE_INTERPRETER  [LLM]\nwhat do scores mean for this persona?\n→ score_interpretation  (persisted)"]:::specialist
         DETECT["DETECT  [MCP]\ndetect_sensorial_conflicts\nflags senses below persona threshold"]:::mcp
-        CONFLICT_R["CONFLICT_REASONER  [LLM]\nwhy did it fail? root cause"]:::specialist
+        CONFLICT_R["CONFLICT_REASONER  [LLM]\nwhy did it fail? root cause\n→ conflict_reasoning  (persisted)"]:::specialist
         SUGGEST["SUGGEST  [MCP]\ngenerate_suggestions\nper failing sense per room"]:::mcp
-        SUGGEST_CRIT["SUGGESTION_CRITIC  [LLM]\nfeasible? ranked by priority?\ncross-sense consequences?"]:::specialist
+        SUGGEST_CRIT["SUGGESTION_CRITIC  [LLM]\nfeasible? ranked by priority?\ncross-sense consequences?\n→ suggestion_critique  (persisted)"]:::specialist
     end
 
     %% ── ⑤a–d TOOL PATHS (placeholders) ─────────────────────────────────────
@@ -78,12 +79,11 @@ flowchart TB
     %% ── ⑥ QUALITY LOOP ──────────────────────────────────────────────────────
     subgraph QUALITY["⑥ QUALITY LOOP"]
         RESPOND["RESPOND  [LLM]\npersona-aware · depth-aware\nanalyze · detect · full formats"]:::llm
-        EVALUATOR["EVALUATOR  [LLM]\ncoherent? complete? right tone?\nAPPROVED or REVISE  (max 3)"]:::specialist
-        FACT_CHECK["FACT_CHECKER  [LLM]\nno invented scores or rooms\nVERIFIED or DISCREPANCY  (max 3)"]:::specialist
+        EVALUATOR["EVALUATOR  [LLM]\ncoherent? complete? right tone?\nAPPROVED or REVISE  (max 1)"]:::specialist
     end
 
     %% ── ⑦ FEEDBACK LOOP ─────────────────────────────────────────────────────
-    WHAT_NEXT["WHAT_NEXT  [LLM]\nfeedback loop offer\ndeeper · what-if · compare · done"]:::llm
+    WHAT_NEXT["WHAT_NEXT  [LLM]\ndepth-aware feedback offer\nnames worst finding · suggests next action"]:::llm
 
     OUTPUT_WRITER[("OUTPUT_WRITER  [PY]\npost-graph · writes resulting_layout/")]:::py
 
@@ -107,15 +107,17 @@ flowchart TB
     START -->|"onboarding_complete"| ROUTING
 
     %% Routing
-    INTENT_CLASSIFIER -->|"comfort · tools"| LOAD_LAYOUT
+    INTENT_CLASSIFIER -->|"comfort · overview · tools"| LOAD_LAYOUT
+    INTENT_CLASSIFIER -->|"follow_up"| DETAIL_RESPOND
     INTENT_CLASSIFIER -->|"inspire"| INSPIRE
     INTENT_CLASSIFIER -->|"chitchat"| CHITCHAT
+    DETAIL_RESPOND --> WHAT_NEXT
     CHITCHAT -->|"analysis intent"| INTENT_CLASSIFIER
     CHITCHAT --> WHAT_NEXT
 
     %% Layout
     LOAD_LAYOUT -->|"overview"| OVERVIEW_RESPOND --> WHAT_NEXT
-    LOAD_LAYOUT -->|"analysis"| ROUTE_INTENT
+    LOAD_LAYOUT -->|"analysis · tools"| ROUTE_INTENT
 
     %% Route intent → tool paths and analysis
     ROUTE_INTENT -->|"analyze · detect · full"| ANALYZE
@@ -143,14 +145,11 @@ flowchart TB
     BIOPHILIC_AUDIT -->|"needs plants"| ADD_FURNITURE
     BIOPHILIC_AUDIT -->|"direct"| SCORE_INTERP
 
-    %% Quality loop
+    %% Quality loop  (fact_checker removed in Bundle C)
     RESPOND --> EVALUATOR
-    EVALUATOR -->|"REVISE  max 3"| RESPOND
-    EVALUATOR -->|"APPROVED"| FACT_CHECK
-    FACT_CHECK -->|"DISCREPANCY  max 3"| RESPOND
-    FACT_CHECK -->|"VERIFIED"| WHAT_NEXT
-    FACT_CHECK -.->|"post-graph"| OUTPUT_WRITER
+    EVALUATOR -->|"REVISE  max 1"| RESPOND
+    EVALUATOR -->|"APPROVED"| WHAT_NEXT
+    WHAT_NEXT -.->|"post-graph"| OUTPUT_WRITER
 
     %% Feedback
-    WHAT_NEXT -->|"deeper · what-if"| ROUTE_INTENT
     WHAT_NEXT -->|"done"| END_F
