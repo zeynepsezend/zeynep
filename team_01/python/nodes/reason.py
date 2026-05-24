@@ -24,6 +24,9 @@ TAG_AND_AUDIT TOOL:
 - ALWAYS pass typology: use "column_grid" unless user asks for perimeter_load_bearing or shear_wall
 - ALWAYS pass grid_spacing: use 4.0 unless user specifies a different value
 
+STRUCTURAL EVALUATION (evaluate, check structure, run loads, assess beams/columns):
+Set action="final", final_response="" (empty string). The evaluate node handles all calculations and prompts automatically. NEVER answer the evaluation yourself.
+
 WHAT-IF QUESTIONS — two-step process, NEVER call a tool:
 Step 1: User asks "what if we remove X" → set action="final", final_response="" (empty string). The evaluate node runs the simulation automatically.
 Step 2: You receive a message starting with "STRUCTURAL FAIL after removing" → set action="final" and write the full response in final_response using this EXACT format, filling in values from the STRUCTURAL FAIL message:
