@@ -11,10 +11,11 @@ from live_material_api import live_db
 from nodes.reason import build_reason_node
 from nodes.tools import build_tool_node
 from nodes.heatmap_nodes import (
-    build_generate_heatmap_node, 
-    build_present_heatmap_node, 
+    build_generate_heatmap_node,
+    build_present_heatmap_node,
     build_calculate_delta_node
 )
+from nodes.arch_advice import build_architectural_advice_node
 
 # ---------------------------------------------------------------------------
 # State definition
@@ -66,6 +67,7 @@ class AgentState(TypedDict, total=False):
     heatmap_json_string: str
     heatmap_path: str | None
     recommendation: str | None
+    architectural_advice: str | None
     presented_comparison: bool
     modify_request: bool
 
@@ -75,7 +77,7 @@ class AgentState(TypedDict, total=False):
 
 def _route_reasoning(state: AgentState) -> str:
     if state.get("final_response") is not None:
-        return "finish"
+        return "architectural_advice"
     if state.get("pending_tool_calls"):
         return "tool"
     if state.get("needs_clarification"):
@@ -254,7 +256,13 @@ def _budget_aware_rec_node(state: AgentState) -> dict[str, Any]:
     return {}
 
 def _present_comparison_node(state: AgentState) -> dict[str, Any]:
-    return {"presented_comparison": True}
+    cost_response = state.get("final_response") or state.get("recommendation") or ""
+    advice = state.get("architectural_advice") or ""
+
+    parts = [p for p in [cost_response, advice] if p]
+    combined = "\n\n---\n\n".join(parts) if parts else "Comparison complete."
+
+    return {"presented_comparison": True, "final_response": combined}
 
 def _modify_price_request_node(state: AgentState) -> dict[str, Any]:
     return {"modify_request": False}
@@ -296,6 +304,7 @@ def build_graph(ctx: Any) -> Any:
     graph.add_node("calculate_delta", build_calculate_delta_node())
     graph.add_node("generate_rec", _generate_rec_node)
     graph.add_node("budget_aware_rec", _budget_aware_rec_node)
+    graph.add_node("architectural_advice", build_architectural_advice_node())
     graph.add_node("present_comparison", _present_comparison_node)
     graph.add_node("modify_price_request", _modify_price_request_node)
     graph.add_node("tool", tool_node)
@@ -309,7 +318,7 @@ def build_graph(ctx: Any) -> Any:
         "extract_intent": "extract_intent",
         "extract_budget": "extract_budget",
         "extract_input_data": "extract_input_data",
-        "finish": END,
+        "architectural_advice": "architectural_advice",
         "tool": "tool"
     })
 
@@ -378,8 +387,9 @@ def build_graph(ctx: Any) -> Any:
         "generate_rec": "generate_rec",
         "budget_aware_rec": "budget_aware_rec"
     })
-    graph.add_edge("generate_rec", "present_comparison")
-    graph.add_edge("budget_aware_rec", "present_comparison")
+    graph.add_edge("generate_rec", "architectural_advice")
+    graph.add_edge("budget_aware_rec", "architectural_advice")
+    graph.add_edge("architectural_advice", "present_comparison")
     graph.add_conditional_edges("present_comparison", _route_present_comparison, {
         "modify_price_request": "modify_price_request",
         "finish": END
@@ -463,6 +473,7 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
         "heatmap_json_string": "",
         "heatmap_path": None,
         "recommendation": None,
+        "architectural_advice": None,
         "presented_comparison": False,
         "modify_request": False,
     }
