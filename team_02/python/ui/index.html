@@ -867,6 +867,61 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
   color:rgba(190,180,235,.85);
 }
 .ap-chip-arrow { margin-right:3px; opacity:.50; }
+/* ── Room selector strip ── */
+#ap-room-selector { margin-bottom:6px; }
+.ap-room-strip {
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-flex-wrap:wrap; flex-wrap:wrap;
+  padding:4px 0 6px;
+}
+.ap-room-chip {
+  display:-webkit-inline-box; display:-webkit-inline-flex; display:inline-flex;
+  -webkit-align-items:center; align-items:center;
+  padding:4px 10px 4px 8px; border-radius:999px;
+  border:1px solid rgba(240,237,232,.10);
+  background:rgba(240,237,232,.03);
+  cursor:pointer; transition:all .14s;
+  margin-right:5px; margin-bottom:5px;
+}
+.ap-room-chip:hover { border-color:rgba(240,237,232,.22); background:rgba(240,237,232,.06); }
+.ap-room-chip.active { border-color:rgba(240,237,232,.28); background:rgba(240,237,232,.07); }
+.ap-room-chip-dot {
+  width:7px; height:7px; border-radius:50%;
+  -webkit-flex-shrink:0; flex-shrink:0; margin-right:6px;
+}
+.ap-room-chip-name {
+  font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.10em;
+  text-transform:uppercase; color:rgba(240,237,232,.48); white-space:nowrap;
+}
+.ap-room-chip.active .ap-room-chip-name { color:rgba(240,237,232,.80); }
+.ap-room-detail-header {
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-align-items:baseline; align-items:baseline;
+  margin-bottom:10px; padding-bottom:6px;
+  border-bottom:1px solid rgba(240,237,232,.07);
+}
+.ap-room-detail-name {
+  font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:rgba(240,237,232,.80); margin-right:8px;
+}
+.ap-room-detail-score {
+  font-family:'IBM Plex Mono',monospace; font-size:11px;
+  color:rgba(240,237,232,.35);
+}
+.ap-all-rooms-toggle {
+  display:-webkit-box; display:-webkit-flex; display:flex;
+  -webkit-align-items:center; align-items:center;
+  -webkit-justify-content:center; justify-content:center;
+  width:100%; padding:7px 0; margin-top:10px;
+  border:1px solid rgba(240,237,232,.08); border-radius:5px;
+  background:transparent; color:rgba(240,237,232,.28);
+  font-family:'IBM Plex Mono',monospace; font-size:8px; letter-spacing:.15em;
+  text-transform:uppercase; cursor:pointer; transition:all .14s;
+}
+.ap-all-rooms-toggle:hover {
+  border-color:rgba(240,237,232,.16); color:rgba(240,237,232,.55);
+  background:rgba(240,237,232,.03);
+}
 </style>
 </head>
 <body>
@@ -1281,6 +1336,7 @@ textarea.sensi-input { resize: none; line-height: 1.7; height: 80px; border-radi
       </div>
       <div class="ap-scroll" id="ap-scroll">
         <div id="ap-topology"></div>
+        <div id="ap-room-selector"></div>
         <div id="ap-scores"></div>
         <div id="ap-score-interp" class="ap-specialist-block" style="display:none;"></div>
         <div id="ap-conflicts"></div>
@@ -2259,6 +2315,8 @@ var _panelScores      = null;
 var _panelConflicts   = null;
 var _panelSuggestions = null;
 var _panelDepth       = '';
+var _selectedRoom     = null;
+var _allRoomsExpanded = false;
 
 var SENSE_COLORS = {
   thermal:   '#E8836A', visual:    '#D4B96A', acoustic:  '#9B8FD4',
@@ -2288,37 +2346,124 @@ function setChartView(view) {
   else _renderRadar(rooms);
 }
 
+// ── Room selector strip ──────────────────────────────────
+function _renderRoomSelector(rooms) {
+  var c = document.getElementById('ap-room-selector');
+  if (!c) return;
+  if (!rooms || rooms.length < 2) { c.innerHTML = ''; return; }
+  var strip = document.createElement('div');
+  strip.className = 'ap-room-strip';
+  rooms.forEach(function(room) {
+    var overall = room.overallScore || 0;
+    var color = overall < 0.50 ? '#E8836A' : overall < 0.65 ? '#D4B96A' : '#8BB88A';
+    var chip = document.createElement('button');
+    chip.className = 'ap-room-chip' + (_selectedRoom === room.roomName ? ' active' : '');
+    chip.setAttribute('data-room', room.roomName);
+    chip.onclick = (function(name) { return function() { selectRoom(name); }; })(room.roomName);
+    chip.innerHTML =
+      '<span class="ap-room-chip-dot" style="background:' + color + ';opacity:0.75;"></span>' +
+      '<span class="ap-room-chip-name">' + (room.roomName || '?') + '</span>';
+    strip.appendChild(chip);
+  });
+  c.innerHTML = '';
+  c.appendChild(strip);
+}
+
+function selectRoom(roomName) {
+  _selectedRoom = roomName;
+  _allRoomsExpanded = false;
+  // Update chip active states
+  var chips = document.querySelectorAll('.ap-room-chip');
+  chips.forEach(function(ch) {
+    if (ch.getAttribute('data-room') === roomName) ch.classList.add('active');
+    else ch.classList.remove('active');
+  });
+  // Update cytoscape highlight
+  if (_apCy) {
+    _apCy.nodes().forEach(function(n) {
+      n.style('background-opacity', n.data('id') === roomName ? 0.50 : 0.12);
+      n.style('border-width', n.data('id') === roomName ? 2.5 : 1.5);
+    });
+    var hint = document.getElementById('cy-room-hint');
+    if (hint) hint.textContent = roomName.toUpperCase();
+  }
+  // Re-render room-aware sections
+  if (_panelScores) {
+    var rooms = _panelScores.rooms || [];
+    if (_chartView === 'bars') _renderScoreBars(rooms);
+  }
+  if (_panelConflicts && (_panelDepth === 'detect' || _panelDepth === 'full')) {
+    _renderConflicts(_panelConflicts.flaggedRooms || []);
+  }
+  if (_panelSuggestions && _panelDepth === 'full') {
+    _renderSuggestions(_panelSuggestions.improvements || []);
+  }
+}
+
+function toggleAllRoomsExpand() {
+  _allRoomsExpanded = !_allRoomsExpanded;
+  if (_panelScores) {
+    var rooms = _panelScores.rooms || [];
+    if (_chartView === 'bars') _renderScoreBars(rooms);
+  }
+}
+
+function _renderRoomBarsDetail(room, container) {
+  var sc = room.comfortScores || {};
+  var overall = room.overallScore || 0;
+  var overallColor = overall < 0.50 ? '#E8836A' : overall < 0.65 ? '#D4B96A' : '#8BB88A';
+  var header = document.createElement('div');
+  header.className = 'ap-room-detail-header';
+  header.innerHTML =
+    '<span class="ap-room-detail-name">' + (room.roomName || '?') + '</span>' +
+    '<span class="ap-room-detail-score" style="color:' + overallColor + ';opacity:0.80;">' + overall.toFixed(2) + '</span>';
+  container.appendChild(header);
+  ALL_SENSES.forEach(function(s) {
+    var val = sc[s] !== undefined ? sc[s] : 0;
+    var pct = (val * 100).toFixed(1);
+    var opacity = val < 0.50 ? '1.0' : val < 0.65 ? '0.65' : '0.38';
+    var row = document.createElement('div');
+    row.className = 'ap-bar-row';
+    var ticks =
+      '<div class="ap-bar-threshold" style="left:50%;"></div>' +
+      '<div class="ap-bar-threshold" style="left:65%;opacity:0.10;"></div>';
+    row.innerHTML =
+      '<span class="ap-bar-sense">' + s + '</span>' +
+      '<div class="ap-bar-track">' +
+        '<div class="ap-bar-fill" style="width:' + pct + '%;background:' + SENSE_COLORS[s] + ';opacity:' + opacity + ';"></div>' +
+        ticks +
+      '</div>' +
+      '<span class="ap-bar-val" style="color:' + (val < 0.50 ? SENSE_COLORS[s] : 'rgba(240,237,232,.35)') + '">' + val.toFixed(2) + '</span>';
+    container.appendChild(row);
+  });
+}
+
 function _renderScoreBars(rooms) {
   var c = document.getElementById('ap-scores');
   c.innerHTML = '<div class="ap-section-label">scores</div>';
-  rooms.forEach(function(room) {
-    var sc = room.comfortScores || {};
-    var overall = (room.overallScore || 0).toFixed(2);
-    var lbl = document.createElement('div');
-    lbl.className = 'ap-room-label';
-    lbl.textContent = (room.roomName || '?') + '  ·  ' + overall;
-    c.appendChild(lbl);
-    ALL_SENSES.forEach(function(s) {
-      var val = sc[s] !== undefined ? sc[s] : 0;
-      var pct = (val * 100).toFixed(1);
-      // Failing scores: full brightness. Good scores: muted.
-      var opacity = val < 0.50 ? '1.0' : val < 0.65 ? '0.65' : '0.38';
-      var row = document.createElement('div');
-      row.className = 'ap-bar-row';
-      // Threshold tick at 50% and 65% of track width
-      var ticks =
-        '<div class="ap-bar-threshold" style="left:50%;"></div>' +
-        '<div class="ap-bar-threshold" style="left:65%;opacity:0.10;"></div>';
-      row.innerHTML =
-        '<span class="ap-bar-sense">' + s + '</span>' +
-        '<div class="ap-bar-track">' +
-          '<div class="ap-bar-fill" style="width:' + pct + '%;background:' + SENSE_COLORS[s] + ';opacity:' + opacity + ';"></div>' +
-          ticks +
-        '</div>' +
-        '<span class="ap-bar-val" style="color:' + (val < 0.50 ? SENSE_COLORS[s] : 'rgba(240,237,232,.35)') + '">' + val.toFixed(2) + '</span>';
-      c.appendChild(row);
-    });
-  });
+
+  // Focused mode: single room
+  if (_selectedRoom && !_allRoomsExpanded) {
+    var focusRoom = null;
+    rooms.forEach(function(r) { if (r.roomName === _selectedRoom) focusRoom = r; });
+    if (focusRoom) _renderRoomBarsDetail(focusRoom, c);
+    var toggleBtn = document.createElement('button');
+    toggleBtn.className = 'ap-all-rooms-toggle';
+    toggleBtn.onclick = toggleAllRoomsExpand;
+    toggleBtn.textContent = '↓  all rooms';
+    c.appendChild(toggleBtn);
+    return;
+  }
+
+  // All-rooms mode
+  rooms.forEach(function(room) { _renderRoomBarsDetail(room, c); });
+  if (_selectedRoom && _allRoomsExpanded) {
+    var collapseBtn = document.createElement('button');
+    collapseBtn.className = 'ap-all-rooms-toggle';
+    collapseBtn.onclick = toggleAllRoomsExpand;
+    collapseBtn.textContent = '↑  collapse';
+    c.appendChild(collapseBtn);
+  }
 }
 
 var SENSE_SYMBOLS = {
@@ -2361,7 +2506,7 @@ function _renderRadar(rooms) {
         min: 0, max: 100, stepSize: 25,
         ticks: { color: 'rgba(240,237,232,0.20)', font: { size: 8 }, backdropColor: 'transparent' },
         pointLabels: {
-          color: 'rgba(240,237,232,0.60)', font: { size: 10, family: "'IBM Plex Mono', monospace" }
+          color: 'rgba(240,237,232,0.60)', font: { size: 10, family: "\'IBM Plex Mono\', monospace" }
         },
         grid:       { color: 'rgba(240,237,232,0.08)' },
         angleLines: { color: 'rgba(240,237,232,0.08)' }
@@ -2375,7 +2520,7 @@ function _renderRadar(rooms) {
 
 function _sensesFromConflicts(conflicts) {
   /* Handles both string items ("acoustic score 0.40 below threshold 0.45")
-     and object items ({acoustic: 0.40}) — the MCP may return either format. */
+     and object items ({acoustic: 0.40}) -- the MCP may return either format. */
   var senses = [];
   (conflicts || []).forEach(function(conf) {
     ALL_SENSES.forEach(function(s) {
@@ -2393,11 +2538,14 @@ function _sensesFromConflicts(conflicts) {
 function _renderConflicts(flaggedRooms) {
   var c = document.getElementById('ap-conflicts');
   c.innerHTML = '<div class="ap-section-label">conflicts</div>';
-  if (!flaggedRooms || flaggedRooms.length === 0) {
-    c.innerHTML += '<div class="ap-empty">no conflicts detected</div>';
+  var filtered = _selectedRoom
+    ? (flaggedRooms || []).filter(function(r) { return r.roomName === _selectedRoom; })
+    : (flaggedRooms || []);
+  if (filtered.length === 0) {
+    c.innerHTML += '<div class="ap-empty">' + (_selectedRoom ? 'no conflicts in this room' : 'no conflicts detected') + '</div>';
     return;
   }
-  flaggedRooms.forEach(function(room) {
+  filtered.forEach(function(room) {
     var senses = _sensesFromConflicts(room.conflicts);
     var div = document.createElement('div');
     div.className = 'ap-conflict-room';
@@ -2419,13 +2567,13 @@ function _renderTopology(flaggedRooms, allRooms) {
     c.innerHTML += '<div class="ap-empty">cytoscape not loaded</div>';
     return;
   }
-  // Build room → failing senses map
+  // Build room -> failing senses map
   var roomSenses = {};
   (flaggedRooms || []).forEach(function(r) {
     var senses = _sensesFromConflicts(r.conflicts);
     if (senses.length > 0) roomSenses[r.roomName] = senses;
   });
-  // Nodes — size = 28 base + 8 per conflict; color encodes overall health
+  // Nodes -- size = 28 base + 8 per conflict; color encodes overall health
   var nodes = (allRooms || []).map(function(room) {
     var overall = room.overallScore || 0.5;
     var issueCount = (roomSenses[room.roomName] || []).length;
@@ -2489,23 +2637,14 @@ function _renderTopology(flaggedRooms, allRooms) {
     autoungrabify: true
   });
 
-  // Node click → scroll to that room's bars in scores section
+  // Node click -> select that room (room-centric mode)
   _apCy.on('tap', 'node', function(evt) {
     var roomName = evt.target.data('id');
-    var hint = document.getElementById('cy-room-hint');
-    if (hint) hint.textContent = roomName.toUpperCase();
-    // Highlight matching room label in scores section
-    var scoresEl = document.getElementById('ap-scores');
-    if (!scoresEl) return;
-    var labels = scoresEl.querySelectorAll('.ap-room-label');
-    labels.forEach(function(lbl) {
-      var isMatch = lbl.textContent.toUpperCase().indexOf(roomName.toUpperCase()) !== -1;
-      lbl.style.color = isMatch ? 'rgba(240,237,232,.95)' : 'rgba(240,237,232,.25)';
-      lbl.style.borderBottomColor = isMatch ? 'rgba(240,237,232,.18)' : 'rgba(240,237,232,.04)';
-    });
-    // Scroll analysis panel to scores section
+    selectRoom(roomName);
+    // Scroll panel to scores section so the focused detail is visible
     setTimeout(function() {
-      scoresEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var scoresEl = document.getElementById('ap-scores');
+      if (scoresEl) scoresEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
   });
 }
@@ -2515,6 +2654,7 @@ function _renderSuggestions(improvements) {
   c.innerHTML = '<div class="ap-section-label">suggestions</div>';
   var any = false;
   (improvements || []).forEach(function(room) {
+    if (_selectedRoom && room.roomName !== _selectedRoom) return;
     (room.suggestions || []).forEach(function(s) {
       any = true;
       var div = document.createElement('div');
@@ -2526,10 +2666,10 @@ function _renderSuggestions(improvements) {
       c.appendChild(div);
     });
   });
-  if (!any) c.innerHTML += '<div class="ap-empty">no suggestions generated</div>';
+  if (!any) c.innerHTML += '<div class="ap-empty">' + (_selectedRoom ? 'no suggestions for this room' : 'no suggestions generated') + '</div>';
 }
 
-// ── Specialist block renderer ──────────────────────────────
+// -- Specialist block renderer ------------------------------------------
 function _renderSpecialistBlock(blockId, title, text) {
   var el = document.getElementById(blockId);
   if (!el) return;
@@ -2538,7 +2678,7 @@ function _renderSpecialistBlock(blockId, title, text) {
   el.innerHTML =
     '<div class="ap-specialist-header" onclick="_toggleSpecialist(\'' + blockId + '\')">' +
       '<span class="ap-specialist-title">' + title + '</span>' +
-      '<span class="ap-specialist-chevron" id="' + blockId + '-chev">▼</span>' +
+      '<span class="ap-specialist-chevron" id="' + blockId + '-chev">\u25bc</span>' +
     '</div>' +
     '<div class="ap-specialist-body" id="' + blockId + '-body" style="display:none;">' +
       text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
@@ -2552,12 +2692,12 @@ function _toggleSpecialist(blockId) {
   var open = body.style.display !== 'none';
   body.style.display = open ? 'none' : 'block';
   if (chev) {
-    chev.textContent = open ? '▼' : '▲';
+    chev.textContent = open ? '\u25bc' : '\u25b2';
     if (open) chev.classList.remove('open'); else chev.classList.add('open');
   }
 }
 
-// ── Action chips ───────────────────────────────────────────
+// -- Action chips -------------------------------------------------------
 function _addAnalysisChips(depth) {
   var inner = document.getElementById('chat-thread-inner');
   if (!inner) return;
@@ -2567,20 +2707,20 @@ function _addAnalysisChips(depth) {
   var row = document.createElement('div');
   row.className = 'ap-chips-row';
   var chips = [
-    '<button class="ap-jump-chip" onclick="jumpPanel(\'scores\')"><span class="ap-chip-arrow">↗</span>scores</button>'
+    '<button class="ap-jump-chip" onclick="jumpPanel(\'scores\')"><span class="ap-chip-arrow">\u2197</span>scores</button>'
   ];
   if (depth === 'detect' || depth === 'full') {
-    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'conflicts\')"><span class="ap-chip-arrow">↗</span>conflicts</button>');
+    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'conflicts\')"><span class="ap-chip-arrow">\u2197</span>conflicts</button>');
   }
   if (depth === 'full') {
-    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'suggestions\')"><span class="ap-chip-arrow">↗</span>suggestions</button>');
-    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'score-interp\')"><span class="ap-chip-arrow">↗</span>analysis</button>');
+    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'suggestions\')"><span class="ap-chip-arrow">\u2197</span>suggestions</button>');
+    chips.push('<button class="ap-jump-chip" onclick="jumpPanel(\'score-interp\')"><span class="ap-chip-arrow">\u2197</span>analysis</button>');
   }
   row.innerHTML = chips.join('');
   lastWrap.appendChild(row);
 }
 
-// ── Panel section jump ─────────────────────────────────────
+// -- Panel section jump -------------------------------------------------
 function jumpPanel(section) {
   if (!document.getElementById('analysis-panel-right').classList.contains('open')) {
     openAnalysisPanel();
@@ -2598,7 +2738,7 @@ function jumpPanel(section) {
   }, 280);
 }
 
-// ── Top bar status update (score ring + conflict badge) ────
+// -- Top bar status update (score ring + conflict badge) ----------------
 function _updateTopBarStatus(rooms, flaggedRooms) {
   // Overall score = average of all room overallScores
   var scores = (rooms || []).map(function(r) { return r.overallScore || 0; });
@@ -2625,7 +2765,7 @@ function _updateTopBarStatus(rooms, flaggedRooms) {
   }
 }
 
-// ── Main panel render ──────────────────────────────────────
+// -- Main panel render --------------------------------------------------
 function renderAnalysisPanel(scoresJson, conflictsJson, suggestionsJson, depth, scoreInterp, conflictReason, suggCritique) {
   if (!scoresJson) return;
   var scores = null, conflicts = null, suggestions = null;
@@ -2649,25 +2789,35 @@ function renderAnalysisPanel(scoresJson, conflictsJson, suggestionsJson, depth, 
   var tag = document.getElementById('ap-depth-tag');
   if (tag) tag.textContent = _panelDepth;
 
-  // 1. Room network first (spatial overview — hero element)
+  // 1. Room network first (spatial overview -- hero element)
   var rooms = scores.rooms || [];
   var tEl = document.getElementById('ap-topology');
   tEl.innerHTML = '';
   if (conflicts && (depth === 'detect' || depth === 'full')) {
     _renderTopology(conflicts.flaggedRooms || [], rooms);
   } else {
-    // Still render network with health colors even without conflict detail
     _renderTopology([], rooms);
   }
 
-  // 2. Scores section
+  // 2. Room selector strip + auto-select worst room
+  _selectedRoom = null;
+  _allRoomsExpanded = false;
+  if (rooms.length > 0) {
+    var worst = rooms.reduce(function(a, b) {
+      return (a.overallScore || 0) <= (b.overallScore || 0) ? a : b;
+    });
+    _selectedRoom = worst.roomName;
+  }
+  _renderRoomSelector(rooms);
+
+  // 3. Scores section
   if (_chartView === 'bars') _renderScoreBars(rooms);
   else _renderRadar(rooms);
 
-  // 3. Score interpreter narrative
+  // 4. Score interpreter narrative
   _renderSpecialistBlock('ap-score-interp', 'what this means', scoreInterp || '');
 
-  // 4. Conflicts section
+  // 5. Conflicts section
   var cEl = document.getElementById('ap-conflicts');
   cEl.innerHTML = '';
   document.getElementById('ap-conflict-reason').style.display = 'none';
@@ -2686,7 +2836,7 @@ function renderAnalysisPanel(scoresJson, conflictsJson, suggestionsJson, depth, 
   }
 }
 
-// ── Bridge init ───────────────────────────────────────────
+// -- Bridge init --------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
   showOverlay("starting sensi...");
   new QWebChannel(qt.webChannelTransport, function(channel) {
