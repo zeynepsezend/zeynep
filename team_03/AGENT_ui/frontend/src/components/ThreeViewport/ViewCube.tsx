@@ -1,12 +1,12 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useRef, useEffect, useState } from 'react'
 import { useTheme } from '../common/ThemeToggle'
 
 interface ViewCubeProps {
   onViewChange: (view: string) => void
   isOrtho: boolean
   onToggleOrtho: () => void
-  /** Euler angles [azimuth, elevation] in radians from CameraTracker */
-  cameraAngles?: { azimuth: number; elevation: number }
+  /** Ref to camera angles updated by CameraTracker (never triggers re-renders) */
+  cameraAnglesRef?: React.RefObject<{ azimuth: number; elevation: number }>
 }
 
 // ── 3D Cube projection with camera-relative rotation ──────────────────────
@@ -27,7 +27,6 @@ function rotateX(v: Vec3, angle: number): Vec3 {
 }
 
 function projectPt(v: Vec3): [number, number] {
-  // Simple orthographic projection after rotation
   const scale = CUBE_SIZE * 0.42
   return [v.x * scale, -v.y * scale]
 }
@@ -59,61 +58,132 @@ function faceNormal(corners: Vec3[]): Vec3 {
   }
 }
 
-export default function ViewCube({ onViewChange, isOrtho, onToggleOrtho, cameraAngles }: ViewCubeProps) {
+const FACE_COLORS: Record<string, { fill: string; fillHover: string }> = {
+  top:    { fill: 'rgba(139,92,246,0.18)', fillHover: 'rgba(139,92,246,0.30)' },
+  bottom: { fill: 'rgba(139,92,246,0.05)', fillHover: 'rgba(139,92,246,0.15)' },
+  front:  { fill: 'rgba(139,92,246,0.10)', fillHover: 'rgba(139,92,246,0.22)' },
+  back:   { fill: 'rgba(139,92,246,0.06)', fillHover: 'rgba(139,92,246,0.18)' },
+  right:  { fill: 'rgba(139,92,246,0.08)', fillHover: 'rgba(139,92,246,0.20)' },
+  left:   { fill: 'rgba(139,92,246,0.06)', fillHover: 'rgba(139,92,246,0.18)' },
+}
+
+export default function ViewCube({ onViewChange, isOrtho, onToggleOrtho, cameraAnglesRef }: ViewCubeProps) {
   const { colors } = useTheme()
+  const svgRef = useRef<SVGSVGElement>(null)
+  const rafId = useRef(0)
+  const prevAz = useRef(0)
+  const prevEl = useRef(0)
 
   const handleFaceClick = useCallback((face: string) => {
     onViewChange(face)
   }, [onViewChange])
 
-  const azimuth = cameraAngles?.azimuth ?? 0.75
-  const elevation = cameraAngles?.elevation ?? 0.6
+  // Animate cube rotation by reading the ref directly — no React state/renders
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg || !cameraAnglesRef) return
 
-  // Transform all face corners by camera angles
-  const transformedFaces = FACES.map(face => {
+    const cx = CUBE_SIZE / 2
+    const cy = CUBE_SIZE / 2
+
+    function update() {
+      const az = cameraAnglesRef!.current.azimuth
+      const el = cameraAnglesRef!.current.elevation
+
+      // Skip DOM update if angles haven't changed enough
+      if (Math.abs(az - prevAz.current) < 0.005 && Math.abs(el - prevEl.current) < 0.005) {
+        rafId.current = requestAnimationFrame(update)
+        return
+      }
+      prevAz.current = az
+      prevEl.current = el
+
+      const transformed = FACES.map(face => {
+        const rotated = face.corners.map(c => {
+          let v = rotateY(c, -az)
+          v = rotateX(v, -el)
+          return v
+        })
+        const projected = rotated.map(projectPt)
+        const normal = faceNormal(rotated)
+        const avgZ = rotated.reduce((s, v) => s + v.z, 0) / rotated.length
+        const cx2d = projected.reduce((s, p) => s + p[0], 0) / projected.length
+        const cy2d = projected.reduce((s, p) => s + p[1], 0) / projected.length
+        return { ...face, projected, normal, avgZ, center2d: [cx2d, cy2d], visible: normal.z < 0 }
+      })
+
+      const sorted = [...transformed].sort((a, b) => b.avgZ - a.avgZ)
+
+      // Update SVG DOM directly
+      const groups = svg!.querySelectorAll('g[data-face]')
+      const orderMap = new Map(sorted.map((f, i) => [f.name, { data: f, order: i }]))
+
+      groups.forEach(g => {
+        const name = g.getAttribute('data-face')!
+        const entry = orderMap.get(name)
+        if (!entry) return
+        const { data } = entry
+
+        if (!data.visible) {
+          ;(g as HTMLElement).style.display = 'none'
+          return
+        }
+        ;(g as HTMLElement).style.display = ''
+
+        const polygon = g.querySelector('polygon')
+        const text = g.querySelector('text')
+        if (polygon) {
+          const pts = data.projected.map(([px, py]: [number, number]) => `${cx + px},${cy + py}`).join(' ')
+          polygon.setAttribute('points', pts)
+        }
+        if (text) {
+          text.setAttribute('x', String(cx + data.center2d[0]))
+          text.setAttribute('y', String(cy + data.center2d[1]))
+        }
+      })
+
+      // Reorder DOM elements for correct depth sorting
+      const parent = svg!.querySelector('g[data-faces]')
+      if (parent) {
+        sorted.forEach(f => {
+          const el = parent.querySelector(`g[data-face="${f.name}"]`)
+          if (el) parent.appendChild(el)
+        })
+      }
+
+      rafId.current = requestAnimationFrame(update)
+    }
+
+    rafId.current = requestAnimationFrame(update)
+    return () => cancelAnimationFrame(rafId.current)
+  }, [cameraAnglesRef])
+
+  const initAz = cameraAnglesRef?.current.azimuth ?? 0.75
+  const initEl = cameraAnglesRef?.current.elevation ?? 0.6
+
+  // Initial face computation for first render
+  const initialFaces = FACES.map(face => {
     const rotated = face.corners.map(c => {
-      let v = rotateY(c, -azimuth)
-      v = rotateX(v, -elevation)
+      let v = rotateY(c, -initAz)
+      v = rotateX(v, -initEl)
       return v
     })
     const projected = rotated.map(projectPt)
     const normal = faceNormal(rotated)
-    // Face center Z for depth sorting
     const avgZ = rotated.reduce((s, v) => s + v.z, 0) / rotated.length
-    // Face center in 2D for label
     const cx2d = projected.reduce((s, p) => s + p[0], 0) / projected.length
     const cy2d = projected.reduce((s, p) => s + p[1], 0) / projected.length
-
-    return {
-      ...face,
-      projected,
-      normal,
-      avgZ,
-      center2d: [cx2d, cy2d] as [number, number],
-      visible: normal.z < 0, // facing camera (towards -z in screen space after projection)
-    }
-  })
-
-  // Sort by depth (back to front)
-  const sorted = [...transformedFaces].sort((a, b) => b.avgZ - a.avgZ)
+    return { ...face, projected, avgZ, center2d: [cx2d, cy2d], visible: normal.z < 0 }
+  }).sort((a, b) => b.avgZ - a.avgZ)
 
   const cx = CUBE_SIZE / 2
   const cy = CUBE_SIZE / 2
-
-  const faceColors: Record<string, { fill: string; fillHover: string }> = {
-    top:    { fill: 'rgba(0,229,255,0.18)', fillHover: 'rgba(0,229,255,0.30)' },
-    bottom: { fill: 'rgba(0,229,255,0.05)', fillHover: 'rgba(0,229,255,0.15)' },
-    front:  { fill: 'rgba(0,229,255,0.10)', fillHover: 'rgba(0,229,255,0.22)' },
-    back:   { fill: 'rgba(0,229,255,0.06)', fillHover: 'rgba(0,229,255,0.18)' },
-    right:  { fill: 'rgba(0,229,255,0.08)', fillHover: 'rgba(0,229,255,0.20)' },
-    left:   { fill: 'rgba(0,229,255,0.06)', fillHover: 'rgba(0,229,255,0.18)' },
-  }
 
   return (
     <div style={{
       position: 'absolute',
       top: 12,
-      right: 12,
+      right: 370,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -124,7 +194,6 @@ export default function ViewCube({ onViewChange, isOrtho, onToggleOrtho, cameraA
       {/* Rotating View Cube */}
       <div style={{
         background: colors.panelBg,
-        backdropFilter: 'blur(24px)',
         border: `1px solid ${colors.border}`,
         borderRadius: 10,
         padding: 4,
@@ -132,42 +201,44 @@ export default function ViewCube({ onViewChange, isOrtho, onToggleOrtho, cameraA
         height: CUBE_SIZE + 8,
       }}>
         <svg
+          ref={svgRef}
           width={CUBE_SIZE}
           height={CUBE_SIZE}
           viewBox={`0 0 ${CUBE_SIZE} ${CUBE_SIZE}`}
           style={{ display: 'block' }}
         >
-          {sorted.map(face => {
-            if (!face.visible) return null
-            const pts = face.projected.map(([px, py]) => `${cx + px},${cy + py}`).join(' ')
-            const fc = faceColors[face.color] || faceColors.front
-            return (
-              <g key={face.name} style={{ cursor: 'pointer' }} onClick={() => handleFaceClick(face.name)}>
-                <polygon
-                  points={pts}
-                  fill={fc.fill}
-                  stroke={colors.accent + '55'}
-                  strokeWidth="0.8"
-                  strokeLinejoin="round"
-                >
-                  <title>{face.name}</title>
-                </polygon>
-                <text
-                  x={cx + face.center2d[0]}
-                  y={cy + face.center2d[1]}
-                  fill={colors.accent}
-                  fontSize="8"
-                  fontWeight="700"
-                  fontFamily="-apple-system, system-ui, sans-serif"
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  style={{ pointerEvents: 'none', letterSpacing: '0.06em', opacity: 0.8 }}
-                >
-                  {face.label}
-                </text>
-              </g>
-            )
-          })}
+          <g data-faces="">
+            {initialFaces.map(face => {
+              const pts = face.projected.map(([px, py]) => `${cx + px},${cy + py}`).join(' ')
+              const fc = FACE_COLORS[face.color] || FACE_COLORS.front
+              return (
+                <g key={face.name} data-face={face.name} style={{ cursor: 'pointer', display: face.visible ? '' : 'none' }} onClick={() => handleFaceClick(face.name)}>
+                  <polygon
+                    points={pts}
+                    fill={fc.fill}
+                    stroke={colors.accent + '55'}
+                    strokeWidth="0.8"
+                    strokeLinejoin="round"
+                  >
+                    <title>{face.name}</title>
+                  </polygon>
+                  <text
+                    x={cx + face.center2d[0]}
+                    y={cy + face.center2d[1]}
+                    fill={colors.accent}
+                    fontSize="8"
+                    fontWeight="700"
+                    fontFamily="-apple-system, system-ui, sans-serif"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    style={{ pointerEvents: 'none', letterSpacing: '0.06em', opacity: 0.8 }}
+                  >
+                    {face.label}
+                  </text>
+                </g>
+              )
+            })}
+          </g>
         </svg>
       </div>
 
@@ -177,7 +248,6 @@ export default function ViewCube({ onViewChange, isOrtho, onToggleOrtho, cameraA
         title={isOrtho ? 'Switch to perspective' : 'Switch to orthographic'}
         style={{
           background: isOrtho ? colors.accent + '18' : colors.panelBg,
-          backdropFilter: 'blur(16px)',
           border: `1px solid ${isOrtho ? colors.accent + '44' : colors.border}`,
           borderRadius: 6,
           padding: '4px 10px',
@@ -200,7 +270,6 @@ export default function ViewCube({ onViewChange, isOrtho, onToggleOrtho, cameraA
         flexDirection: 'column',
         gap: 1,
         background: colors.panelBg,
-        backdropFilter: 'blur(16px)',
         border: `1px solid ${colors.border}`,
         borderRadius: 6,
         padding: 3,

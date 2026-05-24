@@ -1,9 +1,8 @@
 import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react'
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, Grid } from '@react-three/drei'
+import { OrbitControls, Grid, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import FloorPlanRenderer from './FloorPlanRenderer'
-import SelectionHighlight from './SelectionHighlight'
 import PulseHighlight from './PulseHighlight'
 import Labels3D from './Labels3D'
 import ViewCube from './ViewCube'
@@ -11,6 +10,8 @@ import SelectionPanel from './SelectionPanel'
 import { useTheme } from '../common/ThemeToggle'
 import { LayoutJSON, LayerVisibility } from '../../types'
 import type { NodeLinkData } from '../GraphPanel/graphDataMapper'
+
+const EMPTY_SET = new Set<string>()
 
 interface ThreeViewportProps {
   layout: LayoutJSON
@@ -26,26 +27,51 @@ interface SceneProps extends ThreeViewportProps {
   showLabels: boolean
 }
 
-// ── Camera angle tracker — reads camera orientation every frame ─────────
-function CameraTracker({ onAnglesChange }: { onAnglesChange: (az: number, el: number) => void }) {
+// ── Camera angle tracker — writes to a ref, never triggers re-renders ──
+function CameraTracker({ anglesRef }: { anglesRef: React.MutableRefObject<{ azimuth: number; elevation: number }> }) {
   const { camera } = useThree()
-  const prevRef = useRef({ az: 0, el: 0 })
 
   useFrame(() => {
     const pos = camera.position
     const dist = Math.sqrt(pos.x * pos.x + pos.z * pos.z)
-    const azimuth = Math.atan2(pos.x, pos.z)
-    const elevation = Math.atan2(pos.y, dist)
-
-    // Only update when changed meaningfully (avoid re-renders)
-    if (
-      Math.abs(azimuth - prevRef.current.az) > 0.01 ||
-      Math.abs(elevation - prevRef.current.el) > 0.01
-    ) {
-      prevRef.current = { az: azimuth, el: elevation }
-      onAnglesChange(azimuth, elevation)
-    }
+    anglesRef.current.azimuth = Math.atan2(pos.x, pos.z)
+    anglesRef.current.elevation = Math.atan2(pos.y, dist)
   })
+
+  return null
+}
+
+// ── Auto-fit: set orbit target to geometry center on layout change ─────
+function BoundsFitter({ layout, onFit }: { layout: LayoutJSON; onFit: () => void }) {
+  const threeState = useThree()
+  const fittedRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (fittedRef.current === layout.layoutId) return
+    fittedRef.current = layout.layoutId
+
+    const { controls } = threeState
+
+    // Compute center of geometry
+    const pts = layout.outline
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+    for (const [x, y] of pts) {
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x)
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y)
+    }
+    const cx = (minX + maxX) / 2
+    const cz = (minY + maxY) / 2
+
+    // Set orbit target to geometry center
+    if (controls) {
+      const ctrl = controls as any
+      ctrl.target.set(cx, 0, cz)
+      ctrl.update()
+    }
+
+    // Trigger Center view (top-front-right) after target is set
+    requestAnimationFrame(() => onFit())
+  }) // Runs every render but guarded by ref
 
   return null
 }
@@ -57,33 +83,38 @@ function CameraController({ viewCommand }: { viewCommand: string | null }) {
   useEffect(() => {
     if (!viewCommand || !controls) return
     const ctrl = controls as any
-    const dist = camera.position.length() || 40
+    const target = ctrl.target as THREE.Vector3
+    const dist = camera.position.distanceTo(target) || 40
     const viewName = viewCommand.split('__')[0]
 
-    const views: Record<string, { pos: [number, number, number]; up?: [number, number, number] }> = {
-      top: { pos: [0, dist, 0.001], up: [0, 0, -1] },
-      bottom: { pos: [0, -dist, 0.001], up: [0, 0, 1] },
-      front: { pos: [0, 0, dist] },
-      back: { pos: [0, 0, -dist] },
-      right: { pos: [dist, 0, 0] },
-      left: { pos: [-dist, 0, 0] },
-      'top-front': { pos: [0, dist * 0.7, dist * 0.7] },
-      'top-right': { pos: [dist * 0.7, dist * 0.7, 0] },
-      'front-right': { pos: [dist * 0.7, 0, dist * 0.7] },
-      'top-front-right': { pos: [dist * 0.58, dist * 0.58, dist * 0.58] },
-      'top-front-left': { pos: [-dist * 0.58, dist * 0.58, dist * 0.58] },
-      'top-back-right': { pos: [dist * 0.58, dist * 0.58, -dist * 0.58] },
-      'top-back-left': { pos: [-dist * 0.58, dist * 0.58, -dist * 0.58] },
+    // Offsets relative to the current orbit target (geometry center)
+    const offsets: Record<string, { off: [number, number, number]; up?: [number, number, number] }> = {
+      top: { off: [0, dist, 0.001], up: [0, 0, -1] },
+      bottom: { off: [0, -dist, 0.001], up: [0, 0, 1] },
+      front: { off: [0, 0, dist] },
+      back: { off: [0, 0, -dist] },
+      right: { off: [dist, 0, 0] },
+      left: { off: [-dist, 0, 0] },
+      'top-front': { off: [0, dist * 0.7, dist * 0.7] },
+      'top-right': { off: [dist * 0.7, dist * 0.7, 0] },
+      'front-right': { off: [dist * 0.7, 0, dist * 0.7] },
+      'top-front-right': { off: [dist * 0.58, dist * 0.58, dist * 0.58] },
+      'top-front-left': { off: [-dist * 0.58, dist * 0.58, dist * 0.58] },
+      'top-back-right': { off: [dist * 0.58, dist * 0.58, -dist * 0.58] },
+      'top-back-left': { off: [-dist * 0.58, dist * 0.58, -dist * 0.58] },
     }
 
-    const view = views[viewName]
+    const view = offsets[viewName]
     if (!view) return
 
-    camera.position.set(...view.pos)
+    camera.position.set(
+      target.x + view.off[0],
+      target.y + view.off[1],
+      target.z + view.off[2]
+    )
     if (view.up) camera.up.set(...view.up)
     else camera.up.set(0, 1, 0)
-    camera.lookAt(0, 0, 0)
-    ctrl.target.set(0, 0, 0)
+    camera.lookAt(target)
     ctrl.update()
   }, [viewCommand, camera, controls])
 
@@ -92,22 +123,23 @@ function CameraController({ viewCommand }: { viewCommand: string | null }) {
 
 // ── Ortho/Persp switch — modifies the camera in-place ──────────────────
 function OrthoController({ isOrtho }: { isOrtho: boolean }) {
-  const { camera, gl, set } = useThree()
-  const prevIsOrtho = useRef(isOrtho)
+  const { camera, gl, controls, set } = useThree()
+  // Start as null so it runs on first mount
+  const prevIsOrtho = useRef<boolean | null>(null)
 
   useEffect(() => {
-    if (isOrtho === prevIsOrtho.current) return
+    // Skip if value hasn't changed
+    if (prevIsOrtho.current === isOrtho) return
     prevIsOrtho.current = isOrtho
 
     const pos = camera.position.clone()
-    const target = new THREE.Vector3(0, 0, 0)
+    const target = controls ? (controls as any).target.clone() : new THREE.Vector3(0, 0, 0)
     const up = camera.up.clone()
     const canvas = gl.domElement
     const aspect = canvas.clientWidth / canvas.clientHeight
 
     if (isOrtho) {
-      // Switch to orthographic
-      const dist = pos.length()
+      const dist = pos.distanceTo(target)
       const frustumSize = dist * 0.8
       const ortho = new THREE.OrthographicCamera(
         -frustumSize * aspect, frustumSize * aspect,
@@ -120,7 +152,6 @@ function OrthoController({ isOrtho }: { isOrtho: boolean }) {
       ortho.updateProjectionMatrix()
       set({ camera: ortho })
     } else {
-      // Switch to perspective
       const persp = new THREE.PerspectiveCamera(50, aspect, 0.1, 500)
       persp.position.copy(pos)
       persp.up.copy(up)
@@ -128,8 +159,27 @@ function OrthoController({ isOrtho }: { isOrtho: boolean }) {
       persp.updateProjectionMatrix()
       set({ camera: persp })
     }
-  }, [isOrtho, camera, gl, set])
+  }, [isOrtho, camera, gl, controls, set])
 
+  return null
+}
+
+// ── Renderer config — ACES Filmic for dark mode, flat/no-tonemapping for light ──
+function RendererConfig({ isDark }: { isDark: boolean }) {
+  const { gl, scene } = useThree()
+  useEffect(() => {
+    if (isDark) {
+      gl.toneMapping = THREE.ACESFilmicToneMapping
+      gl.toneMappingExposure = 1.0
+    } else {
+      gl.toneMapping = THREE.NoToneMapping
+      gl.toneMappingExposure = 1.0
+      // Force pure white at WebGL level — bypasses R3F color management
+      gl.setClearColor(0xffffff, 1)
+      scene.background = new THREE.Color(0xffffff)
+    }
+    gl.outputColorSpace = THREE.SRGBColorSpace
+  }, [gl, scene, isDark])
   return null
 }
 
@@ -148,57 +198,83 @@ function SceneContent({ layout, selectedId, onSelect, layers, isDark, showLabels
 
   const center = useMemo(() => ({ x: bounds.cx, z: bounds.cz }), [bounds])
 
-  const bgColor = isDark ? '#06090f' : '#f0f2f5'
+  const bgColor = isDark ? '#1a1b24' : '#ffffff'
 
   return (
     <>
-      {/* Background + fog */}
-      <color attach="background" args={[bgColor]} />
-      <fog attach="fog" args={[bgColor, 100, 250]} />
+      {/* Renderer config */}
+      <RendererConfig isDark={isDark} />
 
-      {/* Lighting */}
-      <ambientLight intensity={isDark ? 0.5 : 0.8} color={isDark ? '#8899bb' : '#c0c8d0'} />
+      {/* Background + fog — dark uses declarative, light uses imperative (RendererConfig) to avoid color management darkening */}
+      {isDark && <color attach="background" args={[bgColor]} />}
+      <fog attach="fog" args={[bgColor, 120, 280]} />
+
+      {/* Lighting — neutral colors, strong directional for dark mode, pure white for light */}
+      <ambientLight intensity={isDark ? 0.45 : 0.9} color={isDark ? '#b0b4bc' : '#ffffff'} />
       <directionalLight
-        position={[bounds.w * 0.5, bounds.maxDim * 1.2, bounds.h * 0.3]}
-        intensity={isDark ? 0.8 : 1.0}
-        color={isDark ? '#c0d0e8' : '#ffffff'}
-        castShadow={false}
+        position={[bounds.w * 0.4, bounds.maxDim * 1.5, bounds.h * 0.6]}
+        intensity={isDark ? 1.4 : 0.6}
+        color={isDark ? '#e8e6ef' : '#ffffff'}
+        castShadow={isDark}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-bounds.maxDim}
+        shadow-camera-right={bounds.maxDim}
+        shadow-camera-top={bounds.maxDim}
+        shadow-camera-bottom={-bounds.maxDim}
+        shadow-camera-near={0.5}
+        shadow-camera-far={bounds.maxDim * 3}
+        shadow-bias={-0.0005}
       />
       <directionalLight
         position={[-bounds.w * 0.3, bounds.maxDim * 0.5, -bounds.h * 0.5]}
-        intensity={isDark ? 0.25 : 0.4}
-        color={isDark ? '#4488cc' : '#8899aa'}
+        intensity={isDark ? 0.25 : 0.3}
+        color={isDark ? '#8892a0' : '#ffffff'}
       />
 
-      {/* Glow point lights */}
+      {/* Accent point lights — only for dark mode */}
       <pointLight
-        position={[0, bounds.maxDim * 0.3, 0]}
-        intensity={isDark ? 0.4 : 0.2}
-        color={isDark ? '#00CED1' : '#88bbcc'}
-        distance={bounds.maxDim * 2}
+        position={[0, bounds.maxDim * 0.4, 0]}
+        intensity={isDark ? 0.20 : 0}
+        color={isDark ? '#a0a8b8' : '#ffffff'}
+        distance={bounds.maxDim * 2.5}
         decay={2}
       />
       <pointLight
         position={[bounds.w * 0.3, 1, bounds.h * 0.3]}
-        intensity={isDark ? 0.2 : 0.1}
-        color={isDark ? '#39FF14' : '#88cc88'}
-        distance={bounds.maxDim * 1.5}
+        intensity={isDark ? 0.15 : 0}
+        color={isDark ? '#b0a898' : '#ffffff'}
+        distance={bounds.maxDim * 2}
         decay={2}
       />
 
-      {/* Floor grid */}
+
+      {/* Contact shadows for light mode — above ground, below grid */}
+      {!isDark && (
+        <ContactShadows
+          position={[0, -0.05, 0]}
+          opacity={0.35}
+          scale={bounds.maxDim * 2}
+          blur={2.5}
+          far={10}
+          resolution={512}
+          color="#4a5568"
+        />
+      )}
+
+      {/* Floor grid — above ground plane to prevent z-fighting */}
       <Grid
         args={[200, 200]}
         cellSize={1}
         cellThickness={0.5}
-        cellColor={isDark ? '#0d1a28' : '#c0c8d2'}
+        cellColor={isDark ? '#1e2028' : '#e0e2e6'}
         sectionSize={5}
         sectionThickness={1}
-        sectionColor={isDark ? '#132438' : '#a0aab4'}
+        sectionColor={isDark ? '#282a34' : '#d0d2d6'}
         fadeDistance={100}
-        fadeStrength={1.5}
+        fadeStrength={2.0}
         infiniteGrid
-        position={[0, 0, 0]}
+        position={[0, 0.01, 0]}
       />
 
       {/* Floor plan */}
@@ -215,11 +291,8 @@ function SceneContent({ layout, selectedId, onSelect, layers, isDark, showLabels
         <Labels3D layout={layout} isDark={isDark} center={center} />
       )}
 
-      {/* Selection highlight manager */}
-      <SelectionHighlight selectedId={selectedId} />
-
       {/* Pulse highlight for modified/new elements */}
-      <PulseHighlight modifiedIds={modifiedIds || new Set()} />
+      <PulseHighlight modifiedIds={modifiedIds || EMPTY_SET} />
 
       {/* Controls */}
       <OrbitControls
@@ -238,10 +311,13 @@ function SceneContent({ layout, selectedId, onSelect, layers, isDark, showLabels
 export default function ThreeViewport({ layout, selectedId, onSelect, layers, graphData, modifiedIds }: ThreeViewportProps) {
   const { theme, colors } = useTheme()
   const isDark = theme === 'dark'
-  const [showLabels, setShowLabels] = useState(false)
-  const [isOrtho, setIsOrtho] = useState(false)
+  const [showLabels, setShowLabels] = useState(true)
+  const [isOrtho, setIsOrtho] = useState(true)
   const [viewCommand, setViewCommand] = useState<string | null>(null)
-  const [cameraAngles, setCameraAngles] = useState({ azimuth: 0.75, elevation: 0.6 })
+  const cameraAnglesRef = useRef({ azimuth: 0.75, elevation: 0.6 })
+  const clickScreenPosRef = useRef<{ x: number; y: number } | null>(null)
+  const [clickScreenPos, setClickScreenPos] = useState<{ x: number; y: number } | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const viewCounter = useRef(0)
 
   const cameraConfig = useMemo(() => {
@@ -252,9 +328,9 @@ export default function ThreeViewport({ layout, selectedId, onSelect, layers, gr
       minY = Math.min(minY, y); maxY = Math.max(maxY, y)
     }
     const maxDim = Math.max(maxX - minX, maxY - minY)
-    const dist = maxDim * 1.0
+    const dist = maxDim * 0.6
     return {
-      position: [dist * 0.6, dist * 0.7, dist * 0.6] as [number, number, number],
+      position: [dist * 0.577, dist * 0.577, dist * 0.577] as [number, number, number],
       fov: 50,
     }
   }, [layout])
@@ -276,23 +352,31 @@ export default function ThreeViewport({ layout, selectedId, onSelect, layers, gr
     onSelect(null)
   }, [onSelect])
 
-  const handleCameraAngles = useCallback((az: number, el: number) => {
-    setCameraAngles({ azimuth: az, elevation: el })
+  const handleContainerClick = useCallback((e: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (rect) {
+      // Store in ref (no re-render); SelectionPanel reads it via prop only when selectedId changes
+      const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      clickScreenPosRef.current = pos
+      setClickScreenPos(pos)
+    }
   }, [])
 
-  const bgColor = isDark ? '#06090f' : '#f0f2f5'
+  const bgColor = isDark ? '#1a1b24' : '#ffffff'
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <div ref={containerRef} onClick={handleContainerClick} style={{ width: '100%', height: '100%', position: 'relative' }}>
       <Canvas
         camera={{ position: cameraConfig.position, fov: cameraConfig.fov, near: 0.1, far: 500 }}
         style={{ width: '100%', height: '100%', background: bgColor, transition: 'background 0.3s ease' }}
+        shadows
         gl={{ antialias: true, alpha: false }}
         onPointerMissed={handleMissedClick}
       >
-        <CameraTracker onAnglesChange={handleCameraAngles} />
+        <CameraTracker anglesRef={cameraAnglesRef} />
         <CameraController viewCommand={viewCommand} />
         <OrthoController isOrtho={isOrtho} />
+        <BoundsFitter layout={layout} onFit={() => handleViewChange('top-front-right')} />
         <SceneContent
           layout={layout}
           selectedId={selectedId}
@@ -311,13 +395,12 @@ export default function ThreeViewport({ layout, selectedId, onSelect, layers, gr
         style={{
           position: 'absolute',
           top: 12,
-          right: 120,
+          right: 468,
           zIndex: 20,
           display: 'flex',
           alignItems: 'center',
           gap: 6,
           background: colors.panelBg,
-          backdropFilter: 'blur(16px)',
           border: `1px solid ${showLabels ? colors.accent + '44' : colors.border}`,
           borderRadius: 8,
           padding: '5px 10px',
@@ -347,13 +430,12 @@ export default function ThreeViewport({ layout, selectedId, onSelect, layers, gr
         style={{
           position: 'absolute',
           top: 12,
-          right: 200,
+          right: 556,
           zIndex: 20,
           display: 'flex',
           alignItems: 'center',
           gap: 6,
           background: colors.panelBg,
-          backdropFilter: 'blur(16px)',
           border: `1px solid ${colors.border}`,
           borderRadius: 8,
           padding: '5px 10px',
@@ -382,7 +464,7 @@ export default function ThreeViewport({ layout, selectedId, onSelect, layers, gr
         onViewChange={handleViewChange}
         isOrtho={isOrtho}
         onToggleOrtho={handleToggleOrtho}
-        cameraAngles={cameraAngles}
+        cameraAnglesRef={cameraAnglesRef}
       />
 
       {/* Selection detail panel */}
@@ -391,6 +473,7 @@ export default function ThreeViewport({ layout, selectedId, onSelect, layers, gr
         layout={layout}
         graphData={graphData || null}
         onClose={handleClosePanel}
+        clickPosition={clickScreenPos}
       />
     </div>
   )

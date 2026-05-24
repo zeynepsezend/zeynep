@@ -11,11 +11,11 @@ const GradeDisplay: React.FC<GradeDisplayProps> = ({ grade, score }) => {
   const isDark = theme === 'dark';
 
   const gradeColors: Record<string, string> = {
-    A: '#00E5FF',
-    B: '#39FF14',
-    C: '#FFD600',
-    D: '#FF8C42',
-    F: '#FF4444',
+    A: '#6B7B9E',
+    B: '#7EA68B',
+    C: '#C4896E',
+    D: '#B8986A',
+    F: '#C06060',
   };
 
   const normalizedGrade = grade?.toUpperCase() ?? 'F';
@@ -26,15 +26,15 @@ const GradeDisplay: React.FC<GradeDisplayProps> = ({ grade, score }) => {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: '8px',
+      gap: '4px',
       fontFamily: colors.font,
     }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: '80px',
-        height: '80px',
+        width: '52px',
+        height: '52px',
         borderRadius: '50%',
         background: isDark
           ? `radial-gradient(circle at 35% 35%, ${color}18, ${color}05)`
@@ -46,7 +46,7 @@ const GradeDisplay: React.FC<GradeDisplayProps> = ({ grade, score }) => {
         transition: 'all 0.4s ease',
       }}>
         <span style={{
-          fontSize: 44,
+          fontSize: 28,
           fontWeight: 800,
           color,
           lineHeight: 1,
@@ -59,7 +59,7 @@ const GradeDisplay: React.FC<GradeDisplayProps> = ({ grade, score }) => {
       <div style={{ textAlign: 'center' }}>
         <div style={{
           color: colors.text,
-          fontSize: 32,
+          fontSize: 20,
           fontWeight: 800,
           letterSpacing: '-0.03em',
           lineHeight: 1,

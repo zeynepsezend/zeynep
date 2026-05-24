@@ -7,18 +7,16 @@ interface PulseHighlightProps {
 }
 
 /**
- * Traverses the scene each frame and applies a pulsing emissive glow
- * to any mesh whose userData.elementId is in the modifiedIds set.
+ * Applies a pulsing emissive glow to modified/new elements.
  */
 export default function PulseHighlight({ modifiedIds }: PulseHighlightProps) {
   const { scene } = useThree()
-  const initialized = useRef(new Set<string>())
+  const tracked = useRef(new Map<string, { emissive: number; ei: number }>())
 
   useFrame(({ clock }) => {
-    if (modifiedIds.size === 0) return
+    if (modifiedIds.size === 0 && tracked.current.size === 0) return
 
     const t = clock.getElapsedTime()
-    // Pulse: sine wave between 0.3 and 1.0 intensity, period ~1.5s
     const pulse = 0.5 + 0.5 * Math.sin(t * 4.2)
 
     scene.traverse((obj) => {
@@ -29,25 +27,23 @@ export default function PulseHighlight({ modifiedIds }: PulseHighlightProps) {
       const mat = obj.material as THREE.MeshStandardMaterial
       if (!mat || !('emissive' in mat)) return
 
-      if (modifiedIds.has(eid)) {
-        // Save original if not already saved
-        if (!initialized.current.has(eid)) {
-          obj.userData._origEmissive = mat.emissive.getHex()
-          obj.userData._origEmissiveIntensityPulse = mat.emissiveIntensity
-          initialized.current.add(eid)
+      const isModified = modifiedIds.has(eid)
+      const isTracked = tracked.current.has(eid)
+
+      if (isModified) {
+        if (!isTracked) {
+          tracked.current.set(eid, {
+            emissive: mat.emissive.getHex(),
+            ei: mat.emissiveIntensity,
+          })
         }
-        // Apply pulse: white-cyan flash
-        mat.emissive.setHex(0x00e5ff)
-        mat.emissiveIntensity = 0.3 + pulse * 0.7
-      } else if (initialized.current.has(eid)) {
-        // Restore original
-        if (obj.userData._origEmissive !== undefined) {
-          mat.emissive.setHex(obj.userData._origEmissive)
-          mat.emissiveIntensity = obj.userData._origEmissiveIntensityPulse
-          delete obj.userData._origEmissive
-          delete obj.userData._origEmissiveIntensityPulse
-        }
-        initialized.current.delete(eid)
+        mat.emissive.setHex(0x6B7B9E)
+        mat.emissiveIntensity = 0.1 + pulse * 0.3
+      } else if (isTracked) {
+        const orig = tracked.current.get(eid)!
+        mat.emissive.setHex(orig.emissive)
+        mat.emissiveIntensity = orig.ei
+        tracked.current.delete(eid)
       }
     })
   })

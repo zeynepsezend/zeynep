@@ -68,7 +68,7 @@ const ToolCallCard: React.FC<ToolCallCardProps> = ({ name, status, args, result 
       <div
         style={cardStyle}
         onClick={() => setExpanded(v => !v)}
-        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = isDark ? 'rgba(0, 229, 255, 0.08)' : 'rgba(0, 144, 176, 0.1)'; }}
+        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = isDark ? 'rgba(139, 92, 246, 0.08)' : 'rgba(0, 144, 176, 0.1)'; }}
         onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = ''; }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

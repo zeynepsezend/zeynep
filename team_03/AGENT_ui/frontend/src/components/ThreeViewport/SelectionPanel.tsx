@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react'
 import { useTheme } from '../common/ThemeToggle'
 import { LayoutJSON } from '../../types'
 import type { NodeLinkData } from '../GraphPanel/graphDataMapper'
@@ -8,6 +8,7 @@ interface SelectionPanelProps {
   layout: LayoutJSON
   graphData: NodeLinkData | null
   onClose: () => void
+  clickPosition?: { x: number; y: number } | null
 }
 
 interface ElementInfo {
@@ -116,16 +117,62 @@ function findElement(layout: LayoutJSON, id: string): ElementInfo | null {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  room: '#1A4A6B',
-  door: '#FF8C42',
-  window: '#00E5FF',
-  furniture: '#00CED1',
-  mep: '#39FF14',
-  structure: '#2D3A45',
+  room: '#3D3270',
+  door: '#D4976A',
+  window: '#8B5CF6',
+  furniture: '#7C6FAA',
+  mep: '#34D399',
+  structure: '#2A2838',
 }
 
-export default function SelectionPanel({ selectedId, layout, graphData, onClose }: SelectionPanelProps) {
-  const { colors } = useTheme()
+export default function SelectionPanel({ selectedId, layout, graphData, onClose, clickPosition }: SelectionPanelProps) {
+  const { colors, theme } = useTheme()
+  const isDark = theme === 'dark'
+  const PANEL_W = 260
+  const PANEL_H = 320
+  const [position, setPosition] = useState({ x: 300, y: 200 })
+  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null)
+
+  // Position panel near clicked element when selection changes
+  useEffect(() => {
+    if (clickPosition && selectedId) {
+      const pw = window.innerWidth
+      const ph = window.innerHeight
+      let px = clickPosition.x + 20
+      let py = clickPosition.y - 40
+      if (px + PANEL_W > pw) px = clickPosition.x - PANEL_W - 20
+      if (py + PANEL_H > ph) py = ph - PANEL_H - 16
+      if (py < 16) py = 16
+      if (px < 16) px = 16
+      setPosition({ x: px, y: py })
+    }
+  }, [selectedId, clickPosition])
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: position.x,
+      startPosY: position.y,
+    }
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }, [position])
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current) return
+    const dx = e.clientX - dragRef.current.startX
+    const dy = e.clientY - dragRef.current.startY
+    setPosition({
+      x: Math.max(0, Math.min(window.innerWidth - 100, dragRef.current.startPosX + dx)),
+      y: Math.max(0, Math.min(window.innerHeight - 40, dragRef.current.startPosY + dy)),
+    })
+  }, [])
+
+  const handlePointerUp = useCallback(() => {
+    dragRef.current = null
+  }, [])
 
   const info = useMemo(() => {
     if (!selectedId) return null
@@ -167,11 +214,10 @@ export default function SelectionPanel({ selectedId, layout, graphData, onClose 
   return (
     <div style={{
       position: 'absolute',
-      bottom: 56,
-      left: 16,
+      top: position.y,
+      left: position.x,
       width: 260,
-      background: colors.panelBg,
-      backdropFilter: 'blur(20px) saturate(180%)',
+      background: isDark ? 'rgba(18, 19, 26, 0.94)' : 'rgba(245, 245, 247, 0.95)',
       border: `1px solid ${colors.border}`,
       borderRadius: 12,
       overflow: 'hidden',
@@ -180,13 +226,20 @@ export default function SelectionPanel({ selectedId, layout, graphData, onClose 
       transition: 'background 0.3s, border-color 0.3s',
     }}>
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '10px 14px',
-        borderBottom: `1px solid ${colors.border}`,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 14px',
+          borderBottom: `1px solid ${colors.border}`,
+          cursor: 'grab',
+          userSelect: 'none',
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
           <span style={{
             fontSize: 9,

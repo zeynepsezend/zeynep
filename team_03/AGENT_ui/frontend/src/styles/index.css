@@ -11,8 +11,8 @@ html, body, #root {
 }
 
 body {
-  background: var(--bg, #06090f);
-  color: var(--text, #e0e6ed);
+  background: var(--bg, #08080C);
+  color: var(--text, #F5F5F7);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -29,29 +29,29 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 229, 255, 0.12);
+  background: rgba(139, 92, 246, 0.12);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 229, 255, 0.25);
+  background: rgba(139, 92, 246, 0.25);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 229, 255, 0.12) transparent;
+  scrollbar-color: rgba(139, 92, 246, 0.12) transparent;
 }
 
 /* Selection colors */
 ::selection {
-  background: rgba(0, 229, 255, 0.25);
-  color: #e0e6ed;
+  background: rgba(139, 92, 246, 0.25);
+  color: #F5F5F7;
 }
 
 /* Focus styles for accessibility */
 :focus-visible {
-  outline: 1px solid rgba(0, 229, 255, 0.4);
+  outline: 1px solid rgba(139, 92, 246, 0.4);
   outline-offset: 2px;
 }
 
@@ -67,6 +67,6 @@ button, input, textarea, select {
 }
 
 @keyframes subtleGlow {
-  0%, 100% { box-shadow: 0 0 8px rgba(0, 229, 255, 0.15); }
-  50% { box-shadow: 0 0 16px rgba(0, 229, 255, 0.25); }
+  0%, 100% { box-shadow: 0 0 8px rgba(139, 92, 246, 0.15); }
+  50% { box-shadow: 0 0 16px rgba(139, 92, 246, 0.25); }
 }

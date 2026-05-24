@@ -97,7 +97,7 @@ const Histogram: React.FC<HistogramProps> = ({ data, label, color }) => {
                 </div>
               );
             }}
-            cursor={{ fill: isDark ? 'rgba(0,229,255,0.05)' : 'rgba(0,144,176,0.05)' }}
+            cursor={{ fill: isDark ? 'rgba(139,92,246,0.05)' : 'rgba(0,144,176,0.05)' }}
           />
           <Bar dataKey="count" radius={[3, 3, 0, 0]}>
             {bins.map((entry, index) => (

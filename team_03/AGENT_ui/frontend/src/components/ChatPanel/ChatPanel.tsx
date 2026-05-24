@@ -127,10 +127,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSend, isAgentRunning,
     width: '6px',
     height: '6px',
     borderRadius: '50%',
-    background: isAgentRunning ? '#FF8C42' : '#39FF14',
+    background: isAgentRunning ? '#FBBF24' : '#34D399',
     boxShadow: isAgentRunning
-      ? '0 0 8px #FF8C42, 0 0 2px #FF8C42'
-      : '0 0 8px #39FF14, 0 0 2px #39FF14',
+      ? '0 0 8px #FBBF24, 0 0 2px #FBBF24'
+      : '0 0 8px #34D399, 0 0 2px #34D399',
     animation: isAgentRunning ? 'agentPulse 1s ease-in-out infinite' : 'none',
   };
 
@@ -229,7 +229,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSend, isAgentRunning,
         }
       `}</style>
 
-      <GlassPanel style={panelStyle}>
+      <div style={panelStyle}>
         <div style={headerStyle}>
           <span style={statusDotStyle} />
           <span style={headerTitleStyle}>Agent Chat</span>
@@ -293,7 +293,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSend, isAgentRunning,
             <SendIcon />
           </button>
         </div>
-      </GlassPanel>
+      </div>
     </>
   );
 };

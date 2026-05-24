@@ -57,27 +57,25 @@ const EmptyState: React.FC = () => {
     }}>
       {/* Placeholder KPI row */}
       <div style={{
-        display: 'flex',
-        gap: '8px',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(5, 1fr)',
+        gap: '4px',
       }}>
         {TOOL_SCORES.map(tool => (
           <div key={tool.key} style={{
-            flex: '1 1 60px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: '12px 4px',
+            padding: '8px 2px',
             borderRadius: '8px',
-            background: isDark ? 'rgba(0, 229, 255, 0.02)' : 'rgba(0,0,0,0.02)',
-            border: `1px solid ${isDark ? 'rgba(0, 229, 255, 0.05)' : 'rgba(0,0,0,0.04)'}`,
+            background: isDark ? 'rgba(139, 92, 246, 0.02)' : 'rgba(0,0,0,0.02)',
+            border: `1px solid ${isDark ? 'rgba(139, 92, 246, 0.05)' : 'rgba(0,0,0,0.04)'}`,
             gap: '6px',
           }}>
             <span style={{
-              fontSize: 22,
+              fontSize: 16,
               fontWeight: 800,
-              color: isDark ? 'rgba(0, 229, 255, 0.15)' : 'rgba(0,0,0,0.08)',
+              color: isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(0,0,0,0.08)',
               letterSpacing: '-0.03em',
             }}>--</span>
             <span style={{
@@ -106,7 +104,7 @@ const EmptyState: React.FC = () => {
           width: 56,
           height: 56,
           borderRadius: '50%',
-          border: `2px solid ${isDark ? 'rgba(0, 229, 255, 0.08)' : 'rgba(0,0,0,0.06)'}`,
+          border: `2px solid ${isDark ? 'rgba(139, 92, 246, 0.08)' : 'rgba(0,0,0,0.06)'}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -137,7 +135,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scores }) => {
   };
 
   return (
-    <GlassPanel style={panelStyle} glow>
+    <div style={{ ...panelStyle, padding: '12px' }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -163,14 +161,12 @@ const Dashboard: React.FC<DashboardProps> = ({ scores }) => {
       ) : (
         <>
           <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: '6px',
-            flexWrap: 'wrap',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            gap: '4px',
           }}>
             {TOOL_SCORES.map(tool => (
-              <div key={tool.key} style={{ flex: '1 1 70px', display: 'flex', justifyContent: 'center' }}>
+              <div key={tool.key} style={{ display: 'flex', justifyContent: 'center' }}>
                 <ScoreCard
                   name={tool.label}
                   score={scores[tool.key] as number}
@@ -180,9 +176,9 @@ const Dashboard: React.FC<DashboardProps> = ({ scores }) => {
             ))}
           </div>
 
-          <div style={{ height: '1px', background: colors.border, margin: '12px 0' }} />
+          <div style={{ height: '1px', background: colors.border, margin: '8px 0' }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <GradeDisplay grade={scores.grade} score={scores.overall} />
             <div style={{ flex: 1 }}>
               <WeightBar scores={scores} />
@@ -200,7 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scores }) => {
           )}
         </>
       )}
-    </GlassPanel>
+    </div>
   );
 };
 

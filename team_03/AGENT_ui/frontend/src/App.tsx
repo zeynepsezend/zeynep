@@ -8,26 +8,14 @@ import ProcessPanel from './components/ProcessPanel/ProcessPanel';
 import LayoutLoader from './components/LayoutLoader/LayoutLoader';
 import ReasoningLog from './components/ReasoningLog/ReasoningLog';
 import ThemeToggle, { useTheme } from './components/common/ThemeToggle';
-import ResizeHandle from './components/common/ResizeHandle';
+import FloatingPanel from './components/common/FloatingPanel';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useSelectionSync } from './hooks/useSelectionSync';
 import { useLayoutState } from './hooks/useLayoutState';
 import { useAgentState } from './hooks/useAgentState';
 import type { LayerVisibility, LayerName } from './types';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const COLLAPSED_WIDTH = 24;
-const LEFT_DEFAULT_WIDTH = 280;
-const RIGHT_DEFAULT_WIDTH = 360;
-const LEFT_MIN = 180;
-const LEFT_MAX = 520;
-const RIGHT_MIN = 240;
-const RIGHT_MAX = 600;
-
-const GRAPH_DEFAULT_HEIGHT_PCT = 40;      // percentage of centre column (also used for dashboard)
-const LOG_DEFAULT_HEIGHT_PCT   = 30;      // percentage of right sidebar
-const LOADER_DEFAULT_HEIGHT    = 120;     // px — left sidebar top section
+// ─── Defaults ────────────────────────────────────────────────────────────────
 
 const defaultVisibility: LayerVisibility = {
   outline: true,
@@ -39,124 +27,100 @@ const defaultVisibility: LayerVisibility = {
   structure: true,
 };
 
-// ─── Chevron icons ────────────────────────────────────────────────────────────
+type ViewMode = 'geometry' | 'graph';
 
-const ChevronLeft: React.FC<{ size?: number }> = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 18 9 12 15 6" />
-  </svg>
-);
+// ─── Panel visibility state ─────────────────────────────────────────────────
 
-const ChevronRight: React.FC<{ size?: number }> = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);
-
-// ─── Collapse button ──────────────────────────────────────────────────────────
-
-interface CollapseButtonProps {
-  collapsed: boolean;
-  side: 'left' | 'right';
-  onClick: () => void;
+interface PanelVisibility {
+  layout: boolean
+  layers: boolean
+  pipeline: boolean
+  chat: boolean
+  dashboard: boolean
+  log: boolean
 }
 
-const CollapseButton: React.FC<CollapseButtonProps> = ({ collapsed, side, onClick }) => {
-  const { colors } = useTheme();
-  const [hovered, setHovered] = useState(false);
-
-  // For left sidebar: when open show left arrow (collapse left), when closed show right arrow (expand right)
-  // For right sidebar: when open show right arrow (collapse right), when closed show left arrow (expand left)
-  const showRight = (side === 'left' && collapsed) || (side === 'right' && !collapsed);
-
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      title={collapsed ? 'Expand panel' : 'Collapse panel'}
-      aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 20,
-        height: 20,
-        borderRadius: 4,
-        border: `1px solid ${hovered ? colors.accent : colors.border}`,
-        background: hovered ? colors.accentDim : 'transparent',
-        color: hovered ? colors.accent : colors.muted,
-        cursor: 'pointer',
-        flexShrink: 0,
-        outline: 'none',
-        transition: 'background 0.15s, border-color 0.15s, color 0.15s',
-        padding: 0,
-      }}
-    >
-      {showRight ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-    </button>
-  );
+const defaultPanelVisibility: PanelVisibility = {
+  layout: true,
+  layers: true,
+  pipeline: true,
+  chat: true,
+  dashboard: true,
+  log: false,
 };
 
-// ─── Vertical label for collapsed sidebars ────────────────────────────────────
+// ─── Small SVG icons for panel headers ──────────────────────────────────────
 
-const VerticalLabel: React.FC<{ text: string }> = ({ text }) => {
-  const { colors } = useTheme();
-  return (
-    <div style={{
-      writingMode: 'vertical-rl',
-      textOrientation: 'mixed',
-      transform: 'rotate(180deg)',
-      fontSize: 9,
-      letterSpacing: '0.1em',
-      textTransform: 'uppercase',
-      color: colors.muted,
-      userSelect: 'none',
-      whiteSpace: 'nowrap',
-    }}>
-      {text}
-    </div>
-  );
-};
+const IconCube = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+  </svg>
+);
+
+const IconLayers = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 17 12 22 22 17" />
+    <polyline points="2 12 12 17 22 12" />
+  </svg>
+);
+
+const IconPipeline = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+const IconChat = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+const IconDashboard = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+);
+
+const IconLog = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+  </svg>
+);
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  // ── Theme & core hooks ────────────────────────────────────────────────────
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
   const ws = useWebSocket();
   const { selectedId, select } = useSelectionSync(ws);
   const layoutState = useLayoutState();
   const agentState = useAgentState({ onScoresReady: layoutState.setScores });
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>(defaultVisibility);
   const [logVisible, setLogVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('geometry');
+  const [panels, setPanels] = useState<PanelVisibility>(defaultPanelVisibility);
+  const [topZ, setTopZ] = useState(110);
 
-  // ── Sidebar widths ────────────────────────────────────────────────────────
-  const [leftWidth, setLeftWidth]   = useState(LEFT_DEFAULT_WIDTH);
-  const [rightWidth, setRightWidth] = useState(RIGHT_DEFAULT_WIDTH);
-  const [leftCollapsed, setLeftCollapsed]   = useState(false);
-  const [rightCollapsed, setRightCollapsed] = useState(false);
+  // Z-index state per panel
+  const [panelZ, setPanelZ] = useState<Record<string, number>>({
+    layout: 100, layers: 101, pipeline: 102,
+    chat: 103, dashboard: 104, log: 105,
+  });
 
-  // ── Left sidebar sub-panel heights ───────────────────────────────────────
-  // LayoutLoader height in px (fixed), ProcessPanel takes the rest
-  const [loaderHeight, setLoaderHeight] = useState(LOADER_DEFAULT_HEIGHT);
-
-  // ── Centre sub-panel heights ──────────────────────────────────────────────
-  // GraphPanel height as percentage of centre column height
-  const [graphHeightPct, setGraphHeightPct] = useState(GRAPH_DEFAULT_HEIGHT_PCT);
-
-  // ── Right sidebar sub-panel heights ──────────────────────────────────────
-  // Log height as percentage; Chat takes the rest; Dashboard height mirrors graphHeightPct
-  const [logHeightPct, setLogHeightPct] = useState(LOG_DEFAULT_HEIGHT_PCT);
-
-  // ── Panel refs (used by ResizeHandle for size baseline) ───────────────────
-  const leftRef    = useRef<HTMLDivElement>(null);
-  const rightRef   = useRef<HTMLDivElement>(null);
-  const centreRef  = useRef<HTMLDivElement>(null);
-  const loaderRef  = useRef<HTMLDivElement>(null);
-  const logRef     = useRef<HTMLDivElement>(null);
+  const bringToFront = useCallback((id: string) => {
+    setTopZ(prev => {
+      const next = prev + 1;
+      setPanelZ(pz => ({ ...pz, [id]: next }));
+      return next;
+    });
+  }, []);
 
   // ── WebSocket dispatcher ──────────────────────────────────────────────────
   useEffect(() => {
@@ -180,6 +144,23 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Poll layout from disk while agent is running ──────────────────────────
+  const wasRunningRef = useRef(false);
+  useEffect(() => {
+    if (agentState.isAgentRunning) {
+      wasRunningRef.current = true;
+      const interval = setInterval(() => {
+        layoutState.reloadLayout();
+      }, 3000);
+      return () => clearInterval(interval);
+    } else if (wasRunningRef.current) {
+      // Agent just finished — do a final reload to catch any last changes
+      wasRunningRef.current = false;
+      layoutState.reloadLayout();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentState.isAgentRunning]);
+
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleToggleLayer = useCallback((layer: LayerName) => {
     setLayerVisibility(prev => ({ ...prev, [layer]: !prev[layer] }));
@@ -187,9 +168,6 @@ export default function App() {
 
   const handleChatSend = useCallback((content: string) => {
     agentState.addUserMessage(content);
-    // Always run demo simulation for now — the real backend pipeline
-    // is not yet wired up, so WS messages won't produce agent events.
-    // When the backend is connected, WS events will drive the UI instead.
     agentState.runDemoSimulation(content);
   }, [agentState]);
 
@@ -201,331 +179,321 @@ export default function App() {
   const handleViewportSelect = useCallback((id: string | null) => { select(id, 'viewport'); }, [select]);
   const handleGraphSelect    = useCallback((id: string | null) => { select(id, 'graph');    }, [select]);
 
-  // ── Resize callbacks (clamped) ────────────────────────────────────────────
-  const handleLeftResize = useCallback((px: number) => {
-    setLeftWidth(Math.min(LEFT_MAX, Math.max(LEFT_MIN, px)));
+  const togglePanel = useCallback((key: keyof PanelVisibility) => {
+    setPanels(prev => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  const handleRightResize = useCallback((px: number) => {
-    // The right handle is on the left edge of the right panel;
-    // drag right = smaller panel, so invert delta via the handle itself
-    setRightWidth(Math.min(RIGHT_MAX, Math.max(RIGHT_MIN, px)));
-  }, []);
+  // ── Computed positions (relative to window) ──────────────────────────────
+  const W = typeof window !== 'undefined' ? window.innerWidth : 1920;
+  const H = typeof window !== 'undefined' ? window.innerHeight : 1080;
 
-  const handleLoaderResize = useCallback((px: number) => {
-    setLoaderHeight(Math.min(400, Math.max(60, px)));
-  }, []);
-
-  const handleGraphResize = useCallback((px: number) => {
-    if (!centreRef.current) return;
-    const totalH = centreRef.current.getBoundingClientRect().height;
-    if (totalH === 0) return;
-    // px here is the height of the *graph* panel (bottom section)
-    // ResizeHandle gives us leading panel size; here the leading panel is the viewport (top).
-    // We use (totalH - px) for the graph percentage.
-    const graphPx = Math.max(120, Math.min(totalH - 100, totalH - px));
-    setGraphHeightPct(Math.round((graphPx / totalH) * 100));
-  }, []);
-
-  const handleLogResize = useCallback((px: number) => {
-    if (!rightRef.current) return;
-    const totalH = rightRef.current.getBoundingClientRect().height;
-    if (totalH === 0) return;
-    setLogHeightPct(Math.round((Math.max(80, Math.min(totalH * 0.6, px)) / totalH) * 100));
-  }, []);
-
-  // ── Derived widths ────────────────────────────────────────────────────────
-  const effectiveLeftWidth  = leftCollapsed  ? COLLAPSED_WIDTH : leftWidth;
-  const effectiveRightWidth = rightCollapsed ? COLLAPSED_WIDTH : rightWidth;
-
-  // ── Shared styles ─────────────────────────────────────────────────────────
-  const connectionDot: React.CSSProperties = {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    background:  ws.isConnected ? '#39FF14' : '#FF4444',
-    boxShadow:   ws.isConnected ? '0 0 8px #39FF14, 0 0 2px #39FF14' : '0 0 8px #FF4444, 0 0 2px #FF4444',
-    flexShrink: 0,
-  };
-
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={{
-      display: 'flex',
-      height: '100vh',
+      position: 'relative',
       width: '100vw',
+      height: '100vh',
       background: colors.bg,
       color: colors.text,
       fontFamily: colors.font,
       overflow: 'hidden',
-      transition: 'background 0.3s ease, color 0.3s ease',
     }}>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          LEFT SIDEBAR
-      ══════════════════════════════════════════════════════════════════════ */}
-      <div
-        ref={leftRef}
-        style={{
-          width: effectiveLeftWidth,
-          minWidth: effectiveLeftWidth,
-          display: 'flex',
-          flexDirection: 'column',
-          borderRight: `1px solid ${colors.border}`,
-          overflow: 'hidden',
-          transition: leftCollapsed ? 'width 0.2s ease, min-width 0.2s ease' : 'none',
-          flexShrink: 0,
-        }}
-      >
-        {leftCollapsed ? (
-          /* ── Collapsed strip ── */
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            paddingTop: 8,
-            gap: 10,
-            height: '100%',
-          }}>
-            <CollapseButton collapsed side="left" onClick={() => setLeftCollapsed(false)} />
-            <VerticalLabel text="Pipeline" />
-          </div>
-        ) : (
-          /* ── Expanded content ── */
-          <>
-            {/* Top bar */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '8px 12px',
-              borderBottom: `1px solid ${colors.border}`,
-              flexShrink: 0,
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 10,
-                color: colors.muted,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-              }}>
-                <span style={connectionDot} />
-                {ws.isConnected ? 'Connected' : 'Disconnected'}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ThemeToggle />
-                <CollapseButton collapsed={false} side="left" onClick={() => setLeftCollapsed(true)} />
-              </div>
-            </div>
-
-            {/* Layout Loader (resizable height) */}
-            <div
-              ref={loaderRef}
-              style={{ height: loaderHeight, minHeight: 60, flexShrink: 0, overflow: 'hidden' }}
-            >
-              <LayoutLoader
-                layouts={layoutState.availableLayouts}
-                selectedLayout={layoutState.selectedLayoutName}
-                onSelect={handleLayoutSelect}
-                onUpload={handleLayoutUpload}
-              />
-            </div>
-
-            {/* Horizontal resize handle between loader and pipeline */}
-            <ResizeHandle
-              orientation="horizontal"
-              panelRef={loaderRef}
-              onResize={handleLoaderResize}
-            />
-
-            {/* Process Panel */}
-            <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-              <ProcessPanel nodeStatuses={agentState.nodeStatuses} />
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Vertical resize handle — right edge of left sidebar */}
-      {!leftCollapsed && (
-        <ResizeHandle
-          orientation="vertical"
-          panelRef={leftRef}
-          onResize={handleLeftResize}
-        />
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          CENTRE COLUMN: Viewport (top) + Graph Panel (bottom)
-      ══════════════════════════════════════════════════════════════════════ */}
-      <div
-        ref={centreRef}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}
-      >
-        {/* 3D Viewport */}
-        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-          {layoutState.layout ? (
-            <ThreeViewport
-              layout={layoutState.layout}
-              selectedId={selectedId}
-              onSelect={handleViewportSelect}
-              layers={layerVisibility}
-              graphData={layoutState.graphData}
-            />
-          ) : (
-            <div style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: colors.bg,
-              color: colors.muted,
-              fontSize: 13,
-              flexDirection: 'column',
-              gap: 12,
-              transition: 'background 0.3s ease',
-            }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
-                stroke={colors.accentDim} strokeWidth="1.5">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                <line x1="12" y1="22.08" x2="12" y2="12" />
-              </svg>
-              <span>Select or upload a layout to begin</span>
-            </div>
-          )}
-          {layoutState.layout && (
-            <LayerToggle layers={layerVisibility} onToggle={handleToggleLayer} />
-          )}
-        </div>
-
-        {/* Horizontal resize handle between viewport and graph */}
-        <ResizeHandle
-          orientation="horizontal"
-          panelRef={centreRef}
-          onResize={handleGraphResize}
-        />
-
-        {/* Graph Panel */}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          TOP NAV BAR
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 44,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 16px',
+        zIndex: 250,
+        background: isDark ? 'rgba(18, 19, 26, 0.96)' : 'rgba(245, 245, 247, 0.97)',
+        borderBottom: `1px solid ${colors.border}`,
+      }}>
+        {/* Left: Logo + Title */}
         <div style={{
-          height: `${graphHeightPct}%`,
-          minHeight: 120,
-          borderTop: `1px solid ${colors.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          fontSize: 13,
+          fontWeight: 600,
+          color: colors.text,
+          letterSpacing: '0.02em',
         }}>
-          <GraphPanel
-            graphData={layoutState.graphData}
-            selectedId={selectedId}
-            onSelect={handleGraphSelect}
-          />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+          </svg>
+          AGENT Studio
+        </div>
+
+        {/* Center: View Mode Toggle */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+          borderRadius: 10,
+          padding: 3,
+          border: `1px solid ${colors.border}`,
+        }}>
+          <button
+            onClick={() => setViewMode('geometry')}
+            style={{
+              padding: '5px 16px',
+              borderRadius: 8,
+              border: 'none',
+              fontSize: 12,
+              fontWeight: 500,
+              letterSpacing: '0.02em',
+              cursor: 'pointer',
+              fontFamily: colors.font,
+              transition: 'all 0.2s',
+              background: viewMode === 'geometry'
+                ? (isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(124, 58, 237, 0.12)')
+                : 'transparent',
+              color: viewMode === 'geometry' ? colors.accent : colors.muted,
+            }}
+          >
+            3D Viewport
+          </button>
+          <button
+            onClick={() => setViewMode('graph')}
+            style={{
+              padding: '5px 16px',
+              borderRadius: 8,
+              border: 'none',
+              fontSize: 12,
+              fontWeight: 500,
+              letterSpacing: '0.02em',
+              cursor: 'pointer',
+              fontFamily: colors.font,
+              transition: 'all 0.2s',
+              background: viewMode === 'graph'
+                ? (isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(124, 58, 237, 0.12)')
+                : 'transparent',
+              color: viewMode === 'graph' ? colors.accent : colors.muted,
+            }}
+          >
+            Spatial Graph
+          </button>
+        </div>
+
+        {/* Right: Panel toggles + Status + Theme */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Panel toggle pills */}
+          {(['layout', 'layers', 'pipeline', 'chat', 'dashboard', 'log'] as (keyof PanelVisibility)[]).map(key => (
+            <button
+              key={key}
+              onClick={() => togglePanel(key)}
+              style={{
+                padding: '3px 8px',
+                borderRadius: 6,
+                border: `1px solid ${panels[key] ? colors.accent + '30' : 'transparent'}`,
+                fontSize: 9,
+                fontWeight: 500,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                fontFamily: colors.font,
+                transition: 'all 0.2s',
+                background: panels[key] ? colors.accentDim : 'transparent',
+                color: panels[key] ? colors.accent : colors.muted,
+              }}
+            >
+              {key}
+            </button>
+          ))}
+
+          {/* Connection dot */}
+          <div style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: ws.isConnected ? colors.success : colors.error,
+            boxShadow: ws.isConnected
+              ? `0 0 6px ${colors.success}`
+              : `0 0 6px ${colors.error}`,
+          }} />
+
+          <ThemeToggle />
         </div>
       </div>
 
-      {/* Vertical resize handle — left edge of right sidebar */}
-      {!rightCollapsed && (
-        <ResizeHandle
-          orientation="vertical"
-          panelRef={rightRef}
-          onResize={handleRightResize}
-        />
-      )}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          FULL-SCREEN VIEWPORT / GRAPH (toggle with display)
+      ═══════════════════════════════════════════════════════════════════════ */}
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          RIGHT SIDEBAR: Chat + Log + Dashboard
-      ══════════════════════════════════════════════════════════════════════ */}
-      <div
-        ref={rightRef}
-        style={{
-          width: effectiveRightWidth,
-          minWidth: effectiveRightWidth,
-          display: 'flex',
-          flexDirection: 'column',
-          borderLeft: `1px solid ${colors.border}`,
-          overflow: 'hidden',
-          transition: rightCollapsed ? 'width 0.2s ease, min-width 0.2s ease' : 'none',
-          flexShrink: 0,
-        }}
-      >
-        {rightCollapsed ? (
-          /* ── Collapsed strip ── */
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            paddingTop: 8,
-            gap: 10,
-            height: '100%',
-          }}>
-            <CollapseButton collapsed side="right" onClick={() => setRightCollapsed(false)} />
-            <VerticalLabel text="Chat" />
-          </div>
+      {/* 3D Viewport */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        paddingTop: 44,
+        display: viewMode === 'geometry' ? 'block' : 'none',
+      }}>
+        {layoutState.layout ? (
+          <ThreeViewport
+            layout={layoutState.layout}
+            selectedId={selectedId}
+            onSelect={handleViewportSelect}
+            layers={layerVisibility}
+            graphData={layoutState.graphData}
+            modifiedIds={layoutState.modifiedIds}
+          />
         ) : (
-          /* ── Expanded content ── */
-          <>
-            {/* Chat Panel header row with collapse button */}
-            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              {/* Collapse button row */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'flex-start',
-                padding: '6px 10px',
-                borderBottom: `1px solid ${colors.border}`,
-                flexShrink: 0,
-              }}>
-                <CollapseButton collapsed={false} side="right" onClick={() => setRightCollapsed(true)} />
-              </div>
-              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                <ChatPanel
-                  messages={agentState.messages}
-                  onSend={handleChatSend}
-                  isAgentRunning={agentState.isAgentRunning}
-                  onReset={handleChatReset}
-                  onCancel={handleChatCancel}
-                />
-              </div>
-            </div>
-
-            {/* Horizontal resize handle between Chat and Log */}
-            <ResizeHandle
-              orientation="horizontal"
-              panelRef={logRef}
-              onResize={handleLogResize}
-            />
-
-            {/* Reasoning Log */}
-            <div
-              ref={logRef}
-              style={{
-                height: logVisible ? `${logHeightPct}%` : 'auto',
-                minHeight: logVisible ? 80 : 0,
-                borderTop: `1px solid ${colors.border}`,
-                overflow: 'hidden',
-              }}
-            >
-              <ReasoningLog
-                entries={agentState.logEntries}
-                visible={logVisible}
-                onToggle={() => setLogVisible(v => !v)}
-                isRunning={agentState.isAgentRunning}
-              />
-            </div>
-
-            {/* Dashboard — height mirrors graph panel (graphHeightPct) */}
-            <div
-              style={{
-                height: `${graphHeightPct}%`,
-                minHeight: 100,
-                overflow: 'auto',
-                borderTop: `1px solid ${colors.border}`,
-              }}
-            >
-              <Dashboard scores={layoutState.scores} />
-            </div>
-          </>
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: colors.bg,
+            color: colors.muted,
+            fontSize: 13,
+            flexDirection: 'column',
+            gap: 12,
+          }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+              stroke={colors.accentDim} strokeWidth="1.5">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+              <line x1="12" y1="22.08" x2="12" y2="12" />
+            </svg>
+            <span>Select or upload a layout to begin</span>
+          </div>
         )}
       </div>
+
+      {/* Graph Panel (full-screen background) */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        paddingTop: 44,
+        display: viewMode === 'graph' ? 'block' : 'none',
+      }}>
+        <GraphPanel
+          graphData={layoutState.graphData}
+          selectedId={selectedId}
+          onSelect={handleGraphSelect}
+          fullscreen
+        />
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          FLOATING PANELS
+      ═══════════════════════════════════════════════════════════════════════ */}
+
+      {/* Layout Loader — static, not draggable */}
+      <FloatingPanel
+        id="layout"
+        title="Layout"
+        icon={<IconCube />}
+        defaultPosition={{ x: 16, y: 56 }}
+        defaultSize={{ width: 240 }}
+        visible={panels.layout}
+        zIndex={panelZ.layout}
+        onFocus={() => bringToFront('layout')}
+        draggable={false}
+      >
+        <LayoutLoader
+          layouts={layoutState.availableLayouts}
+          selectedLayout={layoutState.selectedLayoutName}
+          onSelect={handleLayoutSelect}
+          onUpload={handleLayoutUpload}
+        />
+      </FloatingPanel>
+
+      {/* Layers — draggable, positioned to avoid Layout overlap */}
+      {viewMode === 'geometry' && (
+        <FloatingPanel
+          id="layers"
+          title="Layers"
+          icon={<IconLayers />}
+          defaultPosition={{ x: 270, y: 100 }}
+          defaultSize={{ width: 150 }}
+          visible={panels.layers}
+          zIndex={panelZ.layers}
+          onFocus={() => bringToFront('layers')}
+          draggable={true}
+        >
+          <LayerToggle layers={layerVisibility} onToggle={handleToggleLayer} />
+        </FloatingPanel>
+      )}
+
+      {/* Pipeline — static, not draggable */}
+      <FloatingPanel
+        id="pipeline"
+        title="Pipeline"
+        icon={<IconPipeline />}
+        defaultPosition={{ x: 16, y: 460 }}
+        defaultSize={{ width: 220 }}
+        visible={panels.pipeline}
+        zIndex={panelZ.pipeline}
+        onFocus={() => bringToFront('pipeline')}
+        draggable={false}
+        maxHeight={350}
+      >
+        <ProcessPanel nodeStatuses={agentState.nodeStatuses} />
+      </FloatingPanel>
+
+      {/* Chat — static, not draggable */}
+      <FloatingPanel
+        id="chat"
+        title="Chat"
+        icon={<IconChat />}
+        defaultPosition={{ x: W - 356, y: 56 }}
+        defaultSize={{ width: 340, height: 380 }}
+        visible={panels.chat}
+        zIndex={panelZ.chat}
+        onFocus={() => bringToFront('chat')}
+        draggable={false}
+      >
+        <ChatPanel
+          messages={agentState.messages}
+          onSend={handleChatSend}
+          isAgentRunning={agentState.isAgentRunning}
+          onReset={handleChatReset}
+          onCancel={handleChatCancel}
+        />
+      </FloatingPanel>
+
+      {/* Dashboard — static, not draggable */}
+      <FloatingPanel
+        id="dashboard"
+        title="Analysis"
+        icon={<IconDashboard />}
+        defaultPosition={{ x: W - 356, y: 450 }}
+        defaultSize={{ width: 340 }}
+        visible={panels.dashboard}
+        zIndex={panelZ.dashboard}
+        onFocus={() => bringToFront('dashboard')}
+        draggable={false}
+      >
+        <Dashboard scores={layoutState.scores} />
+      </FloatingPanel>
+
+      {/* Reasoning Log */}
+      <FloatingPanel
+        id="log"
+        title="Agent Log"
+        icon={<IconLog />}
+        defaultPosition={{ x: W - 420, y: H - 280 }}
+        defaultSize={{ width: 400 }}
+        visible={panels.log}
+        zIndex={panelZ.log}
+        onFocus={() => bringToFront('log')}
+      >
+        <ReasoningLog
+          entries={agentState.logEntries}
+          visible={true}
+          onToggle={() => togglePanel('log')}
+          isRunning={agentState.isAgentRunning}
+        />
+      </FloatingPanel>
     </div>
   );
 }

@@ -8,13 +8,13 @@ interface LayerToggleProps {
 }
 
 const LAYER_CONFIG: { key: LayerName; label: string; color: string }[] = [
-  { key: 'outline',   label: 'Outline',   color: '#00E5FF' },
-  { key: 'rooms',     label: 'Rooms',     color: '#142a3e' },
-  { key: 'structure', label: 'Walls',     color: '#2a4060' },
-  { key: 'doors',     label: 'Doors',     color: '#FF8C42' },
-  { key: 'windows',   label: 'Windows',   color: '#00E5FF' },
-  { key: 'furniture', label: 'Furniture', color: '#00CED1' },
-  { key: 'mep',       label: 'MEP',       color: '#39FF14' },
+  { key: 'outline',   label: 'Outline',   color: '#6B7B9E' },
+  { key: 'rooms',     label: 'Rooms',     color: '#B5A898' },
+  { key: 'structure', label: 'Walls',     color: '#8B8F96' },
+  { key: 'doors',     label: 'Doors',     color: '#C4896E' },
+  { key: 'windows',   label: 'Windows',   color: '#7A9DB8' },
+  { key: 'furniture', label: 'Furniture', color: '#9888AD' },
+  { key: 'mep',       label: 'MEP',       color: '#7EA68B' },
 ]
 
 export default function LayerToggle({ layers, onToggle }: LayerToggleProps) {
@@ -23,37 +23,14 @@ export default function LayerToggle({ layers, onToggle }: LayerToggleProps) {
 
   return (
     <div style={{
-      position: 'absolute',
-      top: 16,
-      left: 16,
-      background: isDark ? 'rgba(10, 14, 23, 0.75)' : 'rgba(255, 255, 255, 0.85)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      border: `1px solid ${colors.border}`,
-      borderRadius: 10,
-      padding: '14px 18px',
+      padding: '8px 12px',
       display: 'flex',
       flexDirection: 'column',
-      gap: 6,
-      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+      gap: 4,
       fontSize: 12,
       color: colors.muted,
       userSelect: 'none',
-      zIndex: 10,
-      minWidth: 140,
-      transition: 'background 0.3s ease, border-color 0.3s ease',
     }}>
-      <div style={{
-        fontSize: 10,
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-        color: colors.muted,
-        marginBottom: 4,
-        borderBottom: `1px solid ${colors.border}`,
-        paddingBottom: 6,
-      }}>
-        Layers
-      </div>
       {LAYER_CONFIG.map(({ key, label, color }) => (
         <label
           key={key}
@@ -81,11 +58,12 @@ export default function LayerToggle({ layers, onToggle }: LayerToggleProps) {
             border: `1px solid ${color}44`,
             transition: 'background 0.2s',
             flexShrink: 0,
-            boxShadow: layers[key] ? `0 0 6px ${color}66` : 'none',
+            boxShadow: layers[key] ? `0 0 4px ${color}44` : 'none',
           }} />
           <span style={{
             color: layers[key] ? colors.text : colors.muted,
             transition: 'color 0.2s',
+            fontSize: 11,
           }}>
             {label}
           </span>

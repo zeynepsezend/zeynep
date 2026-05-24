@@ -18,6 +18,7 @@ interface GraphPanelProps {
   graphData: NodeLinkData | null;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  fullscreen?: boolean;
 }
 
 interface DetailInfo {
@@ -28,12 +29,10 @@ interface DetailInfo {
 // ── Styles ──────────────────────────────────────────────────────────────────
 
 function makeStyles(T: GraphTheme) {
-  const isDark = T.canvasBg === '#06090f';
+  const isDark = T.canvasBg === '#08080C';
 
   const glassPanel: React.CSSProperties = {
     background: T.panelBg,
-    backdropFilter: 'blur(40px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(40px) saturate(180%)',
     border: `1px solid ${T.panelBorder}`,
     borderRadius: 10,
     color: T.text,
@@ -128,8 +127,6 @@ function makeStyles(T: GraphTheme) {
       right: 12,
       zIndex: 200,
       background: T.panelBg,
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
       border: `1px solid ${T.panelBorder}`,
       borderRadius: 8,
       width: 30,
@@ -273,7 +270,7 @@ function makeStyles(T: GraphTheme) {
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-const GraphPanel: React.FC<GraphPanelProps> = ({ graphData, selectedId, onSelect }) => {
+const GraphPanel: React.FC<GraphPanelProps> = ({ graphData, selectedId, onSelect, fullscreen }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
   const nodesDSRef = useRef<DataSet<VisNode> | null>(null);

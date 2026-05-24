@@ -18,8 +18,8 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ name, score, weight, maxScore = 1
   const { colors, theme } = useTheme();
   const isDark = theme === 'dark';
 
-  const size = 88;
-  const strokeWidth = 5;
+  const size = 56;
+  const strokeWidth = 3.5;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clampedScore = Math.max(0, Math.min(maxScore, score));
@@ -32,12 +32,12 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ name, score, weight, maxScore = 1
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: '4px',
+      gap: '2px',
       fontFamily: colors.font,
-      padding: '8px 4px',
+      padding: '4px 2px',
       borderRadius: '8px',
-      background: isDark ? 'rgba(0, 229, 255, 0.02)' : 'rgba(0,0,0,0.02)',
-      border: `1px solid ${isDark ? 'rgba(0, 229, 255, 0.06)' : 'rgba(0,0,0,0.04)'}`,
+      background: isDark ? 'rgba(139, 92, 246, 0.02)' : 'rgba(0,0,0,0.02)',
+      border: `1px solid ${isDark ? 'rgba(139, 92, 246, 0.06)' : 'rgba(0,0,0,0.04)'}`,
       transition: 'background 0.2s, border-color 0.2s',
     }}>
       <div style={{ position: 'relative', width: size, height: size }}>
@@ -61,7 +61,7 @@ const ScoreCard: React.FC<ScoreCardProps> = ({ name, score, weight, maxScore = 1
           transform: 'translate(-50%, -50%)', textAlign: 'center', lineHeight: 1,
         }}>
           <span style={{
-            fontSize: 26,
+            fontSize: 16,
             fontWeight: 800,
             color,
             letterSpacing: '-0.03em',

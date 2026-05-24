@@ -66,7 +66,7 @@ const LayoutLoader: React.FC<LayoutLoaderProps> = ({
   const optionColor = isDark ? '#e0e6ed' : '#1a2a3a';
 
   return (
-    <GlassPanel>
+    <div style={{ padding: '12px' }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -171,7 +171,7 @@ const LayoutLoader: React.FC<LayoutLoaderProps> = ({
       </div>
 
       <LayoutDropzone onUpload={onUpload} />
-    </GlassPanel>
+    </div>
   );
 };
 

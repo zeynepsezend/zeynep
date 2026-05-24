@@ -1,24 +1,24 @@
-// ── Industrial-futuristic color palette ─────────────────────────────────────
+// ── Apple-minimalist color palette (purple accent) ──────────────────────────
 
 export const NODE_COLORS = {
-  room: '#1A4A6B',      // deep ocean blue
-  door: '#FF8C42',      // warm orange
-  wall: '#2D3A45',      // dark steel
-  window: '#00E5FF',    // cyan neon
-  furniture: '#00CED1', // turquoise
-  mep: '#39FF14',       // electric green
+  room: '#3D3270',      // deep indigo
+  door: '#D4976A',      // warm amber
+  wall: '#2A2838',      // dark plum
+  window: '#A78BFA',    // lavender
+  furniture: '#7C6FAA', // muted purple
+  mep: '#5B8A6F',       // sage green
 } as const;
 
 export const EDGE_COLORS = {
-  contained_in: '#2D3A45',    // structural, muted
-  door_connects: '#FF8C42',   // orange (door color)
-  adjacent: '#1A4A6B',        // room connectivity
-  near: '#00CED1',            // proximity (turquoise)
-  near_wall: '#2D3A45',       // structural
-  near_window: '#00E5FF',     // cyan
-  sightline: '#39FF14',       // green for visible, red for blocked
-  blocks: '#FF4444',          // red for obstructions
-  path: '#00CED1',            // turquoise for paths
+  contained_in: '#2A2838',    // structural, muted
+  door_connects: '#D4976A',   // amber (door color)
+  adjacent: '#3D3270',        // room connectivity
+  near: '#7C6FAA',            // proximity (muted purple)
+  near_wall: '#2A2838',       // structural
+  near_window: '#A78BFA',     // lavender
+  sightline: '#5B8A6F',       // sage green for visible
+  blocks: '#F87171',          // soft rose for obstructions
+  path: '#7C6FAA',            // purple for paths
 } as const;
 
 export const NODE_SHAPES: Record<string, string> = {
@@ -93,7 +93,7 @@ export const NETWORK_OPTIONS = {
   nodes: {
     shape: 'dot',
     font: {
-      color: '#e0e6ed',
+      color: '#F5F5F7',
       size: 10,
       face: FONT_FACE,
       align: 'center' as const,
@@ -101,16 +101,16 @@ export const NETWORK_OPTIONS = {
     borderWidth: 2,
     shadow: {
       enabled: true,
-      size: 14,
+      size: 10,
       x: 0,
       y: 0,
-      color: 'rgba(0, 229, 255, 0.15)',
+      color: 'rgba(139, 92, 246, 0.12)',
     },
   },
   edges: {
     smooth: { type: 'continuous' as const, roundness: 0.3 },
     font: {
-      color: '#4a5a6e',
+      color: '#86868B',
       size: 8,
       face: FONT_FACE,
     },
@@ -133,29 +133,29 @@ export interface GraphTheme {
 }
 
 const DARK_THEME: GraphTheme = {
-  panelBg: 'rgba(10, 14, 22, 0.88)',
-  panelBorder: 'rgba(0, 229, 255, 0.10)',
-  text: '#e0e6ed',
-  muted: '#4a5a6e',
-  accent: '#00E5FF',
-  ok: '#39FF14',
-  fail: '#FF4444',
-  warn: '#FF8C42',
-  canvasBg: '#06090f',
-  nodeFontColor: '#e0e6ed',
+  panelBg: 'rgba(20, 16, 32, 0.72)',
+  panelBorder: 'rgba(255, 255, 255, 0.06)',
+  text: '#F5F5F7',
+  muted: '#86868B',
+  accent: '#8B5CF6',
+  ok: '#34D399',
+  fail: '#F87171',
+  warn: '#FBBF24',
+  canvasBg: '#08080C',
+  nodeFontColor: '#F5F5F7',
 };
 
 const LIGHT_THEME: GraphTheme = {
-  panelBg: 'rgba(255, 255, 255, 0.78)',
-  panelBorder: 'rgba(0, 0, 0, 0.08)',
-  text: '#1a1d24',
-  muted: '#6b7280',
-  accent: '#0077ed',
-  ok: '#248a3d',
-  fail: '#d63230',
-  warn: '#e07020',
-  canvasBg: '#f0f2f5',
-  nodeFontColor: '#1a1d24',
+  panelBg: 'rgba(255, 255, 255, 0.82)',
+  panelBorder: 'rgba(0, 0, 0, 0.06)',
+  text: '#1D1D1F',
+  muted: '#86868B',
+  accent: '#7C3AED',
+  ok: '#059669',
+  fail: '#DC2626',
+  warn: '#D97706',
+  canvasBg: '#F5F5F7',
+  nodeFontColor: '#1D1D1F',
 };
 
 /** Returns the graph theme for the given dark/light mode. */

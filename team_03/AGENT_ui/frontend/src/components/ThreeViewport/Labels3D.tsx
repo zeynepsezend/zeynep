@@ -72,12 +72,12 @@ export default function Labels3D({ layout, isDark, center }: Labels3DProps) {
   }, [layout, center])
 
   const typeColors: Record<string, string> = {
-    room: isDark ? '#4488aa' : '#2266880',
-    door: '#FF8C42',
-    furniture: isDark ? '#00CED1' : '#008888',
-    mep: isDark ? '#39FF14' : '#228811',
-    structure: isDark ? '#6688aa' : '#556677',
-    window: isDark ? '#00E5FF' : '#0077aa',
+    room: isDark ? '#B5A898' : '#8a7e72',
+    door: isDark ? '#C4896E' : '#a06848',
+    furniture: isDark ? '#9888AD' : '#7a6890',
+    mep: isDark ? '#7EA68B' : '#5a8068',
+    structure: isDark ? '#8B8F96' : '#686c72',
+    window: isDark ? '#7A9DB8' : '#5a7a92',
   }
 
   return (
@@ -87,11 +87,13 @@ export default function Labels3D({ layout, isDark, center }: Labels3DProps) {
           key={label.id}
           position={label.position}
           center
-          distanceFactor={30}
+          sprite
+          transform
+          scale={0.4}
           style={{ pointerEvents: 'none' }}
         >
           <div style={{
-            background: isDark ? 'rgba(10,14,23,0.75)' : 'rgba(255,255,255,0.8)',
+            background: isDark ? 'rgba(22,24,32,0.82)' : 'rgba(255,255,255,0.88)',
             color: typeColors[label.type] || (isDark ? '#aabbcc' : '#334455'),
             padding: '2px 6px',
             borderRadius: 4,
@@ -100,8 +102,7 @@ export default function Labels3D({ layout, isDark, center }: Labels3DProps) {
             fontFamily: '-apple-system, system-ui, sans-serif',
             whiteSpace: 'nowrap',
             letterSpacing: '0.02em',
-            border: `1px solid ${isDark ? 'rgba(0,229,255,0.15)' : 'rgba(0,100,130,0.2)'}`,
-            backdropFilter: 'blur(8px)',
+            border: `1px solid ${isDark ? 'rgba(120,130,150,0.20)' : 'rgba(100,110,130,0.15)'}`,
             maxWidth: 120,
             overflow: 'hidden',
             textOverflow: 'ellipsis',

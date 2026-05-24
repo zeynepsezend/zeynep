@@ -49,19 +49,19 @@ const ReasoningLog: React.FC<ReasoningLogProps> = ({ entries, visible, onToggle,
   }, [entries.length]);
 
   const colors = {
-    node_start: '#00E5FF',
-    node_complete: '#39FF14',
-    node_error: '#FF4444',
+    node_start: '#8B5CF6',
+    node_complete: '#34D399',
+    node_error: '#F87171',
     info: '#6b7b8d',
-    tool_call: '#FF8C42',
-    reasoning: '#00CED1',
+    tool_call: '#FBBF24',
+    reasoning: '#7C6FAA',
   };
 
   const bg = isDark ? 'rgba(6, 9, 15, 0.95)' : 'rgba(240, 244, 248, 0.95)';
   const text = isDark ? '#b0c0d0' : '#2a3a4a';
   const muted = isDark ? '#3a4a5e' : '#8a9aaa';
-  const border = isDark ? 'rgba(0, 229, 255, 0.10)' : 'rgba(0, 140, 180, 0.12)';
-  const headerBg = isDark ? 'rgba(0, 229, 255, 0.03)' : 'rgba(0, 140, 180, 0.04)';
+  const border = isDark ? 'rgba(139, 92, 246, 0.10)' : 'rgba(0, 140, 180, 0.12)';
+  const headerBg = isDark ? 'rgba(139, 92, 246, 0.03)' : 'rgba(0, 140, 180, 0.04)';
 
   return (
     <div style={{
@@ -69,7 +69,6 @@ const ReasoningLog: React.FC<ReasoningLogProps> = ({ entries, visible, onToggle,
       flexDirection: 'column',
       height: '100%',
       background: bg,
-      backdropFilter: 'blur(24px) saturate(180%)',
       borderLeft: `1px solid ${border}`,
       overflow: 'hidden',
       transition: 'background 0.3s ease',
@@ -92,7 +91,7 @@ const ReasoningLog: React.FC<ReasoningLogProps> = ({ entries, visible, onToggle,
             <div style={{
               height: '100%',
               width: '50%',
-              background: `linear-gradient(90deg, transparent, #00E5FF, transparent)`,
+              background: `linear-gradient(90deg, transparent, #8B5CF6, transparent)`,
               animation: 'logSlide 1.5s ease-in-out infinite',
             }} />
           </div>
@@ -109,7 +108,7 @@ const ReasoningLog: React.FC<ReasoningLogProps> = ({ entries, visible, onToggle,
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" strokeWidth="2" strokeLinecap="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
             <line x1="16" y1="13" x2="8" y2="13" />
@@ -182,7 +181,7 @@ const ReasoningLog: React.FC<ReasoningLogProps> = ({ entries, visible, onToggle,
                 marginLeft: 8,
                 transition: 'background 0.15s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(0,229,255,0.03)' : 'rgba(0,140,180,0.04)')}
+              onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(139,92,246,0.03)' : 'rgba(0,140,180,0.04)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <span style={{ color: muted, flexShrink: 0, minWidth: 60 }}>
