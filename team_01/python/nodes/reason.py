@@ -79,14 +79,18 @@ def build_reason_node(llm):
         print(f"{'='*50}")
 
         # Trim history to stay within token limit
-        # Cap each message at 600 chars so tool results (full layout JSON) don't blow the context
-        def _cap(msg: dict, limit: int = 600) -> dict:
+        # First message is the layout context — give it a large window.
+        # Subsequent messages (tool outputs, LLM responses) are capped tight.
+        def _cap(msg: dict, limit: int) -> dict:
             c = msg.get("content", "")
             return {**msg, "content": c[:limit] + " ...[trimmed]"} if len(c) > limit else msg
 
         messages = state["messages"]
         kept = (messages[:1] + messages[-3:]) if len(messages) > 4 else messages
-        trimmed_messages = [_cap(m) for m in kept]
+        trimmed_messages = [
+            _cap(m, 2500) if i == 0 else _cap(m, 400)
+            for i, m in enumerate(kept)
+        ]
 
         result = None
         last_error = None
