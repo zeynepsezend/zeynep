@@ -30,7 +30,7 @@ def bootstrap() -> Context:
 
     # Read the layout schema that will be given to the agent as context (team_05-specific)
     repo_root = Path(__file__).resolve().parents[3]
-    layout_path = repo_root / "team_05" / "gh" / "layout_schema-team05.json"
+    layout_path = repo_root / "layout_input" / "layout_schema.json"
     layout_data: dict[str, Any] = json.loads(layout_path.read_text(encoding="utf-8"))
 
     # Connect to the Grasshopper MCP server and list available tools
@@ -93,6 +93,56 @@ def bootstrap() -> Context:
                 "area_m2": {"type": "number"},
             },
             "required": ["room_name", "surface", "material"],
+        },
+    })
+
+    tools.append({
+        "name": "get_unit_cost_by_type",
+        "description": (
+            "Get the unit cost (USD) for a building element type such as door, window, or column. "
+            "Looks up lump-sum rates from the cost database by element type and optional subtype. "
+            "Provide `element_type` (e.g. 'door', 'window', 'column') and optionally `subtype` "
+            "(e.g. 'interior_standard', 'exterior_entrance', 'solid_wood', 'curtain_wall')."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "element_type": {"type": "string"},
+                "subtype": {"type": "string"},
+            },
+            "required": ["element_type"],
+        },
+    })
+
+    tools.append({
+        "name": "get_count_by_type",
+        "description": (
+            "Count the number of discrete elements of a given type in the layout. "
+            "Use for doors, windows, rooms, columns, or any countable element. "
+            "Provide `element_type` (e.g. 'door', 'window', 'room', 'column')."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "element_type": {"type": "string"},
+            },
+            "required": ["element_type"],
+        },
+    })
+
+    tools.append({
+        "name": "get_area_by_type",
+        "description": (
+            "Get the total area (m²) of all elements of a given type in the layout. "
+            "Use for floors, ceilings, facade panels, or any planar element. "
+            "Provide `element_type` (e.g. 'floor', 'ceiling', 'facade')."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "element_type": {"type": "string"},
+            },
+            "required": ["element_type"],
         },
     })
 
