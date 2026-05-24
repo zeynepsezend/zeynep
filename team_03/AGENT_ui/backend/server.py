@@ -78,6 +78,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         session.get_session(),
                         manager,
                         websocket,
+                        session=session,
                     )
                 )
 
