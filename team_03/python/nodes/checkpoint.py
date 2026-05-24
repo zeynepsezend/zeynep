@@ -240,6 +240,20 @@ def build_user_checkpoint_node(mcp_client):
                 elif isinstance(v, dict):
                     print(f"  {RED}- {v.get('type', '?')}: {v.get('description', str(v))}{RESET}")
 
+        # ── Zone placement summary ──────────────────────────────────────
+        zone_queue   = state.get("zone_queue") or []
+        current_zone = state.get("current_zone")
+        placement_history = state.get("placement_history") or []
+        if placement_history and current_zone:
+            zone_items = [p for p in placement_history if p.get("room") == current_zone]
+            if zone_items:
+                print(f"\n{CYAN}{BOLD}Placed in {current_zone}:{RESET}")
+                for item in zone_items:
+                    action = "ADDED" if not item.get("from") else "MOVED"
+                    color  = GREEN if action == "ADDED" else YELLOW
+                    print(f"  {color}{action}{RESET}  {item.get('name')}  "
+                          f"at {item.get('to', [0, 0])}")
+
         history = state.get("placement_history")
         if history:
             print(f"\n{CYAN}{BOLD}Furniture changes made ({len(history)} items):{RESET}")
@@ -361,9 +375,24 @@ def build_user_checkpoint_node(mcp_client):
             for sug in suggestions:
                 print(f"  {CYAN}{sug['key']}{RESET} = {sug['label']}")
 
-        print(f"\n{BOLD}Actions:{RESET}")
-        print("  'approve' -> save final layout and finish")
-        print("  anything else -> describe what to change")
+        populate_done = state.get("populate_done")
+        if populate_done and zone_queue:
+            next_zone_name = zone_queue[0].get("zone_name", "next zone")
+            next_count     = len(zone_queue[0].get("objects", []))
+            print(f"\n{BOLD}Zone '{current_zone}' complete.{RESET}")
+            print(f"Next zone: '{next_zone_name}' ({next_count} objects)")
+            print(f"  {GREEN}'yes'{RESET}     -> proceed to next zone")
+            print(f"  {GREEN}'end'{RESET}     -> save layout and get final analysis")
+            print(f"  anything else -> describe changes to make to this zone")
+        elif populate_done and not zone_queue:
+            print(f"\n{BOLD}All zones complete — full layout ready.{RESET}")
+            print(f"  {GREEN}'end'{RESET}     -> save layout and get final analysis")
+            print(f"  anything else -> describe any final changes")
+        else:
+            print(f"\n{BOLD}Actions:{RESET}")
+            print("  'yes'     -> proceed to next zone")
+            print("  'end'     -> save layout and get final analysis")
+            print("  anything else -> describe changes to make to this zone")
         print(f"{'=' * 60}")
         print()
 
@@ -457,14 +486,16 @@ def build_user_checkpoint_node(mcp_client):
         if restored:
             updates["layout_json_string"] = json.dumps(current_layout)
 
+
         if user_input.lower() in ("approve", "approved", "yes", "ok", "done", "y"):
-            # In query mode — just exit without saving
             if state.get("_query_mode") or not state.get("placement_history"):
                 updates["user_approved"] = False
                 updates["final_response"] = state.get("final_response", "Analysis complete.")
                 return updates
             updates["user_approved"] = True
+            updates["messages"] = [{"role": "user", "content": user_input.lower()}]
             return updates
+
         else:
             updates["user_approved"] = False
             updates["messages"] = [{"role": "user", "content": user_input}]

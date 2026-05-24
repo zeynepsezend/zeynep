@@ -44,18 +44,41 @@ def explain_node(state: AgentState) -> dict:
             f"\nLongest path: {wc['from']} -> {wc['to']} ({wc['distance']}m)\n"
         )
 
-    # Build the prompt by concatenation — avoids .format() choking on any
-    # literal braces that appear in the analysis summary or layout JSON.
+    # Placement summary grouped by room.
+    placement_history = state.get("placement_history") or []
+    if placement_history:
+        from collections import defaultdict
+        by_room: dict = defaultdict(list)
+        for p in placement_history:
+            by_room[p.get("room", "Unknown")].append(p.get("name", "?"))
+        placement_summary = "Equipment placed by room:\n"
+        for room, items in by_room.items():
+            placement_summary += f"  {room}: {', '.join(items)}\n"
+        analysis_summary += "\n" + placement_summary
+
+    # Inject spatial graph text for grounded object-level explanation.
+    graph_text = state.get("spatial_graph_text") or ""
+    spatial_section = (
+        f"\nSpatial relationships and findings:\n{graph_text}\n"
+        if graph_text else ""
+    )
+
     prompt = (
-        "You are a spatial design expert.\n"
+        "You are an industrial spatial design expert.\n"
         "The user has approved a layout.\n\n"
         "Analysis results:\n" + analysis_summary +
-        "\nLayout JSON (first 2000 chars):\n" +
-        state["layout_json_string"][:2000] +
-        "\n\nWrite a clear 3-5 sentence explanation covering: "
-        "overall assessment, main strengths, key weaknesses, "
-        "one specific recommendation. "
-        "Reference actual object names and distances.\n\n"
+        spatial_section +
+        "\n\nWrite a clear 3-5 sentence explanation covering:\n"
+        "0. In one sentence describe the complete material flow across "
+        "all zones — which zone feeds into which from entry to exit.\n"
+        "1. Overall score and grade with specific reasons\n"
+        "2. Name the 1-2 objects with the best placement and why\n"
+        "3. Name the 1-2 objects with the worst clearance or path issues "
+        "and give the actual distance (from SPATIAL RELATIONSHIPS above)\n"
+        "4. One concrete recommendation referencing a specific object, "
+        "direction, and distance in metres\n\n"
+        "Reference actual object names, distances, and OSHA/ISO standards. "
+        "Do not use generic phrases like 'adequate clearance on all sides'.\n\n"
         "Respond with action final and put your explanation in final_response."
     )
 

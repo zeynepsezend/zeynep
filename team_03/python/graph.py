@@ -27,6 +27,7 @@ from nodes.scoring import build_scoring_node
 from nodes.profile_agent import build_profile_agent_node
 from nodes.space_type_agent import build_space_type_agent_node
 from nodes.query_agent import build_query_agent_node
+from nodes.populate_agent import build_populate_agent_node
 from nodes.checkpoint import build_user_checkpoint_node
 from nodes.explain import explain_node
 from nodes.output import output_node
@@ -133,6 +134,20 @@ class AgentState(TypedDict):
     # Reset to [] by _build_initial_state at the start of each new user request.
     viz_highlight_ids:   Annotated[list[str] | None, _keep_last]
 
+    # Set to True by populate_agent after it fills the queue so the keyword
+    # check in _route_after_reason never fires a second time for the same request.
+    populate_done:       Annotated[bool | None, _keep_last]
+
+    # Sanitized placement profile — vehicle profiles (forklift, crane, pallet_jack)
+    # are stripped out here so populate_agent always places with standard_worker.
+    # Separate from profile_config, which is used for circulation analysis.
+    placement_profile:   Annotated[dict | None, _keep_last]
+
+    # Zone-by-zone populate flow — zone_queue holds remaining zones after the
+    # first one is loaded into object_queue; current_zone tracks the active zone.
+    zone_queue:    Annotated[list[dict] | None, _keep_last]
+    current_zone:  Annotated[str | None,        _keep_last]
+
 
 # ---------------------------------------------------------------------------
 # Routing functions — pure state reads, no side effects.
@@ -140,6 +155,12 @@ class AgentState(TypedDict):
 # ---------------------------------------------------------------------------
 
 def _route_after_reason(state: AgentState) -> str:
+    # If populate_agent filled the queue but reason hasn't set object_to_place yet,
+    # drain the queue directly without calling the LLM again.
+    queue = state.get("object_queue") or []
+    if queue and not state.get("object_to_place"):
+        return "add_objects"
+
     # Reason node sets exactly one of these fields to signal what should happen next.
     # object_to_place takes priority: place the object before running any analysis.
     if state.get("object_to_place"):
@@ -160,6 +181,8 @@ MAX_ADJUSTMENTS = 3  # Max times the graph loops back to reason for collision/re
 
 
 def _route_after_group1(state: AgentState) -> str:
+    if state.get("object_queue"):
+        return "drain"
     # Group 1 = collision + visibility + orientation.
     # Hard violations mean the layout is physically impassable — route back
     # to reason immediately rather than wasting time on path checks.
@@ -176,6 +199,8 @@ def _route_after_group1(state: AgentState) -> str:
 
 
 def _route_after_group2(state: AgentState) -> str:
+    if state.get("object_queue"):
+        return "adjust"
     # Group 2 = path + reachability.
     # Same logic with max adjustment limit.
     has_placed = state.get("last_placement_result") is not None
@@ -203,12 +228,56 @@ def _route_after_group2(state: AgentState) -> str:
 
 
 def _route_after_checkpoint(state: AgentState) -> str:
-    # User either approves the layout (write output and end) or requests more
-    # changes (loop back to reason with their new instructions).
-    if state.get("user_approved"):
+    user_input = ""
+    messages = state.get("messages") or []
+    # Find the last human/user message — not assistant or tool messages
+    SYSTEM_PREFIXES = (
+        "tool result:", "scoring complete", "layout score",
+        "collision", "visibility", "path analysis",
+        "reachability", "analysis complete", "placed ",
+        "moved ", "spatial graph", "current layout"
+    )
+    for msg in reversed(messages):
+        role = (msg.type if hasattr(msg, "type") 
+                else msg.get("role", ""))
+        if role not in ("human", "user"):
+            continue
+        content = (
+            msg.content if hasattr(msg, "content")
+            else msg.get("content", "")
+        ).strip()
+        if any(content.lower().startswith(p) for p in SYSTEM_PREFIXES):
+            continue
+        if len(content) > 200:
+            continue
+        user_input = content.lower()
+        break
+
+    zone_queue = state.get("zone_queue") or []
+
+    print(f"[checkpoint_debug] user_input='{user_input}' "
+          f"zone_queue_len={len(state.get('zone_queue') or [])} "
+          f"user_approved={state.get('user_approved')}")
+
+    # "yes" → proceed to next zone
+    if user_input == "yes" and zone_queue:
+        return "next_zone"
+
+    # "end" or "approve" → save and trigger final analysis
+    if user_input in ("end", "approve"):
         return "approved"
-    if state.get("_query_mode") is False and not state.get("placement_history"):
+
+    # Legacy flag fallback for non-populate flows
+    if state.get("user_approved") and not zone_queue:
+        return "approved"
+
+    # Empty input with no zones left → done
+    if (state.get("_query_mode") is False
+            and not state.get("placement_history")
+            and not zone_queue):
         return "query_done"
+
+    # Anything else → loop back to reason with user instructions
     return "continue"
 
 
@@ -335,7 +404,8 @@ def enrich_graph_node(state: AgentState) -> dict:
         text = serialize_for_llm(G)
         print(f"\n[enrich_graph] Spatial graph: {G.number_of_nodes()} nodes, "
               f"{G.number_of_edges()} edges")
-        print(text)
+        if not state.get("object_queue") and not state.get("zone_queue"):
+            print(text)
 
         # Collect actionable findings for ANSI display
         # Skip walls (structural, not movable) — their "clearance" is
@@ -434,6 +504,10 @@ def build_graph(ctx: Any) -> Any:
         print("\n[query_agent] Analysis complete — no changes saved.")
         return {}
 
+    def increment_adjustment_node(state):
+        return {"adjustment_count": state.get("adjustment_count", 0) + 1}
+
+    populate_agent   = build_populate_agent_node(ctx.llm, ctx.knowledge_dir)
     reason           = build_reason_node(ctx.llm)
     tool             = build_tool_node(ctx.mcp_client, ctx.tools, ctx.workspace_path)
     add_objects      = build_add_objects_node(ctx.mcp_client, ctx.workspace_path)
@@ -453,6 +527,8 @@ def build_graph(ctx: Any) -> Any:
     graph.add_node("query_agent",      query_agent)
     graph.add_node("query_end",        query_end_node)
     graph.add_node("reason",           reason)
+    graph.add_node("increment_adjustment", increment_adjustment_node)
+    graph.add_node("populate_agent",   populate_agent)
     graph.add_node("tool",             tool)
     graph.add_node("add_objects",      add_objects)
     graph.add_node("analysis_fan_out", analysis_fan_out_node)
@@ -465,6 +541,124 @@ def build_graph(ctx: Any) -> Any:
     graph.add_node("enrich_graph",     enrich_graph_node)
     graph.add_node("scoring",          scoring)
     graph.add_node("user_checkpoint",  user_checkpoint)
+    from prompts import POPULATE_COORDS_PROMPT as _COORDS_PROMPT
+    from _runtime.llm import call_llm_simple as _call_llm_simple
+    import json as _json_z
+
+    _SUPPORT_KW = {"office","meeting","restroom","toilet","utility",
+                   "corridor","hallway","stair","server","break",
+                   "canteen","lobby","reception"}
+
+    def next_zone_node(state: dict) -> dict:
+        zone_queue = list(state.get("zone_queue") or [])
+        while zone_queue and any(
+            kw in zone_queue[0].get("zone_name","").lower()
+            for kw in _SUPPORT_KW
+        ):
+            print(f"[zone] Skipping support room: {zone_queue[0]['zone_name']}")
+            zone_queue = zone_queue[1:]
+        if not zone_queue:
+            print("[zone] No more functional zones.")
+            return {"zone_queue": [], "object_queue": []}
+        next_plan = zone_queue[0]
+        remaining = zone_queue[1:]
+        zone_name = next_plan.get("zone_name", "")
+        try:
+            layout = _json_z.loads(state.get("layout_json_string", "{}"))
+        except Exception:
+            layout = {}
+        rooms = layout.get("rooms", [])
+        room  = next((r for r in rooms if r.get("name") == zone_name), None)
+        if not room:
+            print(f"[zone] Room '{zone_name}' not found — skipping")
+            return next_zone_node({**state, "zone_queue": zone_queue[1:]})
+        geom = room.get("geometry", [])
+        xs = [p[0] for p in geom]
+        ys = [p[1] for p in geom]
+        space_config      = state.get("space_config") or {}
+        placement_profile = state.get("placement_profile") or {}
+        actual_profile    = placement_profile.get("profile_type","standard_worker")
+        objects    = next_plan.get("objects", [])
+        has_coords = bool(objects) and "objects_list" in objects[0]
+        if has_coords:
+            zone_placements = objects
+        else:
+            print(f"[zone] Calculating coordinates for: {zone_name} ({len(objects)} objects)")
+            from nodes.populate_agent import calculate_zone_coordinates
+
+            room_summary = {
+                "bounds": {
+                    "min_x": round(min(xs),2), "max_x": round(max(xs),2),
+                    "min_y": round(min(ys),2), "max_y": round(max(ys),2),
+                },
+                "width": round(max(xs)-min(xs),2),
+                "depth": round(max(ys)-min(ys),2),
+            }
+
+            doors   = layout.get("doors", [])
+            windows = layout.get("windows", [])
+            mep     = layout.get("mep", [])
+
+            def _door_mid(d):
+                g = d.get("geometry", [])
+                if len(g) >= 2: return [(g[0][0]+g[1][0])/2, (g[0][1]+g[1][1])/2]
+                return d.get("position", [0, 0])
+
+            def _is_load(d):
+                l = (d.get("name","") + d.get("type","")).lower()
+                return any(k in l for k in ("load","dock","freight","cargo"))
+
+            door_info = {
+                "loading_doors":   [{"name": d.get("name",""), "midpoint": _door_mid(d)} for d in doors if _is_load(d)],
+                "personnel_doors": [{"name": d.get("name",""), "midpoint": _door_mid(d)} for d in doors if not _is_load(d)],
+            }
+            window_midpoints = [
+                [(w["geometry"][0][0]+w["geometry"][1][0])/2,
+                 (w["geometry"][0][1]+w["geometry"][1][1])/2]
+                for w in windows if len(w.get("geometry",[]))>=2
+            ]
+            mep_info = []
+            for m in mep:
+                g = m.get("geometry", [])
+                if g:
+                    mxs = [p[0] for p in g]; mys = [p[1] for p in g]
+                    mep_info.append({
+                        "name": m.get("name",""),
+                        "system": m.get("system",""),
+                        "center": [sum(mxs)/len(mxs), sum(mys)/len(mys)],
+                    })
+
+            zone_placements = calculate_zone_coordinates(
+                ctx.llm,
+                zone_name,
+                next_plan.get("zone_function", "production"),
+                room_summary,
+                objects,
+                space_config.get("clearance", 1.2),
+                actual_profile,
+                door_info,
+                window_midpoints,
+                mep_info,
+            )
+        if not zone_placements:
+            print(f"[zone] No placements for '{zone_name}' — skipping")
+            if remaining:
+                return next_zone_node({**state, "zone_queue": remaining})
+            return {"zone_queue": [], "object_queue": []}
+        print(f"[zone_debug] Final zone_placements count: {len(zone_placements)}")
+        print(f"[zone_debug] Returning object_queue with {len(zone_placements)} items")
+        print(f"[zone] Advancing to: {zone_name} ({len(zone_placements)} objects)")
+        return {
+            "object_to_place":   {},
+            "object_queue":      zone_placements,
+            "zone_queue":        remaining,
+            "current_zone":      zone_name,
+            "user_approved":     None,
+            "adjustment_count":  0,
+            "placement_history": [],
+        }
+
+    graph.add_node("next_zone", next_zone_node)
     graph.add_node("explain",          explain_node)
     graph.add_node("output",           output_node)
 
@@ -472,17 +666,41 @@ def build_graph(ctx: Any) -> Any:
     # and resolve the user accessibility profile before the LLM sees anything.
     graph.add_edge(START, "profile_agent")
     graph.add_edge("profile_agent", "space_type_agent")
-    graph.add_edge("space_type_agent", "reason")
+    def populate_check_node(state):
+        return {}
+
+    graph.add_node("populate_check", populate_check_node)
+    graph.add_edge("space_type_agent", "populate_check")
+
+    def _route_after_populate_check(state):
+        if state.get("populate_done"):
+            return "reason"
+        msg = state.get("messages", [])
+        if msg:
+            last = msg[-1]
+            last_msg = last.content if hasattr(last, "content") else last.get("content", "")
+        else:
+            last_msg = ""
+        keywords = ["populate", "fill", "set up", "setup", "generate layout"]
+        if any(k in last_msg.lower() for k in keywords):
+            return "populate_agent"
+        return "reason"
+
+    graph.add_conditional_edges(
+        "populate_check", _route_after_populate_check,
+        {"populate_agent": "populate_agent", "reason": "reason"},
+    )
+    graph.add_edge("populate_agent", "reason")
 
     # Reason routes to: place an object, execute a tool, or move to analysis.
     # "finish" goes to analysis_fan_out which triggers all Group 1 nodes in parallel.
     graph.add_conditional_edges(
         "reason", _route_after_reason,
         {
-            "add_objects":  "add_objects",
-            "query_agent":  "query_agent",
-            "run_tool":     "tool",
-            "finish":       "analysis_fan_out",
+            "add_objects":    "add_objects",
+            "query_agent":    "query_agent",
+            "run_tool":       "tool",
+            "finish":         "analysis_fan_out",
         },
     )
 
@@ -495,7 +713,15 @@ def build_graph(ctx: Any) -> Any:
 
     # After a placement, go through the same analysis fan-out node
     # so both paths (placement and direct finish) trigger the same parallel group.
-    graph.add_edge("add_objects", "analysis_fan_out")
+    def _route_after_add_objects(state):
+        if state.get("object_queue"):
+            return "reason"
+        return "analysis_fan_out"
+
+    graph.add_conditional_edges(
+        "add_objects", _route_after_add_objects,
+        {"reason": "reason", "analysis_fan_out": "analysis_fan_out"}
+    )
 
     # analysis_fan_out fans out to all three Group 1 nodes in parallel.
     graph.add_edge("analysis_fan_out", "collision")
@@ -508,11 +734,13 @@ def build_graph(ctx: Any) -> Any:
     graph.add_edge("visibility",  "group1_join")
     graph.add_edge("orientation", "group1_join")
 
-    # group1_join checks collision results — hard violations route back to reason.
+    # group1_join checks collision results — hard violations route back to reason
+    # via increment_adjustment so adjustment_count stays accurate.
     graph.add_conditional_edges(
         "group1_join", _route_after_group1,
-        {"adjust": "reason", "continue": "path"},
+        {"adjust": "increment_adjustment", "drain": "reason", "continue": "path"},
     )
+    graph.add_edge("increment_adjustment", "reason")
 
     # Group 2: path → reachability → enrich_graph → routing decision.
     # enrich_graph runs BEFORE _route_after_group2 so the spatial graph has
@@ -527,10 +755,14 @@ def build_graph(ctx: Any) -> Any:
     # Scoring aggregates all results and triggers the human approval step.
     graph.add_edge("scoring", "user_checkpoint")
 
+    # Zone advance: after checkpoint approves a zone, load the next one into reason.
+    graph.add_edge("next_zone", "reason")
+
     # User checkpoint: approve → explain → output; otherwise loop back for changes.
     graph.add_conditional_edges(
         "user_checkpoint", _route_after_checkpoint,
-        {"approved": "explain", "continue": "reason", "query_done": "query_end"},
+        {"approved": "explain", "continue": "reason",
+         "query_done": "query_end", "next_zone": "next_zone"},
     )
 
     # Explain runs once after approval; output writes the file and ends the session.
@@ -629,6 +861,10 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
         "spatial_graph":         _sg_dict,
         "spatial_graph_text":    _sg_text,
         "viz_highlight_ids":     [],   # clear highlights on each new request
+        "populate_done":         None,
+        "placement_profile":     None,
+        "zone_queue":            [],
+        "current_zone":          None,
     }
 
 

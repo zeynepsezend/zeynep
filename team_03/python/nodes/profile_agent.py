@@ -154,6 +154,23 @@ def build_profile_agent_node(llm: Any, knowledge_dir: Path):
         mpath  = profile_config.get("min_path_width", "?")
         turn   = profile_config.get("turning_radius", "?")
         print(f"  Profile: {ptype} | min_path: {mpath}m | turning: {turn}m")
-        return {"profile_config": profile_config}
+
+        # Derive a sanitized placement profile — vehicle profiles apply to
+        # circulation analysis only; equipment placement always uses standard_worker.
+        _VEHICLE_PROFILES = {"forklift", "crane", "pallet_jack"}
+        placement_type = (
+            profile_config.get("profile_type", "standard_worker")
+            if profile_config.get("profile_type") not in _VEHICLE_PROFILES
+            else "standard_worker"
+        )
+        placement_profile = DEFAULT_PROFILES.get(
+            placement_type, DEFAULT_PROFILES["standard_worker"]
+        )
+        print(f"  Placement profile: {placement_type}")
+
+        return {
+            "profile_config":    profile_config,
+            "placement_profile": placement_profile,
+        }
 
     return profile_agent_node

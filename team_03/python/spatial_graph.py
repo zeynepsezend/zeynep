@@ -406,7 +406,7 @@ def dict_to_graph(data: dict) -> nx.MultiGraph:
 # Compact text serialization for LLM context
 # ---------------------------------------------------------------------------
 
-MAX_SERIALIZE_LINES = 80
+MAX_SERIALIZE_LINES = 50
 
 
 def serialize_for_llm(G: nx.MultiGraph) -> str:
@@ -501,8 +501,8 @@ def serialize_for_llm(G: nx.MultiGraph) -> str:
         for mid, md in mep_nodes:
             lines.append(f"  {mid} \"{md.get('name', mid)}\" system={md.get('system', '?')}")
 
-    # --- Relations (non-structural edges) ---
-    relation_types = {"near", "near_wall", "near_window", "sightline", "blocks", "path"}
+    # --- Relations (near/adjacent only — sightline and path omitted for brevity) ---
+    relation_types = {"near", "adjacent"}
     rel_edges = [(u, v, d) for u, v, d in G.edges(data=True) if d.get("etype") in relation_types]
     if rel_edges:
         lines.append("RELATIONS:")
@@ -513,18 +513,10 @@ def serialize_for_llm(G: nx.MultiGraph) -> str:
 
             if etype == "near":
                 lines.append(f"  {uname} --near({d.get('distance_m', '?')}m)--> {vname}")
-            elif etype == "near_wall":
-                lines.append(f"  {uname} --near_wall({d.get('distance_m', '?')}m)--> {vname}")
-            elif etype == "near_window":
-                lines.append(f"  {uname} --near_window({d.get('distance_m', '?')}m)--> {vname}")
-            elif etype == "sightline":
-                vis = "visible" if d.get("visible") else f"blocked by {d.get('blocked_by', '?')}"
-                lines.append(f"  {uname} --sightline({vis})--> {vname}")
-            elif etype == "blocks":
-                lines.append(f"  {uname} --blocks--> {vname}")
-            elif etype == "path":
-                status = "reachable" if d.get("reachable") else "unreachable"
-                lines.append(f"  {uname} --path({d.get('distance_m', '?')}m, {status})--> {vname}")
+            elif etype == "adjacent":
+                door_id = d.get("via_door", "?")
+                dw = d.get("door_width", "?")
+                lines.append(f"  {uname} --adjacent({door_id},{dw}m)--> {vname}")
 
     # --- Issues (actionable problems) ---
     issues: list[str] = []
