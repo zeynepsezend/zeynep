@@ -854,31 +854,32 @@
     },
     {
       "id": "furn-15",
-      "name": "quality_control_station",
+      "name": "QC_Station",
       "geometry": [
         [
-          40.0,
-          6.0
+          23.5,
+          6.5
         ],
         [
-          42.0,
-          6.0
+          25.5,
+          6.5
         ],
         [
-          42.0,
+          25.5,
           7.5
         ],
         [
-          40.0,
+          23.5,
           7.5
         ],
         [
-          40.0,
-          6.0
+          23.5,
+          6.5
         ]
       ],
       "attributes": {
-        "roomId": "room-2"
+        "roomId": "room-2",
+        "height": 0.9
       }
     }
   ],

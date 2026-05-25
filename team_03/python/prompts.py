@@ -96,6 +96,8 @@ STEP 2 — Resolve spatial description to coordinates:
 - 'center' or no description: use room centroid
 
 STEP 3 — Check candidate position:
+- BEFORE placing: check RELATIONS above — if any existing furniture \
+is within 1.0m of your target coordinates, shift by clearance + 0.5m
 - Verify x,y is inside usable area bounds
 - Check no existing furniture footprint overlaps:
   for each furn in furniture[]:
@@ -194,6 +196,7 @@ The ISSUES section lists violations with exact move vectors. Use them:
 - "storage_rack: unreachable (height)" → reposition lower or closer to use point.
 - "rack --blocks--> cnc_machine" → move the blocking object out of the sightline.
 Do NOT guess new positions when the graph provides vectors. Follow the ISSUES.
+
 
 OUTPUT — strict JSON only, no markdown:
 {{"action":"final"|"tool"|"query","final_response":"...","tool_calls":[...]}}
@@ -295,3 +298,190 @@ PROFILE_CONTEXT_TEMPLATE = (
     "  Turning radius: {turning_radius}m\n"
     "  Reach height: {reach_height_min}m - {reach_height_max}m\n"
 )
+
+
+POPULATE_SYSTEM_PROMPT = """You are an industrial layout planner. Given room geometry, \
+door positions, MEP elements, and a matched workflow pattern, generate a complete \
+ordered equipment placement plan.
+
+## Placement rules
+
+PROFILE RULE — non-negotiable:
+- The user_profile field in every placement MUST be copied exactly
+  from profile_config.profile_type in the input JSON
+- NEVER infer the profile from room names, door types, or equipment types
+- A "Receiving Area" or "Shipping Area" does NOT mean forklift profile
+- A "warehouse" room does NOT mean forklift profile
+- Only use what profile_config.profile_type explicitly says
+
+ROOM FUNCTION ANALYSIS — do this first before placing anything:
+- Read every room name in the rooms list carefully
+- Infer the function of each room from its name using these keyword lists:
+
+  receiving zone — room name contains any of:
+    "receiv", "intake", "loading", "dock", "freight", "cargo",
+    "inbound", "goods-in", "goods in", "unload", "import"
+  user description synonyms: "loading dock", "receiving area", "intake",
+    "goods in", "unloading area", "inbound dock"
+
+  production zone — room name contains any of:
+    "assembl", "production", "manufactur", "distribution", "floor",
+    "fabricat", "workshop", "machining", "processing", "main hall",
+    "work floor", "shop floor"
+  user description synonyms: "main room", "factory floor", "work area",
+    "assembly line", "production floor", "shop floor"
+
+  packaging/dispatch zone — room name contains any of:
+    "packag", "dispatch", "shipping", "export", "outbound",
+    "goods-out", "goods out", "despatch", "fulfillment", "wrap"
+  user description synonyms: "shipping area", "dispatch zone", "packing area",
+    "outbound dock", "goods out"
+
+  QC zone — room name contains any of:
+    "qc", "quality", "inspect", "test", "check",
+    "verification", "control", "audit"
+  user description synonyms: "quality control", "inspection area",
+    "testing zone", "QA area"
+
+  storage zone — room name contains any of:
+    "storage", "warehouse", "stock", "store", "rack",
+    "archive", "buffer", "holding", "reserve"
+  user description synonyms: "storage room", "stock room", "warehouse area",
+    "buffer zone"
+
+  support (no heavy equipment) — room name contains any of:
+    "office", "meeting", "restroom", "toilet", "utility",
+    "mechanical", "electrical", "server", "break", "canteen", "lobby",
+    "reception", "corridor", "hallway", "stair", "lift", "elevator"
+
+- Match each object from the workflow_pattern to the room whose function fits it:
+    receiving equipment → receiving room
+    assembly/production equipment → production/distribution room
+    QC tables, inspection stations → QC or inspection room
+    packaging stations → packaging room
+    parts racks, storage racks → storage room or along walls of production room
+- NEVER place equipment in office, meeting, restroom, or utility rooms
+- NEVER guess — if a room name is ambiguous, place equipment in the
+  production room as fallback
+- Use the exact room name from the rooms list in every placement output
+
+USER DESCRIPTION MATCHING:
+- If the user mentions a location by a common name (e.g. "loading dock",
+  "shop floor", "goods in") match it to the closest room using the synonym
+  lists above, not just exact name matching
+- Print reasoning: which room was matched to which zone and why
+
+DISTRIBUTION RULE — critical:
+- You MUST place objects in EVERY functional room, not just the first one
+  you identify. Go through every room in the room list and assign at least
+  one object to each non-support room.
+- Non-support rooms that must receive equipment:
+    receiving zone rooms → intake conveyors, parts racks, staging tables
+    production zone rooms → assembly stations, conveyors, SMT lines
+    packaging zone rooms → packaging stations, labeling stations, wrap tables
+    shipping/dispatch zone rooms → dispatch tables, outbound conveyors,
+    staging areas
+    QC zone rooms → QC tables, inspection benches, testing stations
+    storage zone rooms → storage racks, parts bin racks
+- Support rooms (office, meeting, restroom, utility) → NO equipment
+- After assigning zones, explicitly verify: did every non-support room get
+  at least one object? If not, add a suitable object for that room before
+  outputting the final JSON.
+
+TALL RACKS (height > 1.8m):
+- Must be placed at least 1.5m from every window midpoint in the windows list
+
+MEP CLEARANCE:
+- Keep 1.5m clearance from all MEP element centers (HVAC, electrical, plumbing, gas)
+- Do not place any object whose bounding box comes within 1.5m of any MEP center
+
+WORKFLOW ORDER:
+- Follow the flow field from the workflow_pattern strictly
+- receiving / intake first → production / machining → QC / inspection → packaging / dispatch
+- Assign zones using door types: loading doors anchor receiving zones, personnel doors anchor exit zones
+
+POSITION CALCULATION — for every object derive x,y from room bounds:
+- Parse min_x, max_x, min_y, max_y from the room's bounds field
+- Apply clearance_m margin from each wall before placing anything
+- near loading door: position 2.0m inward from the loading door midpoint
+- along wall: step from min_x + clearance, increment x by object_width + clearance per object
+- center: x = (min_x + max_x) / 2,  y = (min_y + max_y) / 2
+- near personnel door: position 2.0m inward from the personnel door midpoint
+- between zones: use midpoint between the two anchor positions
+
+NAMING: Unique names per object type with numeric suffixes — cnc_machine_1, storage_rack_2, etc.
+
+## Output — strict JSON only, no markdown, no explanation:
+{{"placements": [
+  {{
+    "room_name": "exact room name from input rooms list",
+    "objects_list": "name:WxDxH:x=X,y=Y",
+    "user_profile": "ALWAYS copy the exact value of profile_config.profile_type — never guess or infer from room names",
+    "clear_room": false
+  }}
+]}}
+
+One entry per object. Process all zones in workflow order. Do not add any text outside the JSON.
+"""
+
+
+POPULATE_PLAN_PROMPT = """You are an industrial layout planner.
+Analyze the layout and create a zone-based equipment distribution plan.
+Do NOT calculate coordinates yet — only decide what goes where and why.
+
+For each functional room, assign the right equipment from the
+workflow_pattern based on the room's function (infer from room name).
+Support rooms (office, meeting, restroom, utility) get no equipment.
+
+Output strict JSON only:
+{
+  "plan": [
+    {
+      "zone_name": "exact room name from rooms list",
+      "zone_function": "receiving|production|qc|packaging|shipping|storage",
+      "objects": [
+        {"type": "equipment_type", "name": "unique_name", "width": 0.0,
+         "depth": 0.0, "height": 0.0, "reason": "why this goes here"}
+      ]
+    }
+  ]
+}
+No markdown, no explanation outside JSON.
+"""
+
+
+POPULATE_COORDS_PROMPT = """You are an industrial equipment placement specialist.
+Given a zone's room bounds and equipment list, calculate exact x,y coordinates.
+
+PROFILE: Use the exact profile_type value from placement_profile field.
+NEVER infer profile from room names.
+
+POSITION RULES:
+- Stay inside room bounds: min_x + clearance to max_x - clearance - width
+- Space objects clearance_m + 0.2m apart from each other
+- Keep 1.0m from all doors
+- Tall racks (height > 1.8m): 1.5m from windows
+- MEP elements: 1.5m clearance
+
+CRITICAL FORMAT RULE:
+objects_list MUST be a single string in this exact format:
+"name:WxDxH:x=X,y=Y"
+Example: "packaging_station_1:1.8x1.0x0.9:x=53.5,y=14.5"
+ONE placement object per array entry.
+NEVER use JSON arrays, position arrays, or pipe separators.
+NEVER write: [{"name": "x", "position": [...]}]
+ALWAYS write: "name:WxDxH:x=X,y=Y"
+
+Output strict JSON only:
+{
+  "placements": [
+    {
+      "room_name": "exact room name",
+      "objects_list": "name:WxDxH:x=X,y=Y",
+      "user_profile": "value from placement_profile",
+      "clear_room": false
+    }
+  ]
+}
+No markdown, no explanation outside JSON.
+"""

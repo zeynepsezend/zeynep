@@ -24,6 +24,20 @@ def build_reason_node(llm: Any):
     """Return a reason node ready to be added to a LangGraph StateGraph."""
 
     def reason_node(state: dict) -> dict:
+        # If populate_agent filled the queue, skip the LLM entirely.
+        # Just signal _route_after_reason to drain the queue via add_objects.
+        queue = state.get("object_queue") or []
+        object_to_place = state.get("object_to_place")
+        if queue and not object_to_place:
+            print(f"[reason] Queue has {len(queue)} objects — skipping LLM, draining queue.")
+            return {
+                "object_to_place":    queue[0],
+                "object_queue":       queue[1:],
+                "final_response":     "",
+                "pending_tool_calls": [],
+                "adjustment_count":   0,
+            }
+
         print("\nReasoning with LLM...")
 
         # Pull space and profile config set by the pre-agents.
@@ -131,12 +145,13 @@ def build_reason_node(llm: Any):
                 if len(place_calls) > 1:
                     updates["object_queue"] = [c["arguments"] for c in place_calls[1:]]
                     print(f"[reason] Queued {len(place_calls) - 1} additional object(s)")
-                else:
-                    updates["object_queue"] = []
+                # Do NOT clear object_queue here — populate_agent may have filled it.
+                # Only overwrite if the LLM explicitly queued more objects.
             else:
                 # Clear with {} — _keep_last treats None as "no update" and
                 # would preserve the stale value from a previous placement.
                 updates["object_to_place"] = {}
+                # Do NOT clear object_queue — preserve populate_agent queue.
 
             # Pass any non-placement tool calls to tools.py as normal.
             # Use [] instead of None so _keep_last actually clears the field.

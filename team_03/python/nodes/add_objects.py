@@ -45,6 +45,7 @@ def build_add_objects_node(mcp_client, workspace_path):
             parsed_objects = _parse_objects_list(raw_objects)
             objects_list_json = json.dumps(parsed_objects)
         else:
+            parsed_objects = []
             objects_list_json = json.dumps(raw_objects)
 
         layout_json_string = state["layout_json_string"]
@@ -149,6 +150,22 @@ def build_add_objects_node(mcp_client, workspace_path):
                         name = obj.get("name", "")
                         x, y = pos[0], pos[1]
                         w, d = size[0], size[1]
+
+                        # Hard overlap check — shift if overlapping existing furniture
+                        for existing in current_layout.get("furniture", []):
+                            eg = existing.get("geometry", [])
+                            if len(eg) < 4:
+                                continue
+                            exs = [p[0] for p in eg]
+                            eys = [p[1] for p in eg]
+                            ex0, ex1 = min(exs), max(exs)
+                            ey0, ey1 = min(eys), max(eys)
+                            overlap_x = x < ex1 + 0.9 and x + w > ex0 - 0.9
+                            overlap_y = y < ey1 + 0.9 and y + d > ey0 - 0.9
+                            if overlap_x and overlap_y:
+                                x = ex1 + 0.9
+                                print(f"[add_objects] Overlap detected with '{existing.get('name')}' — shifted to x={x:.2f}")
+                                break
 
                         new_geom = [
                             [x, y], [x + w, y], [x + w, y + d],
@@ -288,13 +305,13 @@ def build_add_objects_node(mcp_client, workspace_path):
 
         queue = state.get("object_queue") or []
         if queue:
-            next_obj  = queue[0]
-            remaining = queue[1:]
-            updates["object_to_place"] = next_obj
-            updates["object_queue"]    = remaining
-            print(f"[add_objects] Next in queue: {next_obj.get('objects_list', '')} ({len(remaining)} remaining)")
+            if len(queue) % 5 == 0 or len(queue) < 3:
+                print(f"[add_objects] Queue: {len(queue)} objects remaining")
+            updates["object_queue"]    = queue
+            updates["object_to_place"] = {}
         else:
-            updates["object_queue"] = []
+            updates["object_queue"]    = []
+            updates["object_to_place"] = {}
 
         updates["messages"] = [
             {
