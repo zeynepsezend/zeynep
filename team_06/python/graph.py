@@ -36,6 +36,7 @@ class AgentState(TypedDict, total=False):
     iteration: int                                 # current tool-call count
     max_iterations: int                            # safety cap to stop the process (set from .env)
     final_response: str | None                     # set when the agent is done
+    clarification: str | None                      # question for user clarification (set by all nodes except preprocess)
     feedback_history: list[str]                    # NEW - keep track of feedback given by the user
     #-----------jsons for tools-----------
     layout_json_string: str                        # current layout as a JSON string, injected into tool calls 
@@ -46,6 +47,7 @@ class AgentState(TypedDict, total=False):
     evaluation_json_string: str | None             # NEW - evaluation results
     #-----------results from nodes (for routing)-----------
     preprocess_result: str                         # NEW - which node to go to after preprocess: "search" | "select" | "modify" | "evaluate" | "reason" | "end"
+    reason_result: str                             # NEW - which node to go to after reason: "complete" | "uncomplete"
     topology_result: str                           # NEW - which node to go to after topology: "success" | "failed"
     search_result: str                             # NEW - which node to go to after search: "success" | "failed"
     select_result: str                             # NEW - which node to go to after select: "success" | "failed"
@@ -66,7 +68,27 @@ def _route_after_preprocessing(state: AgentState) -> str:
         "reason": "reason",
         "end": "end",
     }.get(result, "end")
-    
+        
+def _route_after_reason(state: AgentState) -> str:
+    result = state.get("reason_result")
+    clarification = state.get("clarification")
+    question_index = state.get("question_index", 0)
+    # If clarification is set, go to feedback to ask the next question
+    if clarification:
+        return "feedback"
+    # If all questions are answered, only proceed to preprocess if user says 'done', else keep parsing
+    if question_index >= 4:
+        user_prompt = state.get("user_prompt", "").strip().lower()
+        if user_prompt in ("done", "end", "finish", "that's all", "no more", "quit"):
+            return "preprocess"
+        else:
+            return "reason"
+    # Otherwise, stay in reason (should not happen in normal flow)
+    return {
+        "parsed": "preprocess",
+        "uncomplete": "feedback"
+    }.get(result, "reason")
+
 def _route_after_topology(state: AgentState) -> str:
     result = state.get("topology_result")
     return {
@@ -108,7 +130,7 @@ def build_graph(ctx: Any) -> Any:
     select = build_select_node()
     adapt = build_adapt_node(ctx.mcp_client)
     evaluate = build_evaluate_node(ctx.mcp_client)
-    feedback = build_feedback_node(ctx.llm)
+    feedback = build_feedback_node()
     modify = build_modify_node(ctx.mcp_client)
     
     # Wrap nodes to log entry/exit
@@ -148,7 +170,10 @@ def build_graph(ctx: Any) -> Any:
         "modify": "modify",
         "end": END
     })
-    workflow.add_edge("reason", "preprocess")
+    workflow.add_conditional_edges("reason", _route_after_reason, {
+        "preprocess": "preprocess",
+        "feedback": "feedback"
+    })
     workflow.add_conditional_edges("topology", _route_after_topology, {
         "search": "search",
         "feedback": "feedback"
@@ -215,6 +240,9 @@ def run_agent(prompt: str, ctx: Any, session: dict | None = None) -> tuple[str, 
 def _build_initial_state(prompt: str, ctx: Any, session: dict | None = None) -> AgentState:
     if session is None:
         session = {}
+    # Always ensure feedback_history is present
+    if "feedback_history" not in session:
+        session["feedback_history"] = []
 
     layout_json = session.get("layout_json_string")
     if not layout_json:
@@ -232,6 +260,7 @@ def _build_initial_state(prompt: str, ctx: Any, session: dict | None = None) -> 
         "user_prompt": prompt,
         "parsed_prompt": session.get("parsed_prompt"),
         "feedback_history": session.get("feedback_history", []),
+        "clarification": session.get("clarification"),
         "iteration": 0,
         "max_iterations": ctx.max_iterations,
         "final_response": None,

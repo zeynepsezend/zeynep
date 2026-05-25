@@ -30,8 +30,6 @@ def main():
             if "feedback_history" not in session:
                 session["feedback_history"] = []
             response, session = run_agent(user_input, ctx, session)
-            if "feedback_history" not in session:
-                session["feedback_history"] = []
             print(f"\nAgent: {response}\n")
             print(f"[DEBUG] Session after turn: {session.get('question_index')}")
         except Exception as e:

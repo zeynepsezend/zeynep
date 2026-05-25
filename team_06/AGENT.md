@@ -13,3 +13,14 @@ The InHabit Agent is an LLM-powered assistant specialized in generating, adaptin
    - The agent selects the specified layout from the dataset, adapts it to the given boundary, and proceeds with the full evaluation and feedback pipeline.
 4. "Evaluate the current layout and summarise issues."
    - The agent analyzes the current layout for daylight, checks compliance with room size and dimension rules, and summarizes any issues or mismatches with user preferences.
+
+# Example chat mode interaction
+
+1. "How many people will live in the apartment? Please provide names, ages, and relationships."
+User: "Me (36), my partner (32), and our child (2)."
+2. "Do you have any pets? If so, what type and size?"
+User: "We have a big dog."
+3. "What are the main activities at home (e.g., work, cook, hobbies)? When do they happen and who participates?"
+User: "We both work from home, and our child plays in the living room."
+4. "Do you have preferences for rooms (type, size, connections, usage times, or who uses them)?"
+User: "We want the kitchen connected to the living room, and a quiet workspace."
