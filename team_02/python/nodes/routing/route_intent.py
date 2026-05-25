@@ -1,18 +1,7 @@
 """
-nodes/route_intent.py — ROUTE_INTENT node for the Comfort Copilot state graph.
-
-Runs after ASK_PERSONA on the comfort path. The LLM reads the user's prompt
-and decides which depth of analysis is needed:
-
-  "analyze"  → compute comfort scores only
-  "detect"   → compute scores + detect conflicts
-  "full"     → compute scores + detect conflicts + generate suggestions
-
-A Python keyword fallback ensures the node never fails even if the LLM
-times out or returns something unexpected.
-
-Writes to state:
-  comfort_depth  (str)  — "analyze" | "detect" | "full"
+ROUTE_INTENT node — decides analysis depth: analyze / detect / full.
+Uses LLM to read intent; falls back to keyword matching on error.
+Writes comfort_depth to state.
 """
 
 from __future__ import annotations

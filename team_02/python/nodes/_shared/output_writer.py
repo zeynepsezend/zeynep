@@ -7,7 +7,7 @@ Source layouts in randomized_layouts/ are never touched.
 
 Output schema (per room, inside attributes{}):
   "analysis": {
-    "_source":       "Comfort Copilot",
+    "_source":       "Sensi",
     "persona":       str,
     "depth":         "analyze" | "detect" | "full",
     "timestamp":     "2026-05-10T14:32:00",
@@ -19,7 +19,7 @@ Output schema (per room, inside attributes{}):
 
 Output schema (layout root):
   "analysis": {
-    "_source":      "Comfort Copilot",
+    "_source":      "Sensi",
     "persona":      str,
     "depth":        str,
     "timestamp":    str,
@@ -40,7 +40,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-_SOURCE_TAG = "Comfort Copilot"
+_SOURCE_TAG = "Sensi"
 
 
 # ---------------------------------------------------------------------------

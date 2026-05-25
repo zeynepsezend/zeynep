@@ -1,16 +1,6 @@
 """
-nodes/overview.py -- OVERVIEW_RESPOND node for the Comfort Copilot state graph.
-
-Pure Python. No LLM, no MCP calls.
-Triggered when intent is "overview" -- user wants to see what rooms are
-in a layout without running a full comfort analysis.
-
-Reads from state:
-  layout_json_string  (str)  -- the loaded layout JSON
-  layout_id           (str)  -- e.g. "201"
-
-Writes to state:
-  final_response      (str)  -- plain-language room list
+OVERVIEW_RESPOND node — lists rooms in a layout with basic attributes.
+Pure Python, no LLM. No analysis, no persona. Writes final_response.
 """
 
 from __future__ import annotations

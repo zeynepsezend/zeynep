@@ -1,20 +1,11 @@
 """
-nodes/suggest.py — SUGGEST node for the Comfort Copilot state graph.
-
-Pure Python — no LLM. Directly calls the generate_suggestions MCP tool.
-
-Always runs after DETECT, so last_conflicts_json is guaranteed to be in state.
-
-Reads from state:
-  last_conflicts_json  (str)  — output of detect_sensorial_conflicts
-  persona_detected     (str)  — persona name (e.g. "Elderly 65+")
-
-Writes to state:
-  last_suggestions_json  (str)  — unwrapped JSON string from generate_suggestions
+SUGGEST node — calls MCP generate_suggestions on conflicts from DETECT.
+Pure Python, no LLM. One actionable fix per failing sense per room.
+Writes last_suggestions_json to state.
 """
 
 from __future__ import annotations
-from nodes.utils import unwrap_mcp_result
+from nodes._shared.utils import unwrap_mcp_result
 
 
 def build_suggest_node(mcp_client):

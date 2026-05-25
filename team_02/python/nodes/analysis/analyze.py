@@ -1,19 +1,10 @@
 """
-nodes/analyze.py -- ANALYZE node for the Comfort Copilot state graph.
-
-Pure Python -- no LLM. Directly calls the compute_comfort_scores MCP tool.
-
-Reads from state:
-  layout_json_string  (str)       -- full layout JSON
-  persona_detected    (str)       -- persona name (e.g. "Elderly 65+")
-  target_room_id      (str|None)  -- specific room ID, or None for all rooms
-
-Writes to state:
-  last_scores_json    (str)  -- unwrapped JSON string from compute_comfort_scores
+ANALYZE node — calls MCP compute_comfort_scores for all 6 senses across all rooms.
+Pure Python, no LLM. Writes last_scores_json to state.
 """
 
 from __future__ import annotations
-from nodes.utils import unwrap_mcp_result
+from nodes._shared.utils import unwrap_mcp_result
 
 
 def build_analyze_node(mcp_client):
