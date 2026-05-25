@@ -5,7 +5,7 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 end_keywords = ["end", "finish", "done"]
-topology_keywords = ["bedroom", "kitchen", "living", "bathroom", "foyer", "extra", "connected", "open", "adjacent"]
+topology_keywords = ["layout", "apartment", "house", "floor plan", "topology"]
 modify_keywords = ["change", "modify", "adjust", "move", "relocate", "add", "remove"]
 evaluate_keywords = ["evaluate", "feedback", "daylight", "privacy", "flow", "functionality"]
 
