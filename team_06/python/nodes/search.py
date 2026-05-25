@@ -17,7 +17,7 @@ def build_search_node() -> Any:
             logger.error("❌ No topology graph provided")
             return {
                 "search_results_json_string": json.dumps([]),
-                "final_response": "No topology graph provided.",
+                "clarification": "No topology graph provided. Please describe your layout or try again.",
                 "iteration": iteration + 1
             }
         
@@ -53,7 +53,7 @@ def build_search_node() -> Any:
                 return {
                     "search_result": "failed",
                     "search_results_json_string": json.dumps([]),
-                    "final_response": "No matching layouts found.",
+                    "clarification": "No matching layout found. How would you like to proceed? (Type 'end' to exit or write a new request)",
                     "iteration": iteration + 1,
                 }
             
@@ -69,7 +69,7 @@ def build_search_node() -> Any:
             return {
                 "search_result": "failed",
                 "search_results_json_string": json.dumps([]),
-                "final_response": f"Search failed: {str(e)}",
+                "clarification": f"Search failed: {str(e)}. How would you like to proceed?",
                 "iteration": iteration + 1,
             }
         

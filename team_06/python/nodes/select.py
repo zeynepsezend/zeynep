@@ -32,7 +32,7 @@ def build_select_node():
                         print(f"[SELECT] Layout {layout_id} not found in sample_layouts.json.")
                         return {
                             "select_result": "failed",
-                            "final_response": f"Layout {layout_id} not found in sample_layouts.json.",
+                            "clarification": f"Layout {layout_id} not found in sample_layouts.json. How would you like to proceed?",
                             "tried_layout_ids": tried_layout_ids
                         }
                     save_path = Path(__file__).parent.parent.parent / "team_06_edited_layout.json"
@@ -44,14 +44,14 @@ def build_select_node():
                         "select_result": "success",
                         "selected_layout_id": layout_id,
                         "tried_layout_ids": tried_layout_ids,
-                        "final_response": None,
+                        "clarification": None,
                         "layout_json_string": json.dumps(layout)
                     }
                 else:
                     print(f"[SELECT] Layout {layout_id} not found or already tried.")
                     return {
                         "select_result": "failed",
-                        "final_response": f"Layout {layout_id} not found or already tried.",
+                        "clarification": f"Layout {layout_id} not found or already tried. How would you like to proceed?",
                         "tried_layout_ids": tried_layout_ids
                     }
 
@@ -63,7 +63,7 @@ def build_select_node():
             print("[SELECT] No search results found.")
             return {
                 "select_result": "failed",
-                "final_response": "No search results found.",
+                "clarification": "No search results found. How would you like to proceed?",
                 "tried_layout_ids": tried_layout_ids
             }
 
@@ -74,7 +74,7 @@ def build_select_node():
             print("[SELECT] No layouts left to try.")
             return {
                 "select_result": "failed",
-                "final_response": "No layouts left to try.",
+                "clarification": "No layouts left to try. How would you like to proceed? (Type 'end' to exit or write a new request)",
                 "tried_layout_ids": tried_layout_ids
             }
 
@@ -102,7 +102,7 @@ def build_select_node():
             "select_result": "success",
             "selected_layout_id": layout_id,
             "tried_layout_ids": tried_layout_ids,
-            "final_response": None,
+            "clarification": None,
             "layout_json_string": json.dumps(layout)
         }
     return select

@@ -44,6 +44,8 @@ def build_graph_from_programs_and_edges(programs: List[str], edges: List[Tuple[s
     return G
 
 def build_topology_node(llm: Any) -> Any:
+    import logging
+    logger = logging.getLogger(__name__)
     def topology(state: dict) -> dict:
         description = state.get("parsed_prompt") or state.get("user_prompt", "")
         iteration = state.get("iteration", 0)
@@ -53,6 +55,13 @@ def build_topology_node(llm: Any) -> Any:
         if programs:
             G = build_graph_from_programs_and_edges(programs, edges)
             graph_json = json.dumps(nx.node_link_data(G))
+            # Log the topology graph as adjacency list
+            try:
+                logger.info("\n[TOPOLOGY GRAPH] Adjacency List:")
+                for line in nx.generate_adjlist(G):
+                    logger.info(line)
+            except Exception as e:
+                logger.warning(f"Could not print topology graph: {e}")
             return {
                 "topology_result": "success",
                 "topology_graph_json_string": graph_json,
@@ -74,6 +83,13 @@ def build_topology_node(llm: Any) -> Any:
             if programs:
                 G = build_graph_from_programs_and_edges(programs, edges)
                 graph_json = json.dumps(nx.node_link_data(G))
+                # Log the topology graph as adjacency list
+                try:
+                    logger.info("\n[TOPOLOGY GRAPH] Adjacency List:")
+                    for line in nx.generate_adjlist(G):
+                        logger.info(line)
+                except Exception as e:
+                    logger.warning(f"Could not print topology graph: {e}")
                 return {
                     "topology_result": "success",
                     "topology_graph_json_string": graph_json,
@@ -83,14 +99,14 @@ def build_topology_node(llm: Any) -> Any:
         except Exception as e:
             return {
                 "topology_result": "failed",
-                "error": f"Could not parse apartment description: {e}",
+                "clarification": f"Could not parse apartment description: {e}. Please provide a list of rooms and any important adjacencies (e.g., 'bedroom next to kitchen').",
                 "iteration": iteration + 1
             }
 
         # 3. If all fails, ask for clarification
         return {
             "topology_result": "failed",
-            "error": "Please provide a list of rooms and any important adjacencies (e.g., 'bedroom next to kitchen').",
+            "clarification": "Please provide a list of rooms and any important adjacencies (e.g., 'bedroom next to kitchen').",
             "iteration": iteration + 1
         }
 
