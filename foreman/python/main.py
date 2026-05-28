@@ -19,9 +19,5 @@ def main():
     safe_response = response.encode("ascii", errors="replace").decode("ascii")
     print(safe_response)
 
-    # Clean up by properly closing the MCP client connection
-    ctx.mcp_client.close()
-
-
 if __name__ == "__main__":
     main()

@@ -48,7 +48,8 @@ def add_agent_descriptions_to_state(state):
     with open("foreman/agent.md", "r") as f:
         foreman_description = f.read()
         # print(f"Foreman description:\n{foreman_description}\n")
-        state["agent_description"] = foreman_description
+        # state["agent_description"] = foreman_description
+        state["agent_description"] = "You can answer any question about the world."
 
     # Read the agent descriptions
     agent_descriptions = []
@@ -90,6 +91,7 @@ def build_reason_node(llm):
             thought = result["response"]
             state["messages"].append({"role": "assistant", "content": thought})
             state["pending_tool_calls"] = None
+            print(f"LLM thought: {thought}")
 
         if state["iteration"] >= state["max_iterations"] and state.get("final_response") is None:
             state["final_response"] = "I could not produce a final response within the iteration limit."

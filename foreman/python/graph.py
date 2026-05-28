@@ -1,6 +1,6 @@
 from __future__ import annotations
 import json
-from typing import Any, TypedDict
+from typing import Any
 from langgraph.graph import END, START, StateGraph
 from nodes.reason import build_reason_node
 
@@ -39,6 +39,11 @@ def _route(state: AgentState) -> str:
     return "continue_reason"
 
 
+def _loop(state: AgentState) -> AgentState:
+    # Pass-through node used to avoid a direct self-edge on "reason".
+    return state
+
+
 # ---------------------------------------------------------------------------
 # Graph wiring — add nodes and edges here.
 # ---------------------------------------------------------------------------
@@ -53,6 +58,7 @@ def build_graph(ctx: Any) -> Any:
 
     # Add the nodes
     graph.add_node("reason", reason)
+    graph.add_node("loop", _loop)
 
     # Add the edges
     graph.add_edge(START, "reason")
@@ -61,9 +67,10 @@ def build_graph(ctx: Any) -> Any:
         _route,
         {
             "finish": END,
-            "continue_reason": "reason",
+            "continue_reason": "loop",
         },
     )
+    graph.add_edge("loop", "reason")
 
     return graph.compile()
 
