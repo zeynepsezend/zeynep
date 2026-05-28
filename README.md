@@ -303,3 +303,57 @@ It's always a good idea to read documentation and tutorials and prototype before
 | Streamlit | A library for creating web apps for machine learning and data science. | Easy to use, great for data visualization, runs in the browser. | Not designed for complex GUIs, often refreshes the whole page on interaction which is slow. | Web-based | Medium |
 | Gradio | A library for creating web-based interfaces for machine learning models. | Very easy to use, great for quick demos, runs in the browser. | Limited customization, not ideal for complex interfaces. | Web-based | Low |
 | Holoviz Panel | A library for creating interactive web apps and dashboards. | Highly customizable, supports complex interfaces, runs in the browser. | Steeper learning curve, requires installation of Panel and its dependencies. | Web-based | High |
+
+---
+
+## Visualization in UI
+
+Since your agent will be manipulating the layout, it will help to have some options to visualize the layout in your GUI.  Options range from simple ASCII text art to 3D models.  The choice depends on your goals and design preference.
+
+### ASCII Art
+The simplest way to show the layout is to use the text, symbols and characters natively rendered in the GUI. You will have limited interactivity, but it can be good for debugging.  For example, you could use `#` to represent walls, `.` to represent empty space, and `W` to represent windows.  You could print the layout as a grid of characters, with each character representing a different element of the layout.  
+
+For example, a simple layout of two rooms with a door and a window could look like this:
+
+```
+###################
+#........#........#
+#........D........W
+#........#........W
+#........#........#
+###################
+```
+
+### 2D Visualization
+
+#### Native 2D
+A more advanced way to show the layout with linework in a 2D view.  You could use a library like Matplotlib, Plotly, or PyQt's drawing capabilities to render the layout as a 2D floor plan.  This would allow you to show walls, doors, windows, and other elements with more clarity than ASCII art.  You could also add interactivity, such as clicking on a wall to select it or hovering over a room to see its name.
+
+If using a web-based GUI, I recommend using Plotly for 2D visualization, as it has good support for interactivity and is supported by most web frameworks.
+
+![Example 2D Layout Visualization](./readme_images/layout_2d.png)
+
+#### Image-based 2D
+Another option is to generate an image of the layout using a Grasshopper and Swiftlet.  Swiftlet 0.3.0 has the option to send images back to the client as base64-encoded strings through MCP.  You could create a Grasshopper MCP tool that takes the layout JSON as input, renders a 2D floor plan image, and returns the image as a base64 string.  Your Python agent could then decode the string and display the image in the GUI.  
+
+### 3D Visualization
+
+#### Static 3D
+Similar to the image-based 2D option, you could create a Grasshopper MCP tool that takes the layout JSON as input, renders a 3D model of the layout, and returns a static image of the model as a base64 string.  This would allow you to show the layout in 3D, but without interactivity.  
+
+#### Interactive 3D
+The most complex way to show the layout is to render it in 3D with interactivity.  I suggest using Three.js for web-based applications, or PyQt's 3D capabilities for local applications.  You would need to convert the layout JSON into a 3D model, extruding walls and adding details like doors and windows.  The biggest benefit of this approach is that it allows the user to explore the layout from different angles and perspectives, and allows for the user to interact with the model, such as clicking on a wall to select it.
+
+If you go with this approach using Three.js, I recommend using VITE to set up a simple web server to serve the 3D model and handle interactions.  Then you could embed the web-based 3D viewer into your GUI using a web view component or iframe, creating a website inside a website.  You would also need to set up communication between the web-based 3D viewer and your Python agent, such as using WebSockets or HTTP requests.  The VITE server would be launched by a python subprocess when the agent starts, and the 3D viewer would fetch the layout JSON from the Python agent to render the model.  
+
+```mermaid
+sequenceDiagram
+    participant Python Agent (GUI)
+    participant Web-based 3D Viewer (Three.js)
+
+    Python Agent (GUI) ->> Web-based 3D Viewer (Three.js): Setup VITE server and serve Layout JSON 
+    Web-based 3D Viewer (Three.js) ->> Python Agent (GUI): Render 3D model based on Layout JSON 
+    Python Agent (GUI) ->> Web-based 3D Viewer (Three.js): Update 3D model based on user interactions or agent decisions
+    Web-based 3D Viewer (Three.js) ->> Python Agent (GUI): Notify when user interacts with the model
+
+```
