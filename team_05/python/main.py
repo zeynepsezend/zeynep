@@ -2,9 +2,7 @@ import argparse
 from _runtime.bootstrap import bootstrap
 from graph import run_agent
 
-
 def main():
-
     # Process the command line arguments (the user instruction)
     parser = argparse.ArgumentParser(description="Run the Grasshopper MCP agent.")
     parser.add_argument("prompt", help="Your instruction for the agent (e.g. 'delete the kitchen')")
@@ -14,14 +12,12 @@ def main():
     ctx = bootstrap()
     response = run_agent(args.prompt, ctx)
 
-    # Print the final response
+    # Print the final response safely using standard UTF-8
     print("\nAgent response:\n")
-    safe_response = response.encode("ascii", errors="replace").decode("ascii")
-    print(safe_response)
+    print(response)
 
     # Clean up by properly closing the MCP client connection
     ctx.mcp_client.close()
-
 
 if __name__ == "__main__":
     main()
