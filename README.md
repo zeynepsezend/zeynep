@@ -357,3 +357,226 @@ sequenceDiagram
     Web-based 3D Viewer (Three.js) ->> Python Agent (GUI): Notify when user interacts with the model
 
 ```
+
+---
+
+## CLI Requirements
+
+You agent must have a CLI that allows the orchestrator agent to call it as a subprocess.  The CLI should accept user instructions and a layout JSON string as input, and return the agent's response as output along with a JSON string representing the edited layout if applicable.  
+### Instructions for updating main.py to support CLI
+
+1. In `team_XX/python/main.py`, switch from a single positional argument to explicit flags:
+  - `--prompt` (required string)
+  - `--layout_json` (optional JSON string)
+  Update any existing code that references `args[0]` to use `args.prompt` instead.
+
+2. Import `json` and parse `--layout_json` when provided:
+  - Use `json.loads(args.layout_json)`.
+  - If parsing fails, raise a clear `ValueError` (or print an error and exit with non-zero code).
+
+3. Initialize context with `ctx = bootstrap()` as before, then override layout context when CLI input is provided:
+  - If `--layout_json` is present, set `ctx.layout_data` to the parsed dict before calling `run_agent(...)`.
+  - This ensures the run uses orchestrator-provided layout data instead of only `layout_input/layout_schema.json`.
+
+4. Execute the graph with the parsed prompt:
+  - `response = run_agent(prompt_text, ctx)`
+  Keep the output safe for terminals.
+
+5. Print output using a stable machine-readable structure for orchestrators:
+
+  ```text
+  Final Response: 
+  <agent response>
+
+  Edited Layout JSON:
+  <edited layout JSON or "No layout changes">
+  ```
+
+### Example usage:
+
+```bash
+python main.py --prompt "add a window to the south wall of the living room" --layout_json '{
+    "layoutId": "Layout-101",
+    "outline": [[0.0, 0.0], [9.0, 0.0], [9.0, 5.0], [0.0, 5.0], [0.0, 0.0]],
+    "rooms": [
+      {
+        "id": "room-1",
+        "name": "Living Room",
+        "geometry": [[0.0, 0.0], [5.0, 0.0], [5.0, 5.0], [0.0, 5.0], [0.0, 0.0]],
+        "attributes": {"area": 25.0}
+      },
+      {
+        "id": "room-2",
+        "name": "Bedroom 1",
+        "geometry": [[5.0, 0.0], [9.0, 0.0], [9.0, 5.0], [5.0, 5.0], [5.0, 0.0]],
+        "attributes": {"area": 20.0}
+      }
+    ],
+    "doors": [
+      {
+        "id": "door-1",
+        "type": "wooden",
+        "name": "Bedroom Door",
+        "geometry": [[5.0, 2.0], [5.0, 2.9]],
+        "attributes": {"connectsRooms": ["room-1", "room-2"]}
+      }
+    ],
+    "windows": [
+      {
+        "id": "window-1",
+        "type": "sliding",
+        "name": "Living Room Window",
+        "geometry": [[0.0, 2.0], [0.0, 3.5]],
+        "attributes": {"roomId": "room-1"}
+      }
+    ],
+    "furniture": [
+      {
+        "id": "furn-1",
+        "name": "Main Couch",
+        "geometry": [[2.0, 3.0], [4.0, 3.0], [4.0, 4.0], [2.0, 4.0], [2.0, 3.0]],
+        "attributes": {"roomId": "room-1"}
+      }
+    ],
+    "mep": [
+      {
+        "id": "mep-1",
+        "name": "Living Room AC",
+        "geometry": [[2.5, 4.5], [3.5, 4.5], [3.5, 4.8], [2.5, 4.8], [2.5, 4.5]],
+        "attributes": {"system": "hvac"}
+      }
+    ],
+    "structure": [
+      {
+        "id": "wall-1",
+        "name": "North Interior Wall",
+        "geometry": [[5.0, 0.0], [5.0, 5.0]],
+        "attributes": {}
+      }
+    ]
+}'
+```
+
+The agent should parse the `--prompt` and `--layout_json` arguments, run the agent graph, and print the final response and edited layout JSON to the console.  
+
+If there are any follow-up questions or clarifications needed, the agent should prompt the user for input in the console if launched from the CLI.  This will allow the orchestrator agent to have a back-and-forth conversation with your agent if needed, and allow the user to provide additional information or clarification as the agent is running.
+
+Example output:
+
+```
+Final Response: 
+"Added a window to the south wall of the living room."
+
+Edited Layout JSON: 
+{
+    "layoutId": "Layout-101",
+    
+    "outline": [[0.0, 0.0], [9.0, 0.0], [9.0, 5.0], [0.0, 5.0], [0.0, 0.0]],
+  
+    "rooms": [
+      {
+        "id": "room-1",
+        "name": "Living Room",
+        "geometry": [[0.0, 0.0], [5.0, 0.0], [5.0, 5.0], [0.0, 5.0], [0.0, 0.0]],
+        "attributes": {
+          "area": 25.0
+        }
+      },
+      {
+        "id": "room-2",
+        "name": "Bedroom 1",
+        "geometry": [[5.0, 0.0], [9.0, 0.0], [9.0, 5.0], [5.0, 5.0], [5.0, 0.0]],
+        "attributes": {
+          "area": 20.0
+        }
+      }
+    ],
+  
+    "doors": [
+      {
+        "id": "door-1",
+        "type": "wooden",
+        "name": "Bedroom Door",
+        "geometry": [[5.0, 2.0], [5.0, 2.9]],
+        "attributes": {
+          "connectsRooms": ["room-1", "room-2"]
+        }
+      },
+      {
+        "id": "door-2",
+        "type": "wooden",
+        "name": "Living Room Door",
+        "geometry": [[5.0, 2.0], [5.0, 2.9]],
+        "attributes": {
+          "connectsRooms": ["room-1", "room-2"]
+        }
+      }
+    ],
+  
+    "windows": [
+      {
+        "id": "window-1",
+        "type:":"sliding",
+        "name": "Living Room Window",
+        "geometry": [[0.0, 2.0], [0.0, 3.5]],
+        "attributes": {
+          "roomId": "room-1"
+        }
+      },
+      {
+        "id": "window-2",
+        "type:":"sliding",
+        "name": "Living Room South Window",
+        "geometry": [[2.0, 0.0], [3.5, 0.0]],
+        "attributes": {
+          "roomId": "room-1"
+        }
+      }
+    ],
+  
+    "furniture": [
+      {
+        "id": "furn-1",
+        "name": "Main Couch",
+        "geometry": [[2.0, 3.0], [4.0, 3.0], [4.0, 4.0], [2.0, 4.0], [2.0, 3.0]],
+        "attributes": {
+          "roomId": "room-1"
+        }
+      }
+    ],
+  
+    "mep": [
+      {
+        "id": "mep-1",
+        "name": "Living Room AC",
+        "geometry": [[2.5, 4.5], [3.5, 4.5], [3.5, 4.8], [2.5, 4.8], [2.5, 4.5]],
+        "attributes": {
+          "system": "hvac"
+        }
+      },
+      {
+        "id": "mep-2",
+        "name": "Main Breaker Box",
+        "geometry": [[0.2, 0.2], [0.8, 0.2], [0.8, 0.5], [0.2, 0.5], [0.2, 0.2]],
+        "attributes": {
+          "system": "electrical"
+        }
+      }
+    ],
+  
+    "structure": [
+      {
+        "id": "wall-1",
+        "name": "North Interior Wall",
+        "geometry": [[5.0, 0.0], [5.0, 5.0]],
+        "attributes": {}
+      }
+    ]
+  }
+```
+
+---
+
+## Benchmarking
+
+To help evaluate your agent's performance, we can make an edit to the 
