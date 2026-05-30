@@ -24,6 +24,9 @@ TAG_AND_AUDIT TOOL:
 - ALWAYS pass typology: use "column_grid" unless user asks for perimeter_load_bearing or shear_wall
 - ALWAYS pass grid_spacing: use 4.0 unless user specifies a different value
 
+STRUCTURAL EVALUATION (evaluate, check structure, run loads, assess beams/columns, find minimum sections, upgrade sections, optimize structure, check if structure holds):
+Set action="final", final_response="" (empty string). The evaluate node handles all calculations and prompts automatically. NEVER answer the evaluation yourself — not even to say you cannot do it without running checks.
+
 WHAT-IF QUESTIONS — two-step process, NEVER call a tool:
 Step 1: User asks "what if we remove X" → set action="final", final_response="" (empty string). The evaluate node runs the simulation automatically.
 Step 2: You receive a message starting with "STRUCTURAL FAIL after removing" → set action="final" and write the full response in final_response using this EXACT format, filling in values from the STRUCTURAL FAIL message:
@@ -78,15 +81,24 @@ def build_reason_node(llm):
         print(f"  NODE: REASON  (cycle {cycle})")
         print(f"{'='*50}")
 
+        # Evaluation already complete — skip LLM call (triggered after comparison → reason → END)
+        if state.get("evaluation_result") is not None:
+            state["came_from"] = "reason"
+            return state
+
         # Trim history to stay within token limit
-        # Cap each message at 600 chars so tool results (full layout JSON) don't blow the context
-        def _cap(msg: dict, limit: int = 600) -> dict:
+        # First message is the layout context — give it a large window.
+        # Subsequent messages (tool outputs, LLM responses) are capped tight.
+        def _cap(msg: dict, limit: int) -> dict:
             c = msg.get("content", "")
             return {**msg, "content": c[:limit] + " ...[trimmed]"} if len(c) > limit else msg
 
         messages = state["messages"]
         kept = (messages[:1] + messages[-3:]) if len(messages) > 4 else messages
-        trimmed_messages = [_cap(m) for m in kept]
+        trimmed_messages = [
+            _cap(m, 2500) if i == 0 else _cap(m, 400)
+            for i, m in enumerate(kept)
+        ]
 
         result = None
         last_error = None

@@ -1,14 +1,26 @@
 from __future__ import annotations
 import json
+import math
 from pathlib import Path
 from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 from nodes.reason import build_reason_node
-from nodes.modify import build_modify_node
-from nodes.evaluate import build_evaluate_node
+from nodes.modify import build_modify_node, DEFAULT_SECTIONS, BEAM_SECTION_UPGRADE, COL_SECTION_UPGRADE
+from nodes.evaluate import build_evaluate_node, evaluate_structure, SETTINGS_PATH, _get_user_request
 from nodes.comparison import build_comparison_node
 
 EXAMPLE_LAYOUTS_DIR = Path(__file__).parent / "example_layouts"
+
+
+def _dist(a: list, b: list) -> float:
+    return math.dist(a, b)
+
+
+def _settings_load(path: Any, key: str) -> float | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get(key)
+    except Exception:
+        return None
 
 
 class AgentState(TypedDict):
@@ -25,6 +37,27 @@ class AgentState(TypedDict):
     original_layout_json_string: str | None
     cycle: int
     material_override: str | None
+    pending_structural_change: dict | None
+    layout_before_change: str | None
+    live_load_kNm2: float | None
+    sdl_kNm2: float | None
+    find_minimum_done: bool | None
+
+
+_EVAL_KEYWORDS = frozenset({
+    "evaluat", "check loads", "check structure", "check if",
+    "find minimum", "minimum section", "minimum sufficient",
+    "optimiz", "upgrade section", "structurally feasible",
+    "structure hold", "assess struct", "run structural",
+    "is this safe", "is it safe", "is the structure",
+    "will it hold", "can it support", "safe to",
+})
+
+
+def _looks_like_eval(state: AgentState) -> bool:
+    """Return True when the user's original prompt is an evaluation/computation request."""
+    text = _get_user_request(state.get("messages", []))
+    return any(kw in text for kw in _EVAL_KEYWORDS)
 
 
 def _route_from_reason(state: AgentState) -> str:
@@ -34,20 +67,29 @@ def _route_from_reason(state: AgentState) -> str:
         return END
     if state.get("evaluation_result") is not None:
         return END  # evaluate already ran — done
-    return "evaluate"  # always evaluate before ending
+    if state.get("final_response"):
+        # If the user asked for evaluation/computation, force it even if LLM answered directly
+        if _looks_like_eval(state):
+            return "evaluate"
+        return END  # genuine Q&A — use LLM's direct answer
+    return "evaluate"
 
 
 def _route_from_evaluate(state: AgentState) -> str:
     if state.get("came_from") == "tag_and_audit":
         return END
-    if state.get("came_from") == "modify":
+    if state.get("pending_structural_change"):
+        return "modify"
+    if state.get("came_from") in ("modify", "structural_change"):
         return "comparison"
+    if state.get("evaluation_result") is not None:
+        return END  # plain evaluation done — skip the redundant reason call
     return "reason"
 
 
 def build_graph(ctx: Any) -> Any:
     reason = build_reason_node(ctx.llm)
-    modify = build_modify_node(ctx.mcp_client, ctx.tools, ctx.edited_layout_path)
+    modify = build_modify_node(ctx.mcp_client, ctx.tools, ctx.edited_layout_path, evaluate_fn=evaluate_structure)
     evaluate = build_evaluate_node(ctx.llm)
     comparison = build_comparison_node(ctx.llm)
 
@@ -60,7 +102,7 @@ def build_graph(ctx: Any) -> Any:
     graph.add_edge(START, "reason")
     graph.add_conditional_edges("reason", _route_from_reason, {"modify": "modify", "evaluate": "evaluate", END: END})
     graph.add_edge("modify", "evaluate")
-    graph.add_conditional_edges("evaluate", _route_from_evaluate, {"reason": "reason", "comparison": "comparison", END: END})
+    graph.add_conditional_edges("evaluate", _route_from_evaluate, {"reason": "reason", "comparison": "comparison", "modify": "modify", END: END})
     graph.add_edge("comparison", "reason")
 
     return graph.compile()
@@ -68,6 +110,11 @@ def build_graph(ctx: Any) -> Any:
 
 def run_agent(prompt: str, ctx: Any) -> str:
     app = build_graph(ctx)
+    # Snapshot the layout before this run so before/after comparison is always available
+    if ctx.edited_layout_path.exists():
+        before_path = ctx.edited_layout_path.with_stem(ctx.edited_layout_path.stem + "_before")
+        before_path.write_text(ctx.edited_layout_path.read_text(encoding="utf-8"), encoding="utf-8")
+        print(f"[snapshot] saved {before_path.name}")
     initial_state = _build_initial_state(prompt, ctx)
     final_state = app.invoke(initial_state)
 
@@ -75,7 +122,7 @@ def run_agent(prompt: str, ctx: Any) -> str:
     material = final_state.get("material_override")
     print(f"[material] final material_override = {material!r}")
     if material:
-        from nodes.evaluate import DEFAULT_SECTIONS, BEAM_SECTION_UPGRADE, COL_SECTION_UPGRADE
+        from nodes.modify import DEFAULT_SECTIONS, BEAM_SECTION_UPGRADE, COL_SECTION_UPGRADE
         sec = DEFAULT_SECTIONS.get(material)
         if sec:
             # Use the in-state layout (which carries per-element upgrades) as the source
@@ -142,7 +189,46 @@ def run_agent(prompt: str, ctx: Any) -> str:
     if not final_response and ctx.edited_layout_path.exists():
         final_response = f"Done. Layout saved to {ctx.edited_layout_path.name}"
 
+    # Write evaluation report to file
+    _write_evaluation_report(
+        prompt=prompt,
+        eval_json=final_state.get("evaluation_result"),
+        comparison=final_state.get("comparison_result"),
+        report_path=ctx.edited_layout_path.parent / "team_01_evaluation_report.md",
+    )
+
     return final_response
+
+
+def _write_evaluation_report(
+    prompt: str,
+    eval_json: str | None,
+    comparison: str | None,
+    report_path: Path,
+) -> None:
+    import datetime
+    lines = [
+        f"# Structural Evaluation Report",
+        f"",
+        f"**Date:** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"**Prompt:** {prompt}",
+        f"",
+    ]
+    eval_table = _format_evaluation(eval_json)
+    if eval_table:
+        lines.append("## Structural Checks")
+        lines.append("")
+        lines.append("```")
+        lines.append(eval_table)
+        lines.append("```")
+        lines.append("")
+    if comparison:
+        lines.append("## Change Summary")
+        lines.append("")
+        lines.append(comparison)
+        lines.append("")
+    report_path.write_text("\n".join(lines), encoding="utf-8")
+    print(f"[report] saved {report_path.name}")
 
 
 def _format_evaluation(eval_json: str | None) -> str:
@@ -230,16 +316,36 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
     # Send slim summary to LLM to stay within token limit
     slim = []
     for l in layouts:
+        structure = l.get("structure", [])
         conflicts = [
             {"id": s["id"], "conflict": s["attributes"].get("conflict")}
-            for s in l.get("structure", [])
+            for s in structure
             if s.get("attributes", {}).get("conflict") not in (None, "None", "none", "")
         ]
+        # Compact per-element lines: "id type material section span_m"
+        # Format is intentionally terse (~25 chars/element) to stay within LLM context
+        beam_lines = []
+        col_lines  = []
+        for s in structure:
+            attrs   = s.get("attributes", {})
+            geo     = s.get("geometry", [])
+            is_beam = len(geo) == 2
+            sec = (attrs.get("section")
+                   or attrs.get("dimensions")
+                   or (f"{attrs['width']}x{attrs['depth']}" if attrs.get("depth") and attrs.get("width") else "?"))
+            mat = attrs.get("material", "RCC")
+            if is_beam:
+                span = round(_dist(geo[0], geo[1]), 2)
+                beam_lines.append(f"{s['id']} {mat} {sec} {span}m")
+            else:
+                col_lines.append(f"{s['id']} {mat} {sec}")
         slim.append({
             "layoutId": l.get("layoutId"),
             "outline": l.get("outline"),
             "rooms": [{"id": r["id"], "name": r["name"]} for r in l.get("rooms", [])],
-            "structure_count": len(l.get("structure", [])),
+            "structure_count": len(structure),
+            "beams":   beam_lines,
+            "columns": col_lines,
             "structure_conflicts": conflicts,
         })
 
@@ -269,6 +375,11 @@ def _build_initial_state(prompt: str, ctx: Any) -> AgentState:
         "original_layout_json_string": None,
         "cycle": 0,
         "material_override": detected_material,
+        "pending_structural_change": None,
+        "layout_before_change": None,
+        "live_load_kNm2": _settings_load(SETTINGS_PATH, "live_load_kNm2"),
+        "sdl_kNm2": _settings_load(SETTINGS_PATH, "sdl_kNm2"),
+        "find_minimum_done": False,
     }
 
 
